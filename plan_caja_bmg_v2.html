@@ -1,0 +1,2303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan de Caja · BMG Law Services</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>window.XLSX=XLSX;</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#1a1a1a}
+.app{max-width:1500px;margin:0 auto;padding:16px}
+.header{background:#1a2b4a;color:#fff;padding:14px 20px;border-radius:8px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.header h1{font-size:15px;font-weight:700;letter-spacing:.3px}
+.header p{font-size:11px;color:#a0b4d0;margin-top:2px}
+.nav{display:flex;gap:2px;background:#fff;border-radius:8px;padding:4px;margin-bottom:14px;border:1px solid #e0e0e0;flex-wrap:wrap}
+.nav button{padding:7px 14px;border:none;background:transparent;border-radius:5px;cursor:pointer;font-size:12px;color:#555;font-weight:500;transition:.12s;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.nav button.active{background:#1a2b4a;color:#fff}
+.nav button:hover:not(.active){background:#f0f2f5}
+.card{background:#fff;border-radius:8px;border:1px solid #e0e0e0;margin-bottom:14px;overflow:hidden}
+.card-header{padding:11px 16px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:#fafafa}
+.card-header h2{font-size:12px;font-weight:700;color:#1a2b4a;text-transform:uppercase;letter-spacing:.04em}
+.card-body{padding:14px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.metric{background:#fff;border-radius:7px;padding:12px 14px;border:1px solid #e0e0e0}
+.metric-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.metric-val{font-size:19px;font-weight:700;line-height:1.1}
+.metric-sub{font-size:10px;color:#888;margin-top:3px}
+.green{color:#1a7a45}.red{color:#b83232}.blue{color:#1a2b4a}.orange{color:#b06000}.gray{color:#888}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#f4f6f9;padding:7px 9px;text-align:left;font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid #e4e8ee;white-space:nowrap}
+td{padding:5px 9px;border-bottom:1px solid #f2f2f2;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafbfc}
+.num{text-align:right;font-variant-numeric:tabular-nums;font-family:monospace;font-size:11px}
+.section-row td{background:#eef2f7;font-weight:700;font-size:10px;color:#1a2b4a;padding:5px 9px;text-transform:uppercase;letter-spacing:.04em}
+.total-row td{background:#e4ecf4;font-weight:700;border-top:2px solid #1a2b4a}
+.saldo-row td{background:#1a2b4a;color:#fff;font-weight:700;font-size:12px}
+.flujo-row td{background:#f0f4f8;font-weight:700}
+.pill{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600;white-space:nowrap}
+.pill-ok{background:#e4f4ec;color:#1a7a45}
+.pill-warn{background:#fff4e0;color:#b06000}
+.pill-err{background:#fdecea;color:#b83232}
+.pill-neu{background:#f0f0f0;color:#555}
+.pill-dis{background:#fde8f0;color:#9b2060}
+.pill-blue{background:#e4eef8;color:#1a2b4a}
+.btn{padding:5px 11px;border-radius:5px;border:1px solid #dde0e6;background:#fff;cursor:pointer;font-size:11px;font-weight:500;color:#333;transition:.1s;display:inline-flex;align-items:center;gap:4px}
+.btn:hover{background:#f4f6f9}
+.btn-primary{background:#1a2b4a;color:#fff;border-color:#1a2b4a}
+.btn-primary:hover{background:#243d6a}
+.btn-sm{padding:3px 8px;font-size:10px}
+.btn-danger{color:#b83232;border-color:#e4c0c0}
+.btn-danger:hover{background:#fdecea}
+.btn-ghost{border-color:transparent;background:transparent;color:#888}
+.btn-ghost:hover{background:#f0f0f0;color:#333}
+input,select,textarea{font-size:12px;padding:5px 8px;border:1px solid #dde0e6;border-radius:5px;background:#fff;color:#1a1a1a;font-family:Arial,sans-serif}
+input:focus,select:focus{outline:none;border-color:#1a2b4a;box-shadow:0 0 0 2px rgba(26,43,74,.08)}
+.form-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
+.form-group{display:flex;flex-direction:column;gap:3px}
+.form-group label{font-size:10px;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.overflow-x{overflow-x:auto}
+.alert{padding:9px 13px;border-radius:6px;font-size:11px;margin-bottom:12px;display:flex;align-items:flex-start;gap:6px}
+.alert-info{background:#e8f0fb;color:#1a2b4a;border:1px solid #c0d0e8}
+.alert-warn{background:#fff8e6;color:#b06000;border:1px solid #f0d070}
+.alert-ok{background:#e4f4ec;color:#1a7a45;border:1px solid #a0d8b8}
+.month-col-header{font-size:9px;text-align:center;white-space:nowrap}
+.sticky-col{position:sticky;left:0;background:#fff;z-index:2}
+th.sticky-col{background:#f4f6f9;z-index:3}
+.inline-edit{background:transparent;border:none;border-bottom:1px dashed #ccc;width:80px;text-align:right;font-size:11px;padding:2px 3px;font-family:monospace;color:#1a1a1a}
+.inline-edit:focus{outline:none;border-bottom-color:#1a2b4a;background:#f0f4ff}
+.chart-container{width:100%;position:relative;margin:10px 0}
+.sep{height:1px;background:#f0f0f0;margin:12px 0}
+.tag{display:inline-block;font-size:9px;padding:1px 5px;border-radius:3px;margin-left:4px;font-weight:600}
+.tag-real{background:#d4edda;color:#1a7a45}
+.tag-prev{background:#dde8f8;color:#1a2b4a}
+.tag-frozen{background:#ffe8b8;color:#8b5000}
+.desv-pos{color:#1a7a45;font-weight:600}
+.desv-neg{color:#b83232;font-weight:600}
+.desv-zero{color:#888}
+/* Columnas de comparativa */
+.col-presup{background:#f8fbff}
+.col-real{background:#f4fbf6}
+.col-desv{background:#fdf8f0}
+.frozen-badge{font-size:9px;background:#1a2b4a;color:#fff;padding:2px 6px;border-radius:3px;font-weight:600;letter-spacing:.03em}
+.upload-area{border:2px dashed #ccd0d8;border-radius:7px;padding:16px;text-align:center;color:#888;cursor:pointer;font-size:11px;transition:.15s}
+.upload-area:hover{border-color:#1a2b4a;color:#1a2b4a;background:#f4f7fb}
+.month-header-presup{background:#e8f0fb;color:#1a2b4a}
+.month-header-real{background:#e4f4ec;color:#1a7a45}
+.month-header-desv{background:#fff4e0;color:#b06000}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:800px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef,useMemo}=React;
+
+const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MESES_FULL=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+// ── Datos iniciales del Excel ──
+const CLIENTES_INIT=[
+  {id:'bsabadell',nombre:'BANCO SABADELL',grupo:'bancos',iva:0.21},
+  {id:'link',nombre:'LINK FINANZAS',grupo:'servicios',iva:0.21},
+  {id:'aiqon',nombre:'AIQON',grupo:'servicios',iva:0},
+  {id:'claimup',nombre:'CLAIM UP',grupo:'servicios',iva:0.21},
+  {id:'reclamio',nombre:'RECLAMIO',grupo:'servicios',iva:0.21},
+  {id:'cajamar',nombre:'CAJAMAR',grupo:'bancos',iva:0.21},
+  {id:'caixabank',nombre:'CAIXABANK',grupo:'bancos',iva:0.21},
+  {id:'hispania',nombre:'HISPANIA/EOS/SAREB',grupo:'servicios',iva:0.21},
+  {id:'otros',nombre:'OTROS',grupo:'varios',iva:0.21},
+  {id:'madrid',nombre:'MADRID',grupo:'varios',iva:0.21},
+  {id:'gestoria',nombre:'GESTORÍA',grupo:'varios',iva:0.21},
+  {id:'fiscal',nombre:'FISCAL',grupo:'varios',iva:0.21},
+  {id:'procesal',nombre:'PROCESAL',grupo:'varios',iva:0.21},
+  {id:'consultoria',nombre:'CONSULTORÍA',grupo:'varios',iva:0.21},
+];
+
+const FACT_INIT={
+  bsabadell:[43767.5,49961.5,57576,38582.78,42869.75,42869.75,42869.75,21434.88,42869.75,42869.75,42869.75,42869.75],
+  link:      [26683.23,12125,12545.18,18316.05,18316.05,18316.05,18316.05,9158.02,18316.05,18316.05,18316.05,18316.05],
+  aiqon:     [14068.79,15836.52,14455.35,15821.97,15821.97,15821.97,15821.97,7910.98,15821.97,15821.97,15821.97,15821.97],
+  claimup:   [1519.49,490.46,1065.35,1178.87,1178.87,1178.87,1178.87,589.43,1178.87,1178.87,1178.87,1178.87],
+  reclamio:  [2462.55,3276.82,1572.8,2681.13,2681.13,2681.13,2681.13,1340.56,2681.13,2681.13,2681.13,2681.13],
+  cajamar:   [19546.68,5873.48,7779.97,8134.03,8134.03,8134.03,8134.03,4067.02,8134.03,8134.03,8134.03,8134.03],
+  caixabank: [8186.59,971.9,1322.32,3842.96,3842.96,3842.96,3842.96,1921.48,3842.96,3842.96,3842.96,3842.96],
+  hispania:  [8175,6641.85,12849.44,6778.24,9683.2,9683.2,9683.2,4841.6,9683.2,9683.2,9683.2,9683.2],
+  otros:     [10850,4100,4300,4940.83,7058.33,7058.33,7058.33,3529.17,7058.33,7058.33,7058.33,7058.33],
+  madrid:    [4000,0,0,1400,2000,2000,2000,1000,2000,2000,2000,2000],
+  gestoria:  [0,7610,0,8000,8000,8000,8000,8000,8000,8000,8000,8000],
+  fiscal:    [300,0,1580,877.33,1253.33,1253.33,1253.33,626.67,1253.33,1253.33,1253.33,1253.33],
+  procesal:  [850,0,0,283.33,283.33,283.33,283.33,141.67,283.33,283.33,283.33,283.33],
+  consultoria:[837.5,1337.5,1812.5,1993.75,1993.75,1993.75,1993.75,1993.75,1993.75,1993.75,1993.75,1993.75],
+};
+
+const GASTOS_INIT=[
+  {id:'nominas',   concepto:'Nóminas personal fijo (neto)', grupo:'personal',     iva:0,    irpf:0,    importes:Array(12).fill(-37733.73),dia:28},
+  {id:'ss',        concepto:'Seguridad Social (empresa)',   grupo:'personal',     iva:0,    irpf:0,    importes:Array(12).fill(-12167.15),dia:20},
+  {id:'rosalia',   concepto:'Rosalia/LexConnect/Alejandro/Laura',grupo:'colaboradores',iva:0.21,irpf:0.15,importes:Array(12).fill(-10030.67),dia:1},
+  {id:'legalpigeon',concepto:'Legal Pigeon',                grupo:'colaboradores',iva:0.21,irpf:0.15,importes:[0,0,0,0,0,-5486.83,-5486.83,-5486.83,-5486.83,-5486.83,-5486.83,-5486.83],dia:1},
+  {id:'mario',     concepto:'623. Mario',                  grupo:'colaboradores',iva:0.21,irpf:0.15,importes:Array(12).fill(-8553.53),dia:1},
+  {id:'miguel_fee',concepto:'623. Miguel',                 grupo:'colaboradores',iva:0.21,irpf:0.15,importes:Array(12).fill(-2550),dia:1},
+  {id:'marc',      concepto:'623. Marc',                   grupo:'colaboradores',iva:0.21,irpf:0.15,importes:Array(12).fill(-2550),dia:1},
+  {id:'apoint',    concepto:'623. Apoint',                 grupo:'colaboradores',iva:0.21,irpf:0.15,importes:Array(12).fill(-4250),dia:1},
+  {id:'ignacio',   concepto:'623. Ignacio',                grupo:'colaboradores',iva:0.21,irpf:0.15,importes:Array(12).fill(-5000),dia:1},
+  {id:'jorge',     concepto:'623. Jorge',                  grupo:'colaboradores',iva:0.21,irpf:0.15,importes:Array(12).fill(-1000),dia:1},
+  {id:'luis',      concepto:'623. Luis Miralbell (fee -50%)',grupo:'colaboradores',iva:0.21,irpf:0.15,importes:Array(12).fill(-2500),dia:1},
+  {id:'alquiler',  concepto:'Alquiler oficina Barcelona',  grupo:'estructura',   iva:0.21,irpf:0.19,importes:Array(12).fill(-9892),dia:1},
+  {id:'it',        concepto:'Informática (obj. -10%)',     grupo:'estructura',   iva:0.21,irpf:0,   importes:Array(12).fill(-8500)},
+  {id:'otros_g',   concepto:'Otros gastos operativos',     grupo:'estructura',   iva:0.21,irpf:0,   importes:Array(12).fill(-2000)},
+];
+
+const IMPTOS_INIT=[
+  {id:'iva',concepto:'Liquidación IVA (mod. 303)',importes:[0,0,0,0,0,0,-25000,0,0,-25000,0,0]},
+  {id:'irpf',concepto:'Retenciones IRPF (mod. 111/115)',importes:[0,0,0,0,0,0,-30000,0,0,-30000,0,0]},
+  {id:'is',concepto:'Pago fraccionado IS (mod. 202)',importes:Array(12).fill(0)},
+];
+
+const FACTURAS_INIT=[
+  {id:'M00004/26',cliente:'AIQON',concepto:'Servicios legales',fecha:'2026-02-05',baseImponible:197.69,iva:0.21,totalFra:239.20,mesCobro:4,estado:'Pendiente',fechaCobro:''},
+  {id:'M00007/26',cliente:'AIQON',concepto:'Servicios legales',fecha:'2026-02-10',baseImponible:713.35,iva:0.21,totalFra:863.15,mesCobro:4,estado:'Pendiente',fechaCobro:''},
+  {id:'M00091/26',cliente:'AIQON',concepto:'Servicios legales',fecha:'2026-03-19',baseImponible:1692.28,iva:0.21,totalFra:2047.66,mesCobro:4,estado:'Pendiente',fechaCobro:''},
+  {id:'M00093/26',cliente:'AIQON',concepto:'',fecha:'2026-03-20',baseImponible:110.43,iva:0.21,totalFra:133.63,mesCobro:4,estado:'Pendiente',fechaCobro:''},
+  {id:'M00094/26',cliente:'AIQON',concepto:'',fecha:'2026-03-20',baseImponible:436.36,iva:0.21,totalFra:528.00,mesCobro:4,estado:'Pendiente',fechaCobro:''},
+  {id:'M00214/26',cliente:'AIQON',concepto:'Servicios legales',fecha:'2026-04-22',baseImponible:10876.67,iva:0.21,totalFra:13160.77,mesCobro:5,estado:'Pendiente',fechaCobro:''},
+  {id:'M00220/26',cliente:'AIQON',concepto:'Servicios legales',fecha:'2026-05-21',baseImponible:10338.83,iva:0.21,totalFra:12508.99,mesCobro:6,estado:'Pendiente',fechaCobro:''},
+  {id:'M00738/25',cliente:'BANCO SABADELL',concepto:'Honorarios',fecha:'2025-12-23',baseImponible:40.0,iva:0.21,totalFra:48.40,mesCobro:4,estado:'Pendiente',fechaCobro:''},
+  {id:'M00158/26',cliente:'BANCO SABADELL',concepto:'Honorarios',fecha:'2026-04-22',baseImponible:35050.0,iva:0.21,totalFra:42410.50,mesCobro:4,estado:'Pendiente',fechaCobro:''},
+  {id:'M00161/26',cliente:'BANCO SABADELL',concepto:'Honorarios',fecha:'2026-04-22',baseImponible:1494.0,iva:0.21,totalFra:1807.74,mesCobro:4,estado:'Pendiente',fechaCobro:''},
+  {id:'M00162/26',cliente:'BANCO SABADELL',concepto:'Honorarios',fecha:'2026-04-22',baseImponible:2220.0,iva:0.21,totalFra:2686.20,mesCobro:4,estado:'Pendiente',fechaCobro:''},
+  {id:'M00252/26',cliente:'BANCO SABADELL',concepto:'Honorarios',fecha:'2026-05-22',baseImponible:24875.0,iva:0.21,totalFra:30098.75,mesCobro:6,estado:'Pendiente',fechaCobro:''},
+  {id:'M00254/26',cliente:'BANCO SABADELL',concepto:'Honorarios',fecha:'2026-05-22',baseImponible:3750.0,iva:0.21,totalFra:4537.50,mesCobro:6,estado:'Pendiente',fechaCobro:''},
+  {id:'M00056/25',cliente:'CAIXABANK',concepto:'Honorarios',fecha:'2025-02-01',baseImponible:247.93,iva:0.21,totalFra:300.00,mesCobro:4,estado:'Pendiente',fechaCobro:''},
+  {id:'M00130/26',cliente:'CAIXABANK',concepto:'Honorarios',fecha:'2026-03-22',baseImponible:826.45,iva:0.21,totalFra:1000.00,mesCobro:4,estado:'Pendiente',fechaCobro:''},
+  {id:'M00228/26',cliente:'CAIXABANK',concepto:'Honorarios',fecha:'2026-05-22',baseImponible:486.0,iva:0.21,totalFra:588.00,mesCobro:6,estado:'Pendiente',fechaCobro:''},
+  {id:'M00089/26',cliente:'CAJAMAR',concepto:'Honorarios',fecha:'2026-03-19',baseImponible:2002.5,iva:0.21,totalFra:2423.03,mesCobro:4,estado:'Pendiente',fechaCobro:''},
+  {id:'NM0009/26',cliente:'CAJAMAR',concepto:'Honorarios',fecha:'2026-04-01',baseImponible:2500.0,iva:0.21,totalFra:3025.00,mesCobro:5,estado:'Pendiente',fechaCobro:''},
+  {id:'M00187/26',cliente:'CAJAMAR',concepto:'Honorarios',fecha:'2026-04-22',baseImponible:3946.76,iva:0.21,totalFra:4775.58,mesCobro:5,estado:'Pendiente',fechaCobro:''},
+  {id:'M00659/24',cliente:'CLAIM UP',concepto:'Honorarios',fecha:'2024-10-01',baseImponible:997.5,iva:0.21,totalFra:1206.98,mesCobro:5,estado:'Pendiente',fechaCobro:''},
+  {id:'M00018/25',cliente:'CLAIM UP',concepto:'Honorarios',fecha:'2025-01-01',baseImponible:2646.0,iva:0.21,totalFra:3201.68,mesCobro:5,estado:'Pendiente',fechaCobro:''},
+  {id:'M00148/26',cliente:'CLAIM UP',concepto:'Honorarios',fecha:'2026-04-16',baseImponible:1065.35,iva:0.21,totalFra:1289.07,mesCobro:6,estado:'Pendiente',fechaCobro:''},
+  {id:'M00219/26',cliente:'CLAIM UP',concepto:'Honorarios',fecha:'2026-05-16',baseImponible:1217.55,iva:0.21,totalFra:1473.24,mesCobro:6,estado:'Pendiente',fechaCobro:''},
+  {id:'M00076/26',cliente:'RECLAMIO VUELO',concepto:'Honorarios',fecha:'2026-02-22',baseImponible:2262.97,iva:0.21,totalFra:2737.19,mesCobro:4,estado:'Pendiente',fechaCobro:''},
+  {id:'M00143/26',cliente:'RECLAMIO VUELO',concepto:'Honorarios',fecha:'2026-03-22',baseImponible:2707.29,iva:0.21,totalFra:3276.82,mesCobro:5,estado:'Pendiente',fechaCobro:''},
+  {id:'M00146/26',cliente:'HISPANIA',concepto:'Honorarios',fecha:'2026-04-15',baseImponible:4000.0,iva:0.21,totalFra:4840.00,mesCobro:4,estado:'Pendiente',fechaCobro:''},
+  {id:'M00186/26',cliente:'SAREB',concepto:'Honorarios',fecha:'2026-04-22',baseImponible:8920.26,iva:0.21,totalFra:10792.52,mesCobro:5,estado:'Pendiente',fechaCobro:''},
+  {id:'M00183/26',cliente:'LC ASSET',concepto:'Honorarios',fecha:'2026-04-22',baseImponible:12490.18,iva:0.21,totalFra:15113.12,mesCobro:5,estado:'Pendiente',fechaCobro:''},
+  {id:'M00040/26',cliente:'FISCAL',concepto:'Gestión fiscal',fecha:'2026-02-22',baseImponible:2000.0,iva:0.21,totalFra:2420.00,mesCobro:4,estado:'Pendiente',fechaCobro:''},
+  {id:'O00001/26',cliente:'CONSULTORÍA MIGUEL',concepto:'Consultoría',fecha:'2026-04-23',baseImponible:925.0,iva:0.21,totalFra:1119.25,mesCobro:4,estado:'Pendiente',fechaCobro:''},
+  {id:'O00002/26',cliente:'CONSULTORÍA MIGUEL',concepto:'Consultoría',fecha:'2026-04-23',baseImponible:925.0,iva:0.21,totalFra:1119.25,mesCobro:4,estado:'Pendiente',fechaCobro:''},
+  {id:'M00351/25',cliente:'LEGAL DROP',concepto:'Honorarios',fecha:'2025-07-07',baseImponible:7716.0,iva:0.21,totalFra:9336.36,mesCobro:5,estado:'Pendiente',fechaCobro:''},
+  {id:'M00691/25',cliente:'ALDA INVESTMENTS',concepto:'Honorarios',fecha:'2025-11-03',baseImponible:1239.67,iva:0.21,totalFra:1500.00,mesCobro:4,estado:'Pendiente',fechaCobro:''},
+];
+
+// ── Categorías para mapear extracto bancario ──
+// CATS_EXTRACTO se construye dinámicamente desde gastos+impuestos en TabExtracto
+
+const fmt=(n,dec=0)=>{
+  if(n===null||n===undefined||isNaN(n)||n==='')return'—';
+  const abs=Math.abs(n);
+  const s=abs.toLocaleString('es-ES',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+  return(n<0?'-':'')+'€'+s;
+};
+const cx=(...cs)=>cs.filter(Boolean).join(' ');
+const sign=(n,invert=false)=>{
+  if(Math.abs(n)<0.5)return'desv-zero';
+  const pos=invert?(n<0):(n>0);
+  return pos?'desv-pos':'desv-neg';
+};
+
+// ══════════════════════════════════════════════
+// APP ROOT
+// ══════════════════════════════════════════════
+function App(){
+  const [tab,setTab]=useState('control');
+  const [facturacion,setFacturacion]=useState(()=>JSON.parse(JSON.stringify(FACT_INIT)));
+  const [clientes,setClientes]=useState(()=>JSON.parse(JSON.stringify(CLIENTES_INIT)));
+  const [gastos,setGastos]=useState(()=>JSON.parse(JSON.stringify(GASTOS_INIT)));
+  const [impuestos,setImpuestos]=useState(()=>JSON.parse(JSON.stringify(IMPTOS_INIT)));
+  const [facturas,setFacturas]=useState(()=>JSON.parse(JSON.stringify(FACTURAS_INIT)));
+  const [saldoInicial,setSaldoInicial]=useState(45000);
+  const [movimientosReal,setMovimientosReal]=useState([]); // extracto bancario categorizado
+  // Presupuesto congelado — se toma al guardar el plan inicial
+  const [presupuestoFrozen,setPresupuestoFrozen]=useState(null);
+  const [frozenAt,setFrozenAt]=useState(null);
+  const [mesesCerrados,setMesesCerrados]=useState({}); // {0:true, 1:true, ...} meses con real cerrado
+  const MES_ACTUAL=4; // Mayo
+
+  // ── HELPERS DE CÁLCULO ──
+  const ingPresupMes=m=>clientes.reduce((s,c)=>(facturacion[c.id]?.[m]||0)+s,0);
+  // Ingresos con IVA por cliente (para proyección de caja)
+  const ingConIVAMes=m=>clientes.reduce((s,c)=>{
+    const base=facturacion[c.id]?.[m]||0;
+    const iva=c.iva!=null?c.iva:0.21;
+    return s+base*(1+iva);
+  },0);
+  const cvGastos=['nominas','ss','rosalia','legalpigeon'];
+  const mbMes=m=>ingPresupMes(m)+cvGastos.reduce((s,id)=>{const g=gastos.find(x=>x.id===id);return s+(g?g.importes[m]||0:0);},0);
+  const gastosFijosMes=m=>gastos.reduce((s,g)=>s+(g.importes[m]||0),0);
+  const imptosMes=m=>impuestos.reduce((s,i)=>s+(i.importes[m]||0),0);
+  const resultadoMes=m=>ingPresupMes(m)+gastosFijosMes(m)+imptosMes(m);
+
+  // ── CÁLCULOS DE CAJA ──
+
+  // Cobros reales = facturas marcadas Cobradas con fecha real en ese mes
+  const cobrosRealesMes=m=>facturas
+    .filter(f=>{
+      if(f.estado!=='Cobrada'||!f.fechaCobro)return false;
+      const fecha=new Date(f.fechaCobro);
+      return !isNaN(fecha.getTime())&&fecha.getMonth()===m&&fecha.getFullYear()===2026;
+    }).reduce((s,f)=>s+(f.importe||f.totalFra||0),0);
+
+  // Entradas del extracto bancario (traspasos + deuda — NO cobros de facturas)
+  const entradasExtractoMes=m=>movimientosReal
+    .filter(mv=>mv.mes===m&&mv.importe>0&&
+      (mv.categoria==='Traspaso entre cuentas'||mv.categoria==='Nueva deuda / financiación'))
+    .reduce((s,mv)=>s+mv.importe,0);
+
+  // Pagos reales = gastos del extracto bancario (negativos, no traspasos)
+  const pagosRealesMes=m=>movimientosReal
+    .filter(mv=>mv.mes===m&&mv.importe<0&&
+      mv.categoria!=='Traspaso entre cuentas'&&mv.categoria!=='Sin categorizar')
+    .reduce((s,mv)=>s+mv.importe,0);
+
+  // Facturas pendientes asignadas a un mes (no canceladas ni incobrables, no cobradas)
+  const cobrosFacturasMes=m=>facturas
+    .filter(f=>f.mesCobro===m&&!['Cancelada','Incobrable','Cobrada'].includes(f.estado))
+    .reduce((s,f)=>s+(f.importe||f.totalFra||0),0);
+  const hayFacturasPendientesMes=m=>facturas
+    .some(f=>f.mesCobro===m&&!['Cancelada','Incobrable','Cobrada'].includes(f.estado));
+  // Alias para compatibilidad con otras partes del código
+  const hayFacturasMes=hayFacturasPendientesMes;
+
+  // Previsión de ingresos futuros para meses sin facturas asignadas (con IVA)
+  // Solo clientes que no tienen facturas pendientes asignadas a ese mes
+  const previsionSinFacturasMes=m=>{
+    const clientesConFactura=new Set(
+      facturas
+        .filter(f=>f.mesCobro===m&&!['Cancelada','Incobrable','Cobrada'].includes(f.estado))
+        .map(f=>f.cliente)
+    );
+    return clientes.reduce((s,c)=>{
+      // Si este cliente ya tiene factura pendiente para el mes, no añadir previsión
+      if(clientesConFactura.has(c.nombre)||clientesConFactura.has(c.id))return s;
+      const base=facturacion[c.id]?.[m]||0;
+      const iva=c.iva!=null?c.iva:0.21;
+      return s+base*(1+iva);
+    },0);
+  };
+
+  // Total cobros esperados un mes futuro = facturas pendientes + previsión sin cubrir
+  const cobrosEsperadosMes=m=>cobrosFacturasMes(m)+previsionSinFacturasMes(m);
+
+  // Pagos presupuestados neto de caja: base × (1 + IVA − IRPF) + impuestos
+  const gastoCajaMes=m=>gastos.reduce((s,g)=>{
+    const base=g.importes[m]||0;
+    const iva=g.iva||0;const irpf=g.irpf||0;
+    return s+base*(1+iva-irpf);
+  },0);
+  const pagosPresupCajaMes=m=>gastoCajaMes(m)+imptosMes(m);
+
+  // Cobros para el plan de caja según el momento:
+  // - Mes pasado/cerrado → cobros reales (facturas cobradas)
+  // - Mes futuro → facturas pendientes + previsión sin cubrir
+  const mesCerrado=m=>!!(mesesCerrados[m]);
+  const cobrosPresupCajaMes=m=>mesCerrado(m)?cobrosRealesMes(m):cobrosEsperadosMes(m);
+
+  // Flujo neto del mes
+  const flujoPresupMes=m=>cobrosPresupCajaMes(m)+pagosPresupCajaMes(m);
+
+  // Flujo real puro (solo cuando hay datos del extracto)
+  const flujoRealMes=m=>{
+    const c=cobrosRealesMes(m);const p=pagosRealesMes(m);
+    return(c!==0||p!==0)?c+p:null;
+  };
+
+  // Saldo acumulado plan
+  const saldoPresupAcum=m=>{
+    let s=saldoInicial;
+    for(let i=0;i<=m;i++) s+=flujoPresupMes(i)+entradasExtractoMes(i);
+    return s;
+  };
+  // Saldo acumulado real/mixto (real donde hay, plan donde no)
+  const saldoRealAcum=m=>{
+    let s=saldoInicial;
+    for(let i=0;i<=m;i++){
+      const fr=flujoRealMes(i);
+      s+=(fr!==null?fr:flujoPresupMes(i))+entradasExtractoMes(i);
+    }
+    return s;
+  };
+
+  // ── CONGELAR PRESUPUESTO ──
+  const congelarPresupuesto=()=>{
+    if(presupuestoFrozen&&!confirm('Ya hay un presupuesto congelado. ¿Reemplazarlo?'))return;
+    const snapshot={
+      facturacion:JSON.parse(JSON.stringify(facturacion)),
+      clientes:JSON.parse(JSON.stringify(clientes)),
+      gastos:JSON.parse(JSON.stringify(gastos)),
+      impuestos:JSON.parse(JSON.stringify(impuestos)),
+      saldoInicial,
+    };
+    setPresupuestoFrozen(snapshot);
+    setFrozenAt(new Date().toLocaleDateString('es-ES'));
+    alert('✓ Presupuesto base congelado. A partir de ahora puedes actualizar el plan y ver la desviación vs este punto de partida.');
+  };
+
+  // Cálculos frozen
+  const frozenIngMes=m=>{if(!presupuestoFrozen)return null;return presupuestoFrozen.clientes.reduce((s,c)=>(presupuestoFrozen.facturacion[c.id]?.[m]||0)+s,0);};
+  const frozenGastosMes=m=>{if(!presupuestoFrozen)return null;return presupuestoFrozen.gastos.reduce((s,g)=>s+(g.importes[m]||0),0)+presupuestoFrozen.impuestos.reduce((s,i)=>s+(i.importes[m]||0),0);};
+  const frozenFlujoCajaMes=m=>{if(!presupuestoFrozen)return null;return (frozenIngMes(m)||0)+(frozenGastosMes(m)||0);};
+  const frozenSaldoAcum=m=>{if(!presupuestoFrozen)return null;let s=presupuestoFrozen.saldoInicial;for(let i=0;i<=m;i++)s+=frozenFlujoCajaMes(i);return s;};
+
+  const addCliente=(nombre)=>{
+    if(!nombre||!nombre.trim())return;
+    const id='c_'+Date.now();
+    setClientes(p=>[...p,{id,nombre:nombre.trim(),grupo:'varios',iva:0.21}]);
+    setFacturacion(p=>({...p,[id]:Array(12).fill(0)}));
+  };
+
+  const addGasto=(concepto,grupo,importe,iva=0.21,irpf=0)=>{
+    if(!concepto||!concepto.trim())return;
+    const imp=parseFloat(importe)||0;
+    setGastos(p=>[...p,{id:'g_'+Date.now(),concepto:concepto.trim(),grupo,iva,irpf,importes:Array(12).fill(imp<=0?imp:-imp),dia:1}]);
+  };
+
+  const tabs=[
+    {id:'control',label:'Panel de control',icon:'ti-dashboard'},
+    {id:'facturacion',label:'Previsión facturación',icon:'ti-chart-bar'},
+    {id:'pyg',label:'Cuenta PyG',icon:'ti-report-money'},
+    {id:'caja',label:'Plan de caja',icon:'ti-building-bank'},
+    {id:'facturas',label:'Facturas pendientes',icon:'ti-file-invoice'},
+    {id:'extracto',label:'Extracto real',icon:'ti-credit-card'},
+    {id:'gastos_tab',label:'Gastos fijos',icon:'ti-adjustments'},
+  ];
+
+  const sharedProps={facturacion,setFacturacion,clientes,setClientes,addCliente,gastos,setGastos,addGasto,impuestos,setImpuestos,facturas,setFacturas,saldoInicial,setSaldoInicial,movimientosReal,setMovimientosReal,mesesCerrados,setMesesCerrados,MES_ACTUAL,ingPresupMes,ingConIVAMes,mbMes,gastosFijosMes,gastoCajaMes,imptosMes,resultadoMes,cobrosRealesMes,cobrosFacturasMes,previsionSinFacturasMes,cobrosEsperadosMes,entradasExtractoMes,pagosRealesMes,cobrosPresupCajaMes,pagosPresupCajaMes,flujoPresupMes,flujoRealMes,saldoPresupAcum,saldoRealAcum,presupuestoFrozen,frozenAt,frozenIngMes,frozenGastosMes,frozenFlujoCajaMes,frozenSaldoAcum,hayFacturasMes,hayFacturasPendientesMes,mesCerrado};
+
+  return(
+    <div className="app">
+      <div className="header">
+        <div>
+          <h1><i className="ti ti-building-skyscraper" style={{marginRight:7}}></i>BMG Law Services · Plan de Caja 2026</h1>
+          <p>PyG presupuestada · Proyección de caja · Seguimiento real</p>
+        </div>
+        <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+          {presupuestoFrozen
+            ?<span style={{fontSize:10,color:'#a0c4a0'}}><i className="ti ti-snowflake" style={{marginRight:3}}></i>Foto base: {frozenAt}</span>
+            :<span style={{fontSize:10,color:'#f0c060'}}><i className="ti ti-alert-triangle" style={{marginRight:3}}></i>Sin foto base congelada</span>
+          }
+          <button className="btn btn-sm" style={{background:'rgba(255,255,255,.15)',color:'#fff',borderColor:'rgba(255,255,255,.25)',fontSize:10}} onClick={congelarPresupuesto}>
+            <i className="ti ti-snowflake"></i>{presupuestoFrozen?'Recongelar':'Congelar presupuesto base'}
+          </button>
+        </div>
+      </div>
+
+      <div className="nav">
+        {tabs.map(t=>(
+          <button key={t.id} className={tab===t.id?'active':''} onClick={()=>setTab(t.id)}>
+            <i className={`ti ${t.icon}`}></i>{t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab==='control'    &&<TabControl {...sharedProps}/>}
+      {tab==='facturacion'&&<TabFacturacion {...sharedProps}/>}
+      {tab==='pyg'        &&<TabPyG {...sharedProps}/>}
+      {tab==='caja'       &&<TabCaja {...sharedProps}/>}
+      {tab==='facturas'   &&<TabFacturas {...sharedProps}/>}
+      {tab==='extracto'   &&<TabExtracto {...sharedProps}/>}
+      {tab==='gastos_tab' &&<TabGastos {...sharedProps}/>}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+// PANEL DE CONTROL
+// ══════════════════════════════════════════════
+function TabControl({facturacion,clientes,gastos,impuestos,facturas,movimientosReal,saldoInicial,MES_ACTUAL,ingPresupMes,resultadoMes,cobrosPresupCajaMes,pagosPresupCajaMes,flujoPresupMes,flujoRealMes,saldoPresupAcum,saldoRealAcum,presupuestoFrozen,frozenAt,frozenIngMes,frozenFlujoCajaMes,frozenSaldoAcum}){
+  const chartRef=useRef(null);const chartInst=useRef(null);
+  const chartRef2=useRef(null);const chartInst2=useRef(null);
+
+  const totIngAnual=MESES.reduce((_,__,m)=>_+ingPresupMes(m),0);
+  const totResAnual=MESES.reduce((_,__,m)=>_+resultadoMes(m),0);
+  const saldoFin=saldoPresupAcum(11);
+  const saldoReal=saldoRealAcum(MES_ACTUAL);
+  const saldoFrozenFin=presupuestoFrozen?frozenSaldoAcum(11):null;
+  const totPend=facturas.filter(f=>f.estado==='Pendiente').reduce((s,f)=>s+(f.importe||f.totalFra||0),0);
+
+  // Desviación vs frozen
+  const desvIngAcum=presupuestoFrozen
+    ?MESES.slice(0,MES_ACTUAL+1).reduce((_,__,m)=>_+ingPresupMes(m)-frozenIngMes(m),0):null;
+
+  useEffect(()=>{
+    if(!chartRef.current)return;
+    if(chartInst.current)chartInst.current.destroy();
+    const saldosP=MESES.map((_,m)=>Math.round(saldoPresupAcum(m)));
+    const saldosR=MESES.map((_,m)=>{const fr=flujoRealMes(m);if(fr===null&&m>MES_ACTUAL)return null;return Math.round(saldoRealAcum(m));});
+    const saldosF=presupuestoFrozen?MESES.map((_,m)=>Math.round(frozenSaldoAcum(m))):null;
+    const ctx=chartRef.current.getContext('2d');
+    const datasets=[
+      {label:'Plan actual',data:saldosP,borderColor:'#1a2b4a',backgroundColor:'rgba(26,43,74,.07)',tension:.3,pointRadius:3,borderWidth:2,borderDash:[]},
+      {label:'Real / mixto',data:saldosR,borderColor:'#1a7a45',backgroundColor:'rgba(26,122,69,.07)',tension:.3,pointRadius:4,borderWidth:2.5,spanGaps:false},
+    ];
+    if(saldosF) datasets.push({label:'Foto base',data:saldosF,borderColor:'#b06000',backgroundColor:'transparent',tension:.3,pointRadius:2,borderWidth:1.5,borderDash:[5,3]});
+    chartInst.current=new Chart(ctx,{
+      type:'line',data:{labels:MESES,datasets},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{grid:{display:false},ticks:{font:{size:10}}},
+          y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:10},callback:v=>'€'+Math.round(v/1000)+'k'}}}}
+    });
+  },[facturacion,gastos,impuestos,saldoInicial,movimientosReal,facturas,presupuestoFrozen]);
+
+  useEffect(()=>{
+    if(!chartRef2.current)return;
+    if(chartInst2.current)chartInst2.current.destroy();
+    const ingP=MESES.map((_,m)=>Math.round(ingPresupMes(m)));
+    const ingF=presupuestoFrozen?MESES.map((_,m)=>Math.round(frozenIngMes(m))):null;
+    const ctx=chartRef2.current.getContext('2d');
+    const datasets=[{label:'Plan actual',data:ingP,backgroundColor:'rgba(26,43,74,.65)',borderRadius:3}];
+    if(ingF) datasets.push({label:'Foto base',data:ingF,backgroundColor:'rgba(176,96,0,.45)',borderRadius:3});
+    chartInst2.current=new Chart(ctx,{
+      type:'bar',data:{labels:MESES,datasets},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{grid:{display:false},ticks:{font:{size:10}}},
+          y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:10},callback:v=>'€'+Math.round(v/1000)+'k'}}}}
+    });
+  },[facturacion,presupuestoFrozen]);
+
+  return(
+    <div>
+      {!presupuestoFrozen&&(
+        <div className="alert alert-warn">
+          <i className="ti ti-snowflake"></i>
+          <span>Sin presupuesto base congelado. Usa el botón <strong>"Congelar presupuesto base"</strong> en el header para guardar una foto inicial. A partir de ahí podrás ver las desviaciones respecto al plan original.</span>
+        </div>
+      )}
+
+      <div className="metrics">
+        <div className="metric">
+          <div className="metric-label">Ingresos presup. año</div>
+          <div className="metric-val green">{fmt(totIngAnual)}</div>
+          {presupuestoFrozen&&<div className="metric-sub">Foto base: {fmt(MESES.reduce((_,__,m)=>_+frozenIngMes(m),0))}</div>}
+        </div>
+        <div className="metric">
+          <div className="metric-label">Resultado ejercicio</div>
+          <div className={`metric-val ${totResAnual>=0?'green':'red'}`}>{fmt(totResAnual)}</div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">Saldo fin de año (plan)</div>
+          <div className={`metric-val ${saldoFin>=20000?'green':saldoFin>=0?'orange':'red'}`}>{fmt(saldoFin)}</div>
+          {presupuestoFrozen&&<div className="metric-sub">Foto base: {fmt(saldoFrozenFin)}</div>}
+        </div>
+        <div className="metric">
+          <div className="metric-label">Saldo actual (real/mix)</div>
+          <div className={`metric-val ${saldoReal>=20000?'green':saldoReal>=0?'orange':'red'}`}>{fmt(saldoReal)}</div>
+          <div className="metric-sub">{MESES_FULL[MES_ACTUAL]} 2026</div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">Facturas pdte. cobro</div>
+          <div className="metric-val blue">{fmt(totPend)}</div>
+          <div className="metric-sub">{facturas.filter(f=>f.estado==='Pendiente').length} facturas</div>
+        </div>
+        {presupuestoFrozen&&desvIngAcum!==null&&(
+          <div className="metric">
+            <div className="metric-label">Desv. ingresos acum.</div>
+            <div className={`metric-val ${desvIngAcum>=0?'green':'red'}`}>{desvIngAcum>=0?'+':''}{fmt(desvIngAcum)}</div>
+            <div className="metric-sub">vs foto base</div>
+          </div>
+        )}
+      </div>
+
+      <div className="grid2">
+        <div className="card">
+          <div className="card-header">
+            <h2>Saldo de caja acumulado</h2>
+            <div style={{display:'flex',gap:10,fontSize:10,color:'#666'}}>
+              <span><span style={{display:'inline-block',width:12,height:2,background:'#1a2b4a',verticalAlign:'middle',marginRight:3}}></span>Plan actual</span>
+              <span><span style={{display:'inline-block',width:12,height:2,background:'#1a7a45',verticalAlign:'middle',marginRight:3}}></span>Real/mixto</span>
+              {presupuestoFrozen&&<span><span style={{display:'inline-block',width:12,height:2,background:'#b06000',verticalAlign:'middle',marginRight:3,borderTop:'1px dashed #b06000'}}></span>Foto base</span>}
+            </div>
+          </div>
+          <div className="card-body">
+            <div className="chart-container" style={{height:200}}><canvas ref={chartRef} role="img" aria-label="Saldo de caja acumulado"></canvas></div>
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-header">
+            <h2>Ingresos mensuales</h2>
+            <div style={{display:'flex',gap:10,fontSize:10,color:'#666'}}>
+              <span><span style={{display:'inline-block',width:10,height:10,background:'rgba(26,43,74,.65)',marginRight:3,verticalAlign:'middle'}}></span>Plan actual</span>
+              {presupuestoFrozen&&<span><span style={{display:'inline-block',width:10,height:10,background:'rgba(176,96,0,.45)',marginRight:3,verticalAlign:'middle'}}></span>Foto base</span>}
+            </div>
+          </div>
+          <div className="card-body">
+            <div className="chart-container" style={{height:200}}><canvas ref={chartRef2} role="img" aria-label="Ingresos mensuales plan vs foto base"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h2>Seguimiento mensual — Plan vs Real vs Foto base</h2>
+          {presupuestoFrozen&&<span className="frozen-badge"><i className="ti ti-snowflake" style={{marginRight:3}}></i>Foto base: {frozenAt}</span>}
+        </div>
+        <div style={{overflowX:'auto'}}>
+        <table>
+          <thead>
+            <tr>
+              <th className="sticky-col" rowSpan={2}>Mes</th>
+              <th colSpan={3} style={{textAlign:'center',background:'#e8f0fb',color:'#1a2b4a',borderBottom:'1px solid #c0d0e8'}}>COBROS CAJA</th>
+              <th colSpan={2} style={{textAlign:'center',background:'#fdecea',color:'#b83232',borderBottom:'1px solid #e4c0c0'}}>PAGOS CAJA</th>
+              <th colSpan={3} style={{textAlign:'center',background:'#f0f4f8',color:'#1a2b4a',borderBottom:'1px solid #c0d0e0'}}>FLUJO NETO</th>
+              <th colSpan={3} style={{textAlign:'center',background:'#f4f6f9',color:'#1a2b4a',borderBottom:'1px solid #d8dce8'}}>SALDO ACUM.</th>
+            </tr>
+            <tr>
+              <th className="num month-header-presup">Plan</th>
+              <th className="num month-header-real">Real</th>
+              <th className="num month-header-desv">Desv.</th>
+              <th className="num month-header-presup">Plan</th>
+              <th className="num month-header-real">Real</th>
+              <th className="num month-header-presup">Plan</th>
+              <th className="num month-header-real">Real</th>
+              <th className="num month-header-desv">Desv.</th>
+              <th className="num month-header-presup">Plan</th>
+              <th className="num month-header-real">Real/mix</th>
+              {presupuestoFrozen&&<th className="num" style={{background:'#fff4e0',color:'#b06000',fontSize:9}}>Foto base</th>}
+            </tr>
+          </thead>
+          <tbody>
+          {MESES.map((mes,m)=>{
+            const cP=cobrosPresupCajaMes(m);
+            const cR=flujoRealMes(m)!==null?movimientosReal.filter(mv=>mv.mes===m&&(mv.categoria==='Cobros de clientes'||mv.categoria==='Otros ingresos')).reduce((s,mv)=>s+mv.importe,0)+facturas.filter(f=>f.estado==='Cobrada'&&f.fechaCobro&&new Date(f.fechaCobro).getMonth()===m&&new Date(f.fechaCobro).getFullYear()===2026).reduce((s,f)=>s+(f.importe||f.totalFra||0),0):null;
+            const pP=pagosPresupCajaMes(m);
+            const pR=flujoRealMes(m)!==null?movimientosReal.filter(mv=>mv.mes===m&&mv.importe<0&&mv.categoria!=='Traspasos internos'&&mv.categoria!=='Cobros de clientes').reduce((s,mv)=>s+mv.importe,0):null;
+            const fP=flujoPresupMes(m);
+            const fR=flujoRealMes(m);
+            const fDesv=fR!==null?fR-fP:null;
+            const sP=saldoPresupAcum(m);
+            const sR=saldoRealAcum(m);
+            const sF=presupuestoFrozen?frozenSaldoAcum(m):null;
+            const cDesv=cR!==null?cR-cP:null;
+            const isCurr=m===MES_ACTUAL;const isPast=m<MES_ACTUAL;const hasReal=flujoRealMes(m)!==null;
+            return(
+              <tr key={m} style={isCurr?{outline:'2px solid #1a2b4a',outlineOffset:'-1px'}:{}}>
+                <td className="sticky-col" style={{fontWeight:isCurr?700:400,whiteSpace:'nowrap'}}>
+                  {mes}{isCurr&&<span className="pill pill-blue" style={{marginLeft:5}}>Hoy</span>}
+                </td>
+                <td className="num col-presup">{fmt(cP)}</td>
+                <td className="num col-real">{cR!==null?<span className="green">{fmt(cR)}</span>:'—'}</td>
+                <td className={cx('num col-desv',cDesv!==null?sign(cDesv):'desv-zero')}>{cDesv!==null?(cDesv>=0?'+':'')+fmt(cDesv):'—'}</td>
+                <td className="num col-presup red">{fmt(pP)}</td>
+                <td className="num col-real">{pR!==null?<span className="red">{fmt(pR)}</span>:'—'}</td>
+                <td className={cx('num',fP>=0?'green':'red')}>{fmt(fP)}</td>
+                <td className={cx('num',fR!==null?(fR>=0?'green':'red'):'gray')}>{fR!==null?fmt(fR):'—'}</td>
+                <td className={cx('num',fDesv!==null?sign(fDesv):'desv-zero')}>{fDesv!==null?(fDesv>=0?'+':'')+fmt(fDesv):'—'}</td>
+                <td className={cx('num',sP>=20000?'green':sP>=0?'orange':'red')}>{fmt(sP)}</td>
+                <td className={cx('num',sR>=20000?'green':sR>=0?'orange':'red')}><strong>{fmt(sR)}</strong></td>
+                {presupuestoFrozen&&<td className={cx('num','orange')} style={{fontStyle:'italic'}}>{fmt(sF)}</td>}
+              </tr>
+            );
+          })}
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+// TAB FACTURACIÓN
+// ══════════════════════════════════════════════
+function TabFacturacion({facturacion,setFacturacion,clientes,setClientes,addCliente,ingPresupMes,mesesCerrados,setMesesCerrados}){
+  const [nuevo,setNuevo]=useState('');
+
+  const handleAdd=()=>{
+    if(!nuevo.trim())return;
+    addCliente(nuevo);
+    setNuevo('');
+  };
+  const upd=(cid,m,v)=>setFacturacion(p=>{
+    const n={...p,[cid]:[...(p[cid]||Array(12).fill(0))]};
+    n[cid][m]=parseFloat(v)||0;
+    return n;
+  });
+  const delC=id=>{if(!confirm('¿Eliminar?'))return;setClientes(p=>p.filter(c=>c.id!==id));setFacturacion(p=>{const n={...p};delete n[id];return n;});};
+  const updIVA=(id,iva)=>setClientes(p=>p.map(c=>c.id===id?{...c,iva:parseFloat(iva)}:c));
+  const toggleCerrado=m=>setMesesCerrados(p=>({...p,[m]:!p[m]}));
+
+  const totAnual=MESES.reduce((_,__,m)=>_+ingPresupMes(m),0);
+
+  return(
+    <div>
+      <div className="alert alert-info">
+        <i className="ti ti-info-circle"></i>
+        Previsión de facturación por cliente y mes (base imponible, sin IVA). Haz clic en el encabezado de mes para marcarlo como <strong>cerrado</strong> (real confirmado). El plan de caja aplica IVA por cliente para proyectar los cobros.
+      </div>
+
+      {/* Leyenda meses */}
+      <div style={{display:'flex',gap:16,marginBottom:10,fontSize:11,flexWrap:'wrap',alignItems:'center'}}>
+        <span style={{display:'flex',alignItems:'center',gap:5}}>
+          <span style={{width:14,height:14,background:'#f4f8ff',border:'1px solid #c0d0e8',borderRadius:2,display:'inline-block'}}></span>
+          Previsión
+        </span>
+        <span style={{display:'flex',alignItems:'center',gap:5}}>
+          <span style={{width:14,height:14,background:'#eaf7ee',border:'1px solid #7dc89a',borderRadius:2,display:'inline-block'}}></span>
+          <i className="ti ti-lock" style={{fontSize:11,color:'#1a7a45'}}></i> Mes cerrado (real)
+        </span>
+        <span style={{color:'#888'}}>Haz clic en el nombre del mes para abrirlo/cerrarlo</span>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h2>Previsión facturación 2026</h2>
+          <div className="form-row" style={{margin:0}}>
+            <input
+              value={nuevo}
+              onChange={e=>setNuevo(e.target.value)}
+              onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();handleAdd();}}}
+              placeholder="Nuevo cliente..."
+              style={{width:160}}
+            />
+            <button className="btn btn-primary btn-sm" type="button"
+              onClick={handleAdd}>
+              <i className="ti ti-plus"></i> Añadir
+            </button>
+          </div>
+        </div>
+        <div style={{overflowX:'auto'}}>
+        <table style={{minWidth:1200}}>
+          <thead>
+            <tr>
+              <th className="sticky-col" style={{minWidth:160}}>Cliente</th>
+              <th className="num" style={{minWidth:55}}>IVA</th>
+              {MESES.map((m,i)=>{
+                const cerrado=mesesCerrados[i];
+                return(
+                  <th key={i} className="num"
+                    style={{cursor:'pointer',background:cerrado?'#c8ecd4':'#f4f6f9',
+                      color:cerrado?'#1a7a45':'#555',minWidth:72,userSelect:'none'}}
+                    onClick={()=>toggleCerrado(i)}
+                    title={cerrado?`${m}: cerrado — clic para reabrir`:`${m}: previsión — clic para cerrar`}>
+                    {cerrado?<i className="ti ti-lock" style={{fontSize:9,marginRight:2}}></i>
+                            :<i className="ti ti-pencil" style={{fontSize:9,marginRight:2,opacity:.4}}></i>}
+                    {m}
+                  </th>
+                );
+              })}
+              <th className="num">Total año</th>
+              <th className="num" style={{color:'#1a2b4a'}}>Con IVA</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+          {clientes.map(c=>{
+            const fila=facturacion[c.id]||Array(12).fill(0);
+            const iva=c.iva!=null?c.iva:0.21;
+            const totalBase=fila.reduce((s,v)=>s+v,0);
+            const totalConIVA=totalBase*(1+iva);
+            return(
+              <tr key={c.id}>
+                <td className="sticky-col">
+                  <input
+                    style={{background:'transparent',border:'none',borderBottom:'1px dashed transparent',
+                      fontWeight:500,fontSize:12,width:'100%',minWidth:140,padding:'1px 2px'}}
+                    value={c.nombre}
+                    onChange={e=>setClientes(p=>p.map(x=>x.id===c.id?{...x,nombre:e.target.value}:x))}
+                    onFocus={e=>e.target.style.borderBottomColor='#1a2b4a'}
+                    onBlur={e=>e.target.style.borderBottomColor='transparent'}
+                    title="Clic para editar nombre"
+                  />
+                </td>
+                <td className="num">
+                  <select value={iva}
+                    onChange={e=>updIVA(c.id,e.target.value)}
+                    style={{fontSize:10,padding:'2px 3px',border:'1px solid #ddd',borderRadius:3,
+                      width:52,background:iva===0?'#fff8e6':'#fff',
+                      color:iva===0?'#b06000':'#333',fontWeight:iva===0?700:400}}>
+                    <option value={0.21}>21%</option>
+                    <option value={0.1}>10%</option>
+                    <option value={0}>0%</option>
+                  </select>
+                </td>
+                {fila.map((v,m)=>{
+                  const cerrado=mesesCerrados[m];
+                  return(
+                    <td key={m} className="num"
+                      style={{background:cerrado?'#eaf7ee':'',
+                        borderLeft:cerrado?'1px solid #b8dfc4':''}}>
+                      <input className="inline-edit" type="number" value={v||''} placeholder="—"
+                        onChange={e=>upd(c.id,m,e.target.value)}
+                        style={{color:cerrado?'#1a7a45':'#1a1a1a',
+                          borderBottomColor:cerrado?'#7dc89a':'#ccc'}}/>
+                    </td>
+                  );
+                })}
+                <td className="num green" style={{fontWeight:600}}>{fmt(totalBase)}</td>
+                <td className="num" style={{fontWeight:600,color:'#1a2b4a',fontSize:11}}>
+                  {iva===0
+                    ?<span style={{color:'#b06000',fontSize:10}}>sin IVA</span>
+                    :fmt(totalConIVA)}
+                </td>
+                <td><button className="btn btn-sm btn-danger" onClick={()=>delC(c.id)}><i className="ti ti-trash"></i></button></td>
+              </tr>
+            );
+          })}
+          <tr className="total-row">
+            <td className="sticky-col">TOTAL BASE</td>
+            <td></td>
+            {MESES.map((_,m)=>{
+              const cerrado=mesesCerrados[m];
+              return(
+                <td key={m} className="num"
+                  style={{background:cerrado?'#d4f0dc':'',fontWeight:700}}>
+                  {fmt(ingPresupMes(m))}
+                </td>
+              );
+            })}
+            <td className="num">{fmt(totAnual)}</td>
+            <td className="num" style={{color:'#1a2b4a',fontWeight:700}}>
+              {fmt(clientes.reduce((s,c)=>{
+                const iva=c.iva!=null?c.iva:0.21;
+                return s+(facturacion[c.id]||[]).reduce((a,v)=>a+v,0)*(1+iva);
+              },0))}
+            </td>
+            <td></td>
+          </tr>
+          <tr style={{background:'#f0f7f4'}}>
+            <td className="sticky-col" style={{fontWeight:600,fontSize:11,color:'#1a7a45'}}>
+              <i className="ti ti-building-bank" style={{marginRight:4}}></i>COBROS CAJA (base+IVA)
+            </td>
+            <td></td>
+            {MESES.map((_,m)=>{
+              const cerrado=mesesCerrados[m];
+              const cobro=clientes.reduce((s,c)=>{
+                const base=facturacion[c.id]?.[m]||0;
+                const iva=c.iva!=null?c.iva:0.21;
+                return s+base*(1+iva);
+              },0);
+              return(
+                <td key={m} className="num"
+                  style={{color:'#1a7a45',fontWeight:600,background:cerrado?'#d4f0dc':'#f0f7f4'}}>
+                  {fmt(cobro)}
+                </td>
+              );
+            })}
+            <td className="num" style={{color:'#1a7a45',fontWeight:700}}>
+              {fmt(clientes.reduce((s,c)=>{
+                const iva=c.iva!=null?c.iva:0.21;
+                return s+(facturacion[c.id]||[]).reduce((a,v)=>a+v*(1+iva),0);
+              },0))}
+            </td>
+            <td></td><td></td>
+          </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+// TAB PyG
+// ══════════════════════════════════════════════
+function TabPyG({clientes,facturacion,gastos,impuestos,ingPresupMes,mbMes,gastosFijosMes,imptosMes,resultadoMes,mesesCerrados,presupuestoFrozen,frozenIngMes}){
+  const [vista,setVista]=useState('presupuesto'); // 'presupuesto' | 'comparativa'
+
+  const cv=['nominas','ss','rosalia','legalpigeon'];
+  const cvG=gastos.filter(g=>cv.includes(g.id));
+  const struct=gastos.filter(g=>!cv.includes(g.id));
+
+  // Margen bruto %
+  const mbPct=m=>{const ing=ingPresupMes(m);return ing!==0?Math.round(mbMes(m)/ing*100):0;};
+  // Resultado %
+  const resPct=m=>{const ing=ingPresupMes(m);return ing!==0?Math.round(resultadoMes(m)/ing*100):0;};
+
+  // Totales anuales
+  const totIng=MESES.reduce((_,__,m)=>_+ingPresupMes(m),0);
+  const totMB=MESES.reduce((_,__,m)=>_+mbMes(m),0);
+  const totRes=MESES.reduce((_,__,m)=>_+resultadoMes(m),0);
+  const totIngFrozen=presupuestoFrozen?MESES.reduce((_,__,m)=>_+(frozenIngMes(m)||0),0):null;
+
+  // Fila genérica
+  const Row=({label,vals,bold,sec,indent,green,red,pct,pctVals})=>(
+    <tr className={sec?'section-row':bold?'':''}
+      style={bold&&!sec?{background:'#f0f4f8'}:{}}>
+      <td className="sticky-col" style={{fontWeight:bold?700:400,paddingLeft:indent?22:9,fontSize:sec?10:12}}>
+        {label}
+      </td>
+      {vals.map((v,i)=>{
+        const cerrado=mesesCerrados[i];
+        const cls=v>0&&green?'green':v<0&&red?'red':v<0&&green?'red':v>0&&red?'green':'';
+        return(
+          <td key={i} className={`num ${cls}`}
+            style={{background:cerrado?'#f0f7f4':'',fontSize:11,
+              borderLeft:cerrado&&i===0?'':cerrado?'':''}}>
+            {bold?<strong>{v===0?'—':fmt(v)}</strong>:(v===0?'—':fmt(v))}
+            {pct&&pctVals&&pctVals[i]!==0&&<div style={{fontSize:8,color:'#888',textAlign:'right'}}>{pctVals[i]}%</div>}
+          </td>
+        );
+      })}
+      <td className={`num ${vals.reduce((s,v)=>s+v,0)>0&&green?'green':vals.reduce((s,v)=>s+v,0)<0&&red?'red':''}`}
+        style={{fontWeight:bold?700:500,borderLeft:'1px solid #e0e0e0',fontSize:11}}>
+        {bold?<strong>{fmt(vals.reduce((s,v)=>s+v,0))}</strong>:fmt(vals.reduce((s,v)=>s+v,0))}
+      </td>
+    </tr>
+  );
+
+  return(
+    <div>
+      <div className="metrics">
+        <div className="metric">
+          <div className="metric-label">Ingresos presup. año</div>
+          <div className="metric-val green">{fmt(totIng)}</div>
+          {presupuestoFrozen&&totIngFrozen!==null&&<div className="metric-sub">Foto base: {fmt(totIngFrozen)}</div>}
+        </div>
+        <div className="metric">
+          <div className="metric-label">Margen bruto año</div>
+          <div className={`metric-val ${totMB>=0?'green':'red'}`}>{fmt(totMB)}</div>
+          <div className="metric-sub">{totIng?Math.round(totMB/totIng*100):0}% sobre ventas</div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">Resultado ejercicio</div>
+          <div className={`metric-val ${totRes>=0?'green':'red'}`}>{fmt(totRes)}</div>
+          <div className="metric-sub">{totIng?Math.round(totRes/totIng*100):0}% sobre ventas</div>
+        </div>
+        {presupuestoFrozen&&(
+          <div className="metric">
+            <div className="metric-label">Desv. ingresos vs base</div>
+            <div className={`metric-val ${totIng-totIngFrozen>=0?'green':'red'}`}>
+              {totIng-totIngFrozen>=0?'+':''}{fmt(totIng-totIngFrozen)}
+            </div>
+            <div className="metric-sub">vs foto base {fmt(totIngFrozen)}</div>
+          </div>
+        )}
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h2>Cuenta de explotación · BMG Law Services 2026</h2>
+          <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
+            <button className={`btn btn-sm ${vista==='presupuesto'?'btn-primary':''}`}
+              onClick={()=>setVista('presupuesto')}>Plan</button>
+            {presupuestoFrozen&&(
+              <button className={`btn btn-sm ${vista==='comparativa'?'btn-primary':''}`}
+                onClick={()=>setVista('comparativa')}>Plan vs Foto base</button>
+            )}
+            <span style={{fontSize:10,color:'#888',marginLeft:4}}>
+              <i className="ti ti-info-circle" style={{marginRight:3}}></i>
+              Vista calculada — edita datos en <strong>Previsión facturación</strong> y <strong>Gastos fijos</strong>. Cierra los meses ahí.
+            </span>
+          </div>
+        </div>
+        <div style={{overflowX:'auto'}}>
+
+        {vista==='presupuesto'&&(
+        <table style={{minWidth:1050}}>
+          <thead><tr>
+            <th className="sticky-col" style={{minWidth:220}}>Concepto</th>
+            {MESES.map((m,i)=>{
+              const cerrado=mesesCerrados[i];
+              return(
+                <th key={i} className="num month-col-header"
+                  title={cerrado?`${MESES_FULL[i]}: mes cerrado — edita en "Previsión facturación" o "Gastos fijos"`:`${MESES_FULL[i]}: previsión — cierra el mes en "Previsión facturación" o "Gastos fijos"`}
+                  style={{background:cerrado?'#e0f0e8':'#f4f6f9',
+                    color:cerrado?'#1a7a45':'#555',minWidth:68,cursor:'help'}}>
+                  {cerrado&&<i className="ti ti-lock" style={{fontSize:8,marginRight:1}}></i>}
+                  {cerrado||<i className="ti ti-pencil" style={{fontSize:8,marginRight:1,opacity:.3}}></i>}
+                  {MESES[i]}
+                </th>
+              );
+            })}
+            <th className="num" style={{borderLeft:'1px solid #e0e0e0',minWidth:80}}>Total año</th>
+          </tr></thead>
+          <tbody>
+          <tr className="section-row"><td colSpan={14}>CIFRA DE NEGOCIO</td></tr>
+          {clientes.map(c=><Row key={c.id} label={c.nombre} indent green
+            vals={MESES.map((_,m)=>facturacion[c.id]?.[m]||0)}/>)}
+          <Row label="TOTAL INGRESOS" bold green
+            vals={MESES.map((_,m)=>ingPresupMes(m))}/>
+
+          <tr className="section-row"><td colSpan={14}>COSTES DE VENTAS (personal directo)</td></tr>
+          {cvG.map(g=><Row key={g.id} label={g.concepto} indent red vals={g.importes}/>)}
+          <Row label="MARGEN BRUTO" bold green
+            vals={MESES.map((_,m)=>mbMes(m))}
+            pct pctVals={MESES.map((_,m)=>mbPct(m))}/>
+
+          <tr className="section-row"><td colSpan={14}>ESTRUCTURA Y COLABORADORES</td></tr>
+          {struct.map(g=><Row key={g.id} label={g.concepto} indent red vals={g.importes}/>)}
+          <Row label="TOTAL ESTRUCTURA" bold red
+            vals={MESES.map((_,m)=>struct.reduce((s,g)=>s+(g.importes[m]||0),0))}/>
+
+          <tr className="section-row"><td colSpan={14}>IMPUESTOS Y DOTACIONES</td></tr>
+          {impuestos.map(i=><Row key={i.id} label={i.concepto} indent red vals={i.importes}/>)}
+
+          <tr className="saldo-row">
+            <td className="sticky-col" style={{fontWeight:700}}>RESULTADO DEL EJERCICIO</td>
+            {MESES.map((_,m)=>{
+              const r=resultadoMes(m);const pct=resPct(m);
+              const cerrado=mesesCerrados[m];
+              return(
+                <td key={m} className="num" style={{background:cerrado?'rgba(255,255,255,.1)':''}}>
+                  <strong>{r===0?'—':fmt(r)}</strong>
+                  {pct!==0&&<div style={{fontSize:8,opacity:.7}}>{pct}%</div>}
+                </td>
+              );
+            })}
+            <td className="num" style={{borderLeft:'1px solid rgba(255,255,255,.2)'}}><strong>{fmt(totRes)}</strong></td>
+          </tr>
+          </tbody>
+        </table>
+        )}
+
+        {vista==='comparativa'&&presupuestoFrozen&&(
+        <table style={{minWidth:1050}}>
+          <thead>
+            <tr>
+              <th className="sticky-col" style={{minWidth:220}}>Concepto</th>
+              {MESES.map((_,i)=>(
+                <th key={i} colSpan={2} className="num"
+                  style={{textAlign:'center',background:mesesCerrados[i]?'#e0f0e8':'#f0f4f8',
+                    fontSize:9,color:mesesCerrados[i]?'#1a7a45':'#555',
+                    borderLeft:'1px solid #e0e0e0'}}>
+                  {mesesCerrados[i]&&<i className="ti ti-lock" style={{fontSize:8,marginRight:2}}></i>}
+                  {MESES[i]}
+                </th>
+              ))}
+              <th className="num" style={{borderLeft:'1px solid #ddd',background:'#f0f4f8'}}>Total</th>
+            </tr>
+            <tr>
+              <th className="sticky-col"></th>
+              {MESES.map((_,i)=>[
+                <th key={`p${i}`} className="num" style={{fontSize:9,background:'#e8f0fb',color:'#1a2b4a',borderLeft:'1px solid #ddd'}}>Plan</th>,
+                <th key={`b${i}`} className="num" style={{fontSize:9,background:'#fff4e0',color:'#b06000'}}>Base</th>
+              ])}
+              <th className="num" style={{background:'#f4f6f9',fontSize:9,borderLeft:'1px solid #ddd'}}>Desv.</th>
+            </tr>
+          </thead>
+          <tbody>
+          {[
+            {label:'INGRESOS',planFn:m=>ingPresupMes(m),frozenFn:m=>frozenIngMes(m)||0,bold:true,green:true},
+            {label:'MARGEN BRUTO',planFn:m=>mbMes(m),frozenFn:m=>{
+              const ingF=frozenIngMes(m)||0;
+              const cvF=cvG.reduce((s,g)=>{const fg=presupuestoFrozen.gastos.find(x=>x.id===g.id);return s+(fg?fg.importes[m]||0:0);},0);
+              return ingF+cvF;
+            },bold:true,green:true},
+            {label:'RESULTADO',planFn:m=>resultadoMes(m),frozenFn:m=>{
+              const ingF=frozenIngMes(m)||0;
+              const gastF=presupuestoFrozen.gastos.reduce((s,g)=>s+(g.importes[m]||0),0);
+              const impF=presupuestoFrozen.impuestos.reduce((s,i)=>s+(i.importes[m]||0),0);
+              return ingF+gastF+impF;
+            },bold:true,green:true},
+          ].map(({label,planFn,frozenFn,bold,green})=>{
+            const totPlan=MESES.reduce((_,__,m)=>_+planFn(m),0);
+            const totFrozen=MESES.reduce((_,__,m)=>_+frozenFn(m),0);
+            return(
+              <tr key={label} style={{background:bold?'#f0f4f8':''}}>
+                <td className="sticky-col" style={{fontWeight:bold?700:400}}>{label}</td>
+                {MESES.map((_,m)=>{
+                  const plan=planFn(m);const frozen=frozenFn(m);const desv=plan-frozen;
+                  return[
+                    <td key={`p${m}`} className={`num ${green&&plan>0?'green':plan<0?'red':''}`}
+                      style={{background:'#f4f8ff',fontSize:11,borderLeft:'1px solid #e8e8e8'}}>
+                      {bold?<strong>{fmt(plan)}</strong>:fmt(plan)}
+                    </td>,
+                    <td key={`b${m}`} className="num"
+                      style={{background:'#fffaf0',fontSize:11,color:'#888'}}>
+                      {fmt(frozen)}
+                    </td>
+                  ];
+                })}
+                <td className={`num ${totPlan-totFrozen>=0?'green':'red'}`}
+                  style={{fontWeight:700,borderLeft:'1px solid #ddd',fontSize:11}}>
+                  {totPlan-totFrozen>=0?'+':''}{fmt(totPlan-totFrozen)}
+                </td>
+              </tr>
+            );
+          })}
+          </tbody>
+        </table>
+        )}
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+// TAB PLAN DE CAJA
+// ══════════════════════════════════════════════
+function TabCaja({gastos,impuestos,facturas,saldoInicial,setSaldoInicial,MES_ACTUAL,
+  cobrosRealesMes,cobrosFacturasMes,previsionSinFacturasMes,cobrosEsperadosMes,
+  cobrosPresupCajaMes,entradasExtractoMes,pagosPresupCajaMes,gastoCajaMes,
+  flujoPresupMes,saldoPresupAcum,hayFacturasPendientesMes,mesCerrado,mesesCerrados}){
+
+  const estadoMes=m=>{
+    if(mesCerrado(m)) return {label:'Real',color:'#1a7a45',bg:'#e8f7ee'};
+    if(m===MES_ACTUAL) return {label:'Actual',color:'#1a2b4a',bg:'#e8f0fb'};
+    return {label:'Prev.',color:'#888',bg:''};
+  };
+
+  const totCobros=MESES.reduce((_,__,m)=>_+cobrosPresupCajaMes(m)+entradasExtractoMes(m),0);
+  const totPagos=MESES.reduce((_,__,m)=>_+pagosPresupCajaMes(m),0);
+  const saldoFin=saldoPresupAcum(11);
+
+  return(
+    <div>
+      {/* Métricas clave */}
+      <div className="metrics">
+        <div className="metric">
+          <div className="metric-label">Saldo inicial</div>
+          <div className="metric-val blue">{fmt(saldoInicial)}</div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">Total cobros año</div>
+          <div className="metric-val green">{fmt(totCobros)}</div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">Total pagos año</div>
+          <div className="metric-val red">{fmt(totPagos)}</div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">Saldo fin de año</div>
+          <div className={`metric-val ${saldoFin>=20000?'green':saldoFin>=0?'orange':'red'}`}>{fmt(saldoFin)}</div>
+        </div>
+      </div>
+
+      {/* Leyenda */}
+      <div style={{display:'flex',gap:16,marginBottom:10,fontSize:11,flexWrap:'wrap',alignItems:'center'}}>
+        <span style={{display:'flex',alignItems:'center',gap:5}}>
+          <span style={{padding:'1px 6px',background:'#e8f7ee',color:'#1a7a45',borderRadius:3,fontSize:10,fontWeight:600}}>Real</span>
+          Mes cerrado — cobros = facturas cobradas
+        </span>
+        <span style={{display:'flex',alignItems:'center',gap:5}}>
+          <span style={{padding:'1px 6px',background:'#dde8f8',color:'#1a2b4a',borderRadius:3,fontSize:10,fontWeight:600}}>Prev.</span>
+          Mes futuro — cobros = facturas pendientes + previsión sin cubrir
+        </span>
+        <span style={{color:'#888'}}>Cierra los meses en "Previsión facturación" y "Gastos fijos"</span>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h2>Plan de caja · BMG Law Services 2026</h2>
+          <div style={{display:'flex',gap:6,alignItems:'center'}}>
+            <span style={{fontSize:11,color:'#666'}}>Saldo inicial (€):</span>
+            <input type="number" value={saldoInicial}
+              onChange={e=>setSaldoInicial(parseFloat(e.target.value)||0)}
+              style={{width:100}}/>
+          </div>
+        </div>
+        <div style={{overflowX:'auto'}}>
+        <table style={{minWidth:1050}}>
+          <thead>
+            <tr>
+              <th className="sticky-col" style={{minWidth:230}}>Concepto</th>
+              {MESES.map((_,m)=>{
+                const est=estadoMes(m);
+                return(
+                  <th key={m} className="num"
+                    style={{minWidth:72,background:est.bg||'#f4f6f9',color:est.color,fontSize:9}}>
+                    <div>{MESES[m]}</div>
+                    <div style={{fontWeight:600,marginTop:1}}>{est.label}</div>
+                  </th>
+                );
+              })}
+              <th className="num" style={{borderLeft:'1px solid #ddd',minWidth:80}}>Total año</th>
+            </tr>
+          </thead>
+          <tbody>
+
+          {/* ── COBROS ── */}
+          <tr className="section-row"><td colSpan={14}>COBROS (ENTRADAS)</td></tr>
+
+          {/* Facturas cobradas — solo meses cerrados */}
+          <tr>
+            <td className="sticky-col" style={{paddingLeft:20,fontSize:11}}>
+              Facturas cobradas <span className="tag tag-real">real</span>
+            </td>
+            {MESES.map((_,m)=>{
+              const v=cobrosRealesMes(m);
+              const cerrado=mesCerrado(m);
+              return(
+                <td key={m} className="num"
+                  style={{background:cerrado?'#f0fbf4':'',color:cerrado&&v>0?'#1a7a45':'#ccc',fontSize:11}}>
+                  {cerrado&&v>0?fmt(v):'—'}
+                </td>
+              );
+            })}
+            <td className="num green" style={{borderLeft:'1px solid #ddd'}}>
+              {fmt(MESES.reduce((_,__,m)=>_+(mesCerrado(m)?cobrosRealesMes(m):0),0))}
+            </td>
+          </tr>
+
+          {/* Facturas pendientes asignadas — solo meses futuros con facturas */}
+          <tr>
+            <td className="sticky-col" style={{paddingLeft:20,fontSize:11}}>
+              Facturas pendientes asignadas <span className="tag tag-prev">prev.</span>
+            </td>
+            {MESES.map((_,m)=>{
+              const v=cobrosFacturasMes(m);
+              const futuro=!mesCerrado(m);
+              const hasFact=hayFacturasPendientesMes(m);
+              return(
+                <td key={m} className="num"
+                  style={{color:futuro&&hasFact?'#1a2b4a':'#ccc',fontSize:11}}>
+                  {futuro&&hasFact?fmt(v):'—'}
+                </td>
+              );
+            })}
+            <td className="num" style={{borderLeft:'1px solid #ddd',color:'#1a2b4a'}}>
+              {fmt(MESES.reduce((_,__,m)=>_+(!mesCerrado(m)&&hayFacturasPendientesMes(m)?cobrosFacturasMes(m):0),0))}
+            </td>
+          </tr>
+
+          {/* Previsión para clientes sin factura asignada */}
+          <tr>
+            <td className="sticky-col" style={{paddingLeft:20,fontSize:11}}>
+              Previsión s/factura <span className="tag tag-prev">prev.</span>
+            </td>
+            {MESES.map((_,m)=>{
+              const v=previsionSinFacturasMes(m);
+              const futuro=!mesCerrado(m);
+              return(
+                <td key={m} className="num"
+                  style={{color:futuro&&v>0?'#888':'#ccc',fontSize:11,fontStyle:'italic'}}>
+                  {futuro&&v>0?fmt(v):'—'}
+                </td>
+              );
+            })}
+            <td className="num" style={{borderLeft:'1px solid #ddd',color:'#888',fontStyle:'italic'}}>
+              {fmt(MESES.reduce((_,__,m)=>_+(!mesCerrado(m)?previsionSinFacturasMes(m):0),0))}
+            </td>
+          </tr>
+
+          {/* Traspasos y deuda del extracto */}
+          <tr>
+            <td className="sticky-col" style={{paddingLeft:20,fontSize:11}}>
+              Traspasos / Nueva deuda <span className="tag tag-real">extracto</span>
+            </td>
+            {MESES.map((_,m)=>{
+              const v=entradasExtractoMes(m);
+              return(
+                <td key={m} className="num" style={{color:v>0?'#1a2b4a':'#ccc',fontSize:11}}>
+                  {v>0?fmt(v):'—'}
+                </td>
+              );
+            })}
+            <td className="num" style={{borderLeft:'1px solid #ddd',color:'#1a2b4a'}}>
+              {fmt(MESES.reduce((_,__,m)=>_+entradasExtractoMes(m),0))}
+            </td>
+          </tr>
+
+          <tr className="total-row">
+            <td className="sticky-col">TOTAL COBROS</td>
+            {MESES.map((_,m)=>(
+              <td key={m} className="num green">
+                <strong>{fmt(cobrosPresupCajaMes(m)+entradasExtractoMes(m))}</strong>
+              </td>
+            ))}
+            <td className="num green" style={{borderLeft:'1px solid #ddd'}}>
+              <strong>{fmt(MESES.reduce((_,__,m)=>_+cobrosPresupCajaMes(m)+entradasExtractoMes(m),0))}</strong>
+            </td>
+          </tr>
+
+          {/* ── PAGOS ── */}
+          <tr className="section-row"><td colSpan={14}>PAGOS (SALIDAS) — neto caja: base + IVA − IRPF</td></tr>
+
+          {gastos.map(g=>{
+            const iva=g.iva||0;const irpf=g.irpf||0;
+            const tieneImp=iva!==0||irpf!==0;
+            return(
+              <tr key={g.id}>
+                <td className="sticky-col" style={{paddingLeft:20,fontSize:11}}>
+                  {g.concepto}
+                  {tieneImp&&<span style={{fontSize:9,color:'#888',marginLeft:5}}>
+                    {iva>0?`+${Math.round(iva*100)}%IVA`:''}{irpf>0?` -${Math.round(irpf*100)}%IRPF`:''}
+                  </span>}
+                </td>
+                {g.importes.map((base,m)=>{
+                  const neto=base*(1+iva-irpf);
+                  const cerrado=mesCerrado(m);
+                  return(
+                    <td key={m} className="num red"
+                      style={{background:cerrado?'#fef4f4':'',fontSize:11}}>
+                      {neto===0?'—':fmt(neto)}
+                    </td>
+                  );
+                })}
+                <td className="num red" style={{borderLeft:'1px solid #ddd',fontSize:11}}>
+                  {fmt(g.importes.reduce((s,base)=>s+base*(1+iva-irpf),0))}
+                </td>
+              </tr>
+            );
+          })}
+
+          <tr className="section-row"><td colSpan={14} style={{fontSize:10}}>Impuestos y pagos variables</td></tr>
+          {impuestos.map(i=>(
+            <tr key={i.id}>
+              <td className="sticky-col" style={{paddingLeft:20,fontSize:11}}>{i.concepto}</td>
+              {i.importes.map((v,m)=>(
+                <td key={m} className="num red" style={{fontSize:11}}>{v===0?'—':fmt(v)}</td>
+              ))}
+              <td className="num red" style={{borderLeft:'1px solid #ddd',fontSize:11}}>
+                {fmt(i.importes.reduce((s,v)=>s+v,0))}
+              </td>
+            </tr>
+          ))}
+
+          <tr className="total-row">
+            <td className="sticky-col">TOTAL PAGOS</td>
+            {MESES.map((_,m)=>(
+              <td key={m} className="num red">
+                <strong>{fmt(pagosPresupCajaMes(m))}</strong>
+              </td>
+            ))}
+            <td className="num red" style={{borderLeft:'1px solid #ddd'}}>
+              <strong>{fmt(MESES.reduce((_,__,m)=>_+pagosPresupCajaMes(m),0))}</strong>
+            </td>
+          </tr>
+
+          {/* ── FLUJO Y SALDO ── */}
+          <tr style={{background:'#f0f4f8'}}>
+            <td className="sticky-col" style={{fontWeight:700,fontSize:12}}>FLUJO NETO DEL MES</td>
+            {MESES.map((_,m)=>{
+              const f=cobrosPresupCajaMes(m)+entradasExtractoMes(m)+pagosPresupCajaMes(m);
+              return(
+                <td key={m} className={`num ${f>=0?'green':'red'}`} style={{fontWeight:700}}>
+                  {fmt(f)}
+                </td>
+              );
+            })}
+            <td className="num" style={{borderLeft:'1px solid #ddd',fontWeight:700}}>
+              {fmt(MESES.reduce((_,__,m)=>_+cobrosPresupCajaMes(m)+entradasExtractoMes(m)+pagosPresupCajaMes(m),0))}
+            </td>
+          </tr>
+
+          <tr className="saldo-row">
+            <td className="sticky-col" style={{fontWeight:700}}>SALDO ACUMULADO</td>
+            {MESES.map((_,m)=>{
+              const s=saldoPresupAcum(m);
+              return(
+                <td key={m} className="num">
+                  <strong>{fmt(s)}</strong>
+                  {s<0&&<div style={{fontSize:8,color:'#ffaaaa'}}>⚠ negativo</div>}
+                </td>
+              );
+            })}
+            <td style={{borderLeft:'1px solid rgba(255,255,255,.2)'}}></td>
+          </tr>
+
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+// TAB FACTURAS PENDIENTES
+// ══════════════════════════════════════════════
+function TabFacturas({facturas,setFacturas,MES_ACTUAL}){
+  const blank={id:'',cliente:'',clienteNm:'',exp:'',concepto:'',fecha:'',importe:'',diasRetraso:'',reclamacion:'',ultimaRecl:'',respuestaCliente:'',mesCobro:MES_ACTUAL,estado:'Pendiente',fechaCobro:''};
+  const [form,setForm]=useState(blank);
+  const [editId,setEditId]=useState(null);
+  const [filtroMes,setFiltroMes]=useState('todos');
+  const [filtroEstado,setFiltroEstado]=useState('todos');
+  const [filtroCliente,setFiltroCliente]=useState('todos');
+  const [importLog,setImportLog]=useState(null);
+  const ESTADOS=['Pendiente','No vencida','Cobrada','En disputa','Controlado','PDT Resolución Jud.','Nuevo Vencimiento','Sin Respuesta','Incobrable','Cancelada'];
+
+  // Convierte número serial de Excel a fecha YYYY-MM-DD
+  const excelSerialToDate=serial=>{
+    if(!serial||isNaN(serial))return'';
+    const d=new Date((serial-25569)*86400*1000);
+    return d.toISOString().split('T')[0];
+  };
+
+  // Estima mes de cobro basado en estado y días de retraso
+  const estimarMesCobro=(estado,diasRetraso)=>{
+    const e=(estado||'').toUpperCase();
+    if(e.includes('RESOLUCIÓN')||e.includes('JUDICIAL'))return 11; // fin de año por defecto
+    if(e.includes('CONTROLADO'))return MES_ACTUAL+1<=11?MES_ACTUAL+1:11;
+    if(e.includes('NUEVO VENCIMIENTO'))return MES_ACTUAL+1<=11?MES_ACTUAL+1:11;
+    if(e.includes('SIN RESPUESTA'))return MES_ACTUAL+2<=11?MES_ACTUAL+2:11;
+    const dias=parseInt(diasRetraso)||0;
+    if(dias>500)return 11;
+    if(dias>200)return Math.min(MES_ACTUAL+3,11);
+    if(dias>60)return Math.min(MES_ACTUAL+2,11);
+    return Math.min(MES_ACTUAL+1,11);
+  };
+
+  const guardar=()=>{
+    if(!form.id||!form.cliente||!form.importe){alert('Completa Nº Factura, Cliente e Importe');return;}
+    const f={...form,importe:parseFloat(form.importe)||0,mesCobro:parseInt(form.mesCobro)};
+    if(editId){setFacturas(p=>p.map(x=>x.id===editId?f:x));setEditId(null);}
+    else setFacturas(p=>[...p,f]);
+    setForm(blank);
+  };
+
+  const cambiarEstado=(id,estado,fechaCobro='')=>{
+    setFacturas(p=>p.map(f=>{
+      if(f.id!==id)return f;
+      const fc=(estado==='Cobrada'&&!f.fechaCobro)?fechaCobro||new Date().toISOString().split('T')[0]:f.fechaCobro;
+      return{...f,estado,fechaCobro:fc};
+    }));
+  };
+
+  // ── IMPORTADOR EXCEL BMG (.xlsx) con SheetJS ──
+  // Lee el archivo .xlsx directamente (sin necesidad de exportar a CSV).
+  // Lee AMBAS pestañas en una sola subida:
+  //   "FACTURAS PENDIENTES"        → filas con estado, días retraso, observaciones
+  //   "FACTURAS EMITIDAS NO VENCIDAS" → filas sin estado (se asigna "No vencida")
+  //
+  // REGLA DE FUSIÓN:
+  //   - Cobradas en la app → SIEMPRE se preservan (nunca se tocan)
+  //   - En el Excel + ya cobradas en la app → se ignoran (ya cobradas)
+  //   - En el Excel + ya existían no-cobradas → se ACTUALIZAN
+  //   - En el Excel + nuevas → se AÑADEN
+  //   - No están en el Excel + no cobradas + en disputa/judicial/controlado → se CONSERVAN
+  //   - No están en el Excel + no cobradas + estado normal → se ELIMINAN
+
+  const parsearHojaXLSX=(rows, estadoDefault)=>{
+    if(!rows||rows.length<2)return[];
+    // Primera fila = cabeceras
+    const headers=rows[0].map(h=>String(h||'').trim().toUpperCase());
+    const ci={};
+    const COLMAP={
+      exp:['EXP','EXP.'],cliente:['CLIENTE'],clienteNm:['CLIENTE NM'],
+      factura:['FACTURA'],fecha:['FECHA FACTURA','FECHA FRA'],
+      mesFra:['MES FACTURA'],importe:['IMPORTE FACTURA','IMPORTE'],
+      diasRetraso:['DÍAS RETRASO','DIAS RETRASO'],reclamacion:['RECLAMACIÓN','RECLAMACION'],
+      ultimaRecl:['ÚLTIMA RECL.','ULTIMA RECL'],respuestaCliente:['RESPUESTA CLIENTE'],
+      estado:['ESTADO'],
+    };
+    Object.entries(COLMAP).forEach(([key,aliases])=>{
+      const idx=headers.findIndex(h=>aliases.some(a=>h.includes(a)));
+      if(idx>=0)ci[key]=idx;
+    });
+    if(ci.factura===undefined||ci.importe===undefined)return[];
+
+    const resultado=[];
+    rows.slice(1).forEach(row=>{
+      const g=i=>(i!==undefined&&row[i]!==undefined&&row[i]!==null)?String(row[i]).trim():'';
+      const factura=g(ci.factura);
+      const importe=parseFloat(String(g(ci.importe)).replace(',','.'))||0;
+      if(!factura||!importe)return;
+
+      // Fechas: SheetJS puede dar número serial o string
+      const fechaRaw=ci.fecha!==undefined?row[ci.fecha]:'';
+      let fechaISO='';
+      if(typeof fechaRaw==='number'){
+        fechaISO=excelSerialToDate(fechaRaw);
+      } else if(fechaRaw){
+        const s=String(fechaRaw).trim();
+        if(/^\d{5}$/.test(s)) fechaISO=excelSerialToDate(parseInt(s));
+        else fechaISO=s;
+      }
+
+      const estadoRaw=g(ci.estado)||estadoDefault;
+      const diasRetraso=parseInt(g(ci.diasRetraso))||0;
+
+      let mesCobro;
+      if(estadoDefault==='No vencida'){
+        const d=new Date(fechaISO);
+        const v=new Date(d.getTime()+45*86400000);
+        mesCobro=isNaN(v.getTime())?Math.min(MES_ACTUAL+1,11):Math.min(v.getMonth(),11);
+      } else {
+        mesCobro=estimarMesCobro(estadoRaw,diasRetraso);
+      }
+
+      // Fecha última reclamación
+      const ulRaw=ci.ultimaRecl!==undefined?row[ci.ultimaRecl]:'';
+      const ultimaRecl=typeof ulRaw==='number'?excelSerialToDate(ulRaw):String(ulRaw||'').trim();
+
+      resultado.push({
+        id:factura,
+        exp:g(ci.exp),cliente:g(ci.cliente),clienteNm:g(ci.clienteNm),
+        concepto:'',fecha:fechaISO,importe,diasRetraso,
+        reclamacion:g(ci.reclamacion),ultimaRecl,
+        respuestaCliente:g(ci.respuestaCliente),
+        mesCobro,
+        estado:estadoDefault==='No vencida'?'No vencida':normalizarEstado(estadoRaw),
+        fechaCobro:'',_origen:estadoDefault,
+      });
+    });
+    return resultado;
+  };
+
+  const fusionar=(delExcel,appActual)=>{
+    const cobradas=appActual.filter(f=>f.estado==='Cobrada');
+    const cobradosIds=new Set(cobradas.map(f=>f.id));
+    const idsExcel=new Set(delExcel.map(f=>f.id));
+
+    const aInsertar=delExcel
+      .filter(f=>!cobradosIds.has(f.id))
+      .map(f=>{
+        const exist=appActual.find(x=>x.id===f.id);
+        // Si el usuario había ajustado el mes a mano, lo respetamos
+        if(exist&&exist._mesCobro_manual)return{...f,mesCobro:exist.mesCobro};
+        return f;
+      });
+
+    const conservar=appActual.filter(f=>
+      !idsExcel.has(f.id)&&
+      f.estado!=='Cobrada'&&
+      ['En disputa','PDT Resolución Jud.','Controlado','Incobrable'].includes(f.estado)
+    );
+
+    return[...cobradas,...aInsertar,...conservar];
+  };
+
+  const importarExcelBMG=e=>{
+    const file=e.target.files[0];if(!file)return;
+    if(!window.XLSX){alert('La librería SheetJS no está cargada aún. Espera un segundo y vuelve a intentarlo.');return;}
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{
+        const wb=window.XLSX.read(ev.target.result,{type:'array',cellDates:false});
+
+        // Detectar pestañas por nombre (buscar parcialmente)
+        const nombrePend=wb.SheetNames.find(n=>n.toUpperCase().includes('PENDIENTE'));
+        const nombreNoVenc=wb.SheetNames.find(n=>n.toUpperCase().includes('NO VENCIDA')||n.toUpperCase().includes('EMITIDAS'));
+
+        if(!nombrePend&&!nombreNoVenc){
+          alert(`No se encontraron las pestañas esperadas.\nPestañas en el archivo: ${wb.SheetNames.join(', ')}\n\nSe esperaba: "FACTURAS PENDIENTES" y/o "FACTURAS EMITIDAS NO VENCIDAS"`);
+          return;
+        }
+
+        const toRows=sheet=>window.XLSX.utils.sheet_to_json(sheet,{header:1,defval:''});
+
+        const pendientes=nombrePend?parsearHojaXLSX(toRows(wb.Sheets[nombrePend]),'Pendiente'):[];
+        const noVencidas=nombreNoVenc?parsearHojaXLSX(toRows(wb.Sheets[nombreNoVenc]),'No vencida'):[];
+        const delExcel=[...pendientes,...noVencidas];
+
+        if(delExcel.length===0){
+          alert('No se encontraron filas válidas (con nº factura e importe) en las pestañas.');
+          return;
+        }
+
+        const resultado=fusionar(delExcel,facturas);
+        setFacturas(resultado);
+        setImportLog({
+          pendientes:pendientes.length,noVencidas:noVencidas.length,
+          cobradas:facturas.filter(f=>f.estado==='Cobrada').length,
+          conservadas:resultado.filter(f=>f._origen===undefined||['En disputa','PDT Resolución Jud.','Controlado','Incobrable'].includes(f.estado)).length,
+          fecha:new Date().toLocaleString('es-ES'),
+        });
+      }catch(err){
+        alert('Error al leer el Excel: '+err.message);
+        console.error(err);
+      }
+    };
+    r.readAsArrayBuffer(file);
+    e.target.value='';
+  };
+
+  const normalizarEstado=s=>{
+    const u=s.toUpperCase();
+    if(u.includes('RESOLUCIÓN')||u.includes('JUDICIAL')||u.includes('JUD'))return'PDT Resolución Jud.';
+    if(u.includes('CONTROLADO'))return'Controlado';
+    if(u.includes('NUEVO VENCIMIENTO'))return'Nuevo Vencimiento';
+    if(u.includes('SIN RESPUESTA'))return'Sin Respuesta';
+    if(u.includes('COBRAD'))return'Cobrada';
+    if(u.includes('INCOBRABLE'))return'Incobrable';
+    if(u.includes('DISPUTA'))return'En disputa';
+    return'Pendiente';
+  };
+
+  const clientesUnicos=[...new Set(facturas.map(f=>f.cliente))].sort();
+  const filtradas=facturas.filter(f=>{
+    if(filtroMes!=='todos'&&f.mesCobro!==parseInt(filtroMes))return false;
+    if(filtroEstado!=='todos'&&f.estado!==filtroEstado)return false;
+    if(filtroCliente!=='todos'&&f.cliente!==filtroCliente)return false;
+    return true;
+  });
+
+  const totPend=facturas.filter(f=>!['Cobrada','Cancelada','Incobrable'].includes(f.estado)).reduce((s,f)=>s+f.importe,0);
+  const totCob=facturas.filter(f=>f.estado==='Cobrada').reduce((s,f)=>s+f.importe,0);
+  const totDisp=facturas.filter(f=>['En disputa','PDT Resolución Jud.'].includes(f.estado)).reduce((s,f)=>s+f.importe,0);
+
+  // Resumen por mes de cobro estimado
+  const porMes=MESES.map((_,m)=>facturas.filter(f=>f.mesCobro===m&&!['Cancelada','Incobrable','Cobrada'].includes(f.estado)).reduce((s,f)=>s+f.importe,0));
+
+  const estadoBadgeClass=e=>{
+    if(e==='Cobrada')return'pill-ok';
+    if(e==='Pendiente'||e==='Sin Respuesta')return'pill-warn';
+    if(e==='En disputa'||e==='PDT Resolución Jud.')return'pill-dis';
+    if(e==='Incobrable'||e==='Cancelada')return'pill-err';
+    return'pill-neu';
+  };
+
+  return(
+    <div>
+      <div className="metrics">
+        <div className="metric"><div className="metric-label">Pendiente cobro</div><div className="metric-val orange">{fmt(totPend)}</div><div className="metric-sub">{facturas.filter(f=>!['Cobrada','Cancelada','Incobrable'].includes(f.estado)).length} facturas</div></div>
+        <div className="metric"><div className="metric-label">Cobrado</div><div className="metric-val green">{fmt(totCob)}</div><div className="metric-sub">{facturas.filter(f=>f.estado==='Cobrada').length} facturas</div></div>
+        <div className="metric"><div className="metric-label">En disputa / Jud.</div><div className="metric-val red">{fmt(totDisp)}</div><div className="metric-sub">{facturas.filter(f=>['En disputa','PDT Resolución Jud.'].includes(f.estado)).length} facturas</div></div>
+        <div className="metric"><div className="metric-label">Total fichero</div><div className="metric-val blue">{facturas.length}</div><div className="metric-sub">facturas</div></div>
+      </div>
+
+      {/* Resumen de cobros estimados por mes */}
+      <div className="card">
+        <div className="card-header"><h2>Cobros estimados por mes (facturas pendientes)</h2></div>
+        <div className="card-body" style={{padding:'10px 14px'}}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(12,1fr)',gap:6}}>
+            {MESES.map((m,i)=>(
+              <div key={i} style={{textAlign:'center',padding:'8px 4px',borderRadius:5,background:porMes[i]>0?'#f0f7ee':'#f8f8f8',border:`1px solid ${porMes[i]>0?'#b8d8b0':'#e8e8e8'}`}}>
+                <div style={{fontSize:10,color:'#888',marginBottom:3}}>{m}</div>
+                <div style={{fontSize:11,fontWeight:600,color:porMes[i]>0?'#1a7a45':'#ccc'}}>{porMes[i]>0?fmt(porMes[i]):'—'}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Importador */}
+      <div className="card">
+        <div className="card-header"><h2>Importar / actualizar desde Excel BMG</h2></div>
+        <div className="card-body">
+          <div className="alert alert-info" style={{marginBottom:12}}>
+            <i className="ti ti-info-circle"></i>
+            <span>Sube directamente el <strong>.xlsx</strong> de seguimiento. La app lee las dos pestañas a la vez. Las facturas ya cobradas en la app nunca se eliminan.</span>
+          </div>
+          <div style={{display:'flex',gap:12,alignItems:'flex-start',flexWrap:'wrap'}}>
+            <div>
+              <label className="upload-area" style={{display:'block',width:280,cursor:'pointer'}}>
+                <i className="ti ti-file-spreadsheet" style={{fontSize:28,display:'block',marginBottom:8,color:'#1a7a45'}}></i>
+                <strong>Subir Seguimiento_Factura_*.xlsx</strong><br/>
+                <span style={{fontSize:10,color:'#aaa',marginTop:4,display:'block'}}>
+                  Lee automáticamente:<br/>
+                  ✓ Pestaña "FACTURAS PENDIENTES"<br/>
+                  ✓ Pestaña "FACTURAS EMITIDAS NO VENCIDAS"
+                </span>
+                <input type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={importarExcelBMG}/>
+              </label>
+            </div>
+            <div style={{flex:1,minWidth:180,fontSize:11,color:'#555',lineHeight:1.8}}>
+              <strong>Reglas de fusión al importar:</strong><br/>
+              🔒 Facturas <strong>Cobradas</strong> → nunca se tocan<br/>
+              🔄 Facturas en el Excel → se actualizan o añaden<br/>
+              ⚠️ En disputa / Judicial → se conservan aunque no estén<br/>
+              🗑 Pendientes que ya no aparecen → se eliminan
+            </div>
+          </div>
+          {importLog&&(
+            <div className="alert alert-ok" style={{marginTop:10}}>
+              <i className="ti ti-circle-check"></i>
+              <span>
+                <strong>{importLog.fecha}</strong><br/>
+                ✓ {importLog.pendientes} pendientes + {importLog.noVencidas} no vencidas importadas
+                · 🔒 {importLog.cobradas} cobradas preservadas
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Formulario manual */}
+      <div className="card">
+        <div className="card-header">
+          <h2>{editId?'Editar factura':'Añadir factura manualmente'}</h2>
+          {editId&&<button className="btn btn-sm" onClick={()=>{setEditId(null);setForm(blank);}}>Cancelar edición</button>}
+        </div>
+        <div className="card-body">
+          <div className="form-row">
+            <div className="form-group"><label>Nº Factura</label><input value={form.id} onChange={e=>setForm(p=>({...p,id:e.target.value}))} style={{width:110}} placeholder="M00001/26"/></div>
+            <div className="form-group"><label>Cliente (código)</label><input value={form.cliente} onChange={e=>setForm(p=>({...p,cliente:e.target.value}))} style={{width:130}} placeholder="BANCO SABADELL"/></div>
+            <div className="form-group"><label>Cliente (nombre)</label><input value={form.clienteNm} onChange={e=>setForm(p=>({...p,clienteNm:e.target.value}))} style={{width:150}} placeholder="Nombre del deudor"/></div>
+            <div className="form-group"><label>Fecha factura</label><input type="date" value={form.fecha} onChange={e=>setForm(p=>({...p,fecha:e.target.value}))} style={{width:125}}/></div>
+            <div className="form-group"><label>Importe (€ total)</label><input type="number" value={form.importe} onChange={e=>setForm(p=>({...p,importe:e.target.value}))} style={{width:110}} placeholder="0"/></div>
+            <div className="form-group"><label>Días retraso</label><input type="number" value={form.diasRetraso} onChange={e=>setForm(p=>({...p,diasRetraso:e.target.value}))} style={{width:80}} placeholder="0"/></div>
+            <div className="form-group"><label>Mes cobro estimado</label><select value={form.mesCobro} onChange={e=>setForm(p=>({...p,mesCobro:parseInt(e.target.value)}))} style={{width:120}}>{MESES_FULL.map((m,i)=><option key={i} value={i}>{m}</option>)}</select></div>
+            <div className="form-group"><label>Estado</label><select value={form.estado} onChange={e=>setForm(p=>({...p,estado:e.target.value}))} style={{width:140}}>{ESTADOS.map(e=><option key={e} value={e}>{e}</option>)}</select></div>
+            {form.estado==='Cobrada'&&<div className="form-group"><label>Fecha cobro</label><input type="date" value={form.fechaCobro} onChange={e=>setForm(p=>({...p,fechaCobro:e.target.value}))} style={{width:125}}/></div>}
+            <div className="form-group"><label>&nbsp;</label><button className="btn btn-primary" onClick={guardar}>{editId?'Actualizar':'Añadir'}</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h2>Listado ({filtradas.length}) · {fmt(filtradas.reduce((s,f)=>s+(f.importe||f.totalFra||0),0))}</h2>
+          <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+            <select value={filtroMes} onChange={e=>setFiltroMes(e.target.value)} style={{fontSize:11}}>
+              <option value="todos">Todos los meses</option>
+              {MESES_FULL.map((m,i)=><option key={i} value={i}>{m}</option>)}
+            </select>
+            <select value={filtroEstado} onChange={e=>setFiltroEstado(e.target.value)} style={{fontSize:11}}>
+              <option value="todos">Todos los estados</option>
+              {ESTADOS.map(e=><option key={e} value={e}>{e}</option>)}
+            </select>
+            <select value={filtroCliente} onChange={e=>setFiltroCliente(e.target.value)} style={{fontSize:11}}>
+              <option value="todos">Todos los clientes</option>
+              {clientesUnicos.map(c=><option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+        </div>
+        <div style={{overflowX:'auto'}}>
+        <table>
+          <thead><tr>
+            <th>Nº Factura</th>
+            <th>Cliente</th>
+            <th>Deudor / Nombre</th>
+            <th>Fecha</th>
+            <th className="num">Importe</th>
+            <th className="num">Días</th>
+            <th>Cobro estimado</th>
+            <th>Estado</th>
+            <th style={{maxWidth:200}}>Observaciones</th>
+            <th>Fecha cobro</th>
+            <th></th>
+          </tr></thead>
+          <tbody>
+          {filtradas.map(f=>{
+            const imp=f.importe||f.totalFra||0;
+            const dias=parseInt(f.diasRetraso)||0;
+            return(
+            <tr key={f.id}>
+              <td style={{fontFamily:'monospace',fontSize:11,whiteSpace:'nowrap'}}>{f.id}</td>
+              <td style={{fontWeight:600,fontSize:11,whiteSpace:'nowrap'}}>{f.cliente}</td>
+              <td style={{fontSize:11,color:'#555',maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={f.clienteNm}>{f.clienteNm||f.concepto||'—'}</td>
+              <td style={{fontSize:11,whiteSpace:'nowrap'}}>{f.fecha||'—'}</td>
+              <td className="num" style={{fontWeight:700,color:imp>10000?'#b83232':'#1a1a1a'}}>{fmt(imp)}</td>
+              <td className="num" style={{fontSize:11,color:dias>365?'#b83232':dias>180?'#b06000':'#555'}}>{dias>0?dias:'—'}</td>
+              <td>
+                <select value={f.mesCobro}
+                  style={{fontSize:10,padding:'2px 4px',border:'1px solid #ddd',borderRadius:4,width:90,
+                    background:f._mesCobro_manual?'#fffbe6':'#fff',
+                    borderColor:f._mesCobro_manual?'#e0a000':'#ddd'}}
+                  title={f._mesCobro_manual?'Mes editado manualmente':'Mes estimado automáticamente'}
+                  onChange={ev=>setFacturas(p=>p.map(x=>x.id===f.id?{...x,mesCobro:parseInt(ev.target.value),_mesCobro_manual:true}:x))}>
+                  {MESES_FULL.map((m,i)=><option key={i} value={i}>{m}</option>)}
+                </select>
+              </td>
+              <td>
+                <select value={f.estado} style={{fontSize:10,padding:'2px 4px',border:'1px solid #ddd',borderRadius:4,maxWidth:140}}
+                  onChange={e=>{
+                    const nuevo=e.target.value;
+                    if(nuevo==='Cobrada'&&f.estado!=='Cobrada'){
+                      const fecha=prompt('Fecha de cobro (YYYY-MM-DD):',new Date().toISOString().split('T')[0]);
+                      cambiarEstado(f.id,nuevo,fecha||'');
+                    }else cambiarEstado(f.id,nuevo);
+                  }}>
+                  {ESTADOS.map(e=><option key={e} value={e}>{e}</option>)}
+                </select>
+              </td>
+              <td style={{fontSize:10,color:'#666',maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={f.respuestaCliente}>{f.respuestaCliente||'—'}</td>
+              <td style={{fontSize:11,color:'#1a7a45',whiteSpace:'nowrap'}}>{f.fechaCobro||'—'}</td>
+              <td style={{whiteSpace:'nowrap'}}>
+                <button className="btn btn-sm btn-ghost" onClick={()=>{setForm({...f,importe:f.importe||f.totalFra||0});setEditId(f.id);}} title="Editar"><i className="ti ti-edit"></i></button>
+                <button className="btn btn-sm btn-danger" onClick={()=>{if(confirm('¿Eliminar?'))setFacturas(p=>p.filter(x=>x.id!==f.id));}} title="Eliminar"><i className="ti ti-trash"></i></button>
+              </td>
+            </tr>
+          );})}
+          {filtradas.length===0&&<tr><td colSpan={11} style={{textAlign:'center',padding:24,color:'#aaa'}}>Sin resultados con los filtros actuales</td></tr>}
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ══════════════════════════════════════════════
+// TAB EXTRACTO REAL
+// ══════════════════════════════════════════════
+function TabExtracto({movimientosReal,setMovimientosReal,gastos,impuestos,MES_ACTUAL}){
+  const [filtroMes,setFiltroMes]=useState('todos');
+  const [filtroBanco,setFiltroBanco]=useState('todos');
+  const [bancoSeleccionado,setBancoSeleccionado]=useState('CAIXABANK');
+  const [bancos,setBancos]=useState(['CAIXABANK','SABADELL','CAJAMAR','BSCH','BANKINTER']);
+  const [nuevoBanco,setNuevoBanco]=useState('');
+
+  const catsGasto=gastos.map(g=>g.concepto);
+  const catsImp=impuestos.map(i=>i.concepto);
+  // Ingresos: cobros de facturas NO se categorizan aquí (vienen de pestaña facturas)
+  // Solo traspasos entre cuentas y nueva deuda
+  const CATS_INGRESO=['Traspaso entre cuentas','Nueva deuda / financiación'];
+  const CATS=[...CATS_INGRESO,...catsGasto,...catsImp,'Sin categorizar'];
+
+  const autocat=(concepto,importe)=>{
+    const c=concepto.toLowerCase().replace(/\n/g,' ');
+    // Ingresos: solo traspasos o deuda — nunca "cobro de factura" automático
+    if(importe>0){
+      if(c.includes('traspas')||c.includes('transfer')||c.includes('trasp')) return 'Traspaso entre cuentas';
+      if(c.includes('prestam')||c.includes('crédito')||c.includes('credito')||c.includes('financ')||c.includes('poliza')||c.includes('póliza')) return 'Nueva deuda / financiación';
+      return 'Sin categorizar'; // ingresos positivos sin clasificar → revisar a mano
+    }
+    // Gastos: buscar coincidencia en nombre de partida
+    const match=[...gastos,...impuestos].find(g=>
+      g.concepto.toLowerCase().split(' ').some(w=>w.length>4&&c.includes(w))
+    );
+    if(match) return match.concepto;
+    if(c.includes('nomin')||c.includes('salari')) return gastos.find(g=>g.id==='nominas')?.concepto||catsGasto[0]||'Sin categorizar';
+    if(c.includes('seguridad social')||c.includes('recibo ss')) return gastos.find(g=>g.id==='ss')?.concepto||'Sin categorizar';
+    if(c.includes('alquiler')||c.includes('arrendamiento')) return gastos.find(g=>g.id==='alquiler')?.concepto||'Sin categorizar';
+    if(c.includes('hacienda')||c.includes('aeat')||c.includes('mod.')||c.includes('irpf')||c.includes('iva')) return catsImp[0]||'Sin categorizar';
+    return catsGasto[catsGasto.length-1]||'Sin categorizar';
+  };
+
+  const claveDedup=(fecha,concepto,importe,banco)=>`${fecha}|${String(concepto).replace(/\s+/g,' ').trim()}|${importe}|${banco}`;
+
+  // ── IMPORTADOR EXCEL (.xls/.xlsx) con SheetJS ──
+  // Formato esperado: Fecha | Concepto | Importe | Saldo (Saldo opcional)
+  const importarExcel=e=>{
+    const file=e.target.files[0];if(!file)return;
+    if(!window.XLSX){alert('SheetJS no está cargado aún, espera un momento.');return;}
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{
+        const wb=window.XLSX.read(ev.target.result,{type:'array',cellDates:true});
+        const sheet=wb.Sheets[wb.SheetNames[0]];
+        const rows=window.XLSX.utils.sheet_to_json(sheet,{header:1,defval:''});
+        if(rows.length<2){alert('El archivo está vacío.');return;}
+
+        // Detectar fila de cabecera (buscar "fecha" o "importe")
+        let headerRow=0;
+        for(let i=0;i<Math.min(5,rows.length);i++){
+          const r0=rows[i].map(c=>String(c).toLowerCase());
+          if(r0.some(c=>c.includes('fecha'))||r0.some(c=>c.includes('importe'))){headerRow=i;break;}
+        }
+        const headers=rows[headerRow].map(c=>String(c).toLowerCase().trim());
+        const ci={
+          fecha: headers.findIndex(h=>h.includes('fecha')),
+          concepto: headers.findIndex(h=>h.includes('concepto')||h.includes('descripci')||h.includes('movimiento')),
+          importe: headers.findIndex(h=>h.includes('importe')||h.includes('amount')||h.includes('cargo')),
+        };
+        // Fallback posicional si no hay cabecera reconocible
+        if(ci.fecha<0) ci.fecha=0;
+        if(ci.concepto<0) ci.concepto=1;
+        if(ci.importe<0) ci.importe=2;
+
+        const clavesExistentes=new Set(movimientosReal.map(m=>claveDedup(m.fecha,m.concepto,m.importe,m.banco)));
+        const nuevos=[];
+        let añadidos=0,duplicados=0,saltados=0;
+
+        rows.slice(headerRow+1).forEach((row,idx)=>{
+          if(!row[ci.fecha]&&!row[ci.importe])return; // fila vacía
+
+          // Fecha: puede ser Date (SheetJS con cellDates), número serial, o string
+          let fechaISO='';let fechaStr='';
+          const fRaw=row[ci.fecha];
+          if(fRaw instanceof Date){
+            fechaISO=fRaw.toISOString().split('T')[0];
+            fechaStr=`${String(fRaw.getDate()).padStart(2,'0')}/${String(fRaw.getMonth()+1).padStart(2,'0')}/${fRaw.getFullYear()}`;
+          } else if(typeof fRaw==='number'&&fRaw>40000){
+            // Serial Excel
+            const d=new Date((fRaw-25569)*86400*1000);
+            fechaISO=d.toISOString().split('T')[0];
+            fechaStr=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+          } else {
+            fechaStr=String(fRaw||'').trim();
+            const p=fechaStr.split(/[\/\-\.]/);
+            if(p.length===3){
+              fechaISO=p[0].length===4
+                ?`${p[0]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`
+                :`${p[2].length===2?'20'+p[2]:p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+            }
+          }
+          if(!fechaISO){saltados++;return;}
+
+          // Concepto: limpiar saltos de línea del Excel
+          const concepto=String(row[ci.concepto]||'').replace(/\n|\r/g,' ').replace(/\s+/g,' ').trim();
+          if(!concepto){saltados++;return;}
+
+          // Importe
+          const importeRaw=String(row[ci.importe]||'').replace(',','.').replace(/[^0-9.-]/g,'');
+          const importe=parseFloat(importeRaw);
+          if(isNaN(importe)){saltados++;return;}
+
+          const mes=fechaISO?new Date(fechaISO).getMonth():MES_ACTUAL;
+          const clave=claveDedup(fechaStr,concepto,importe,bancoSeleccionado);
+          if(clavesExistentes.has(clave)){duplicados++;return;}
+          clavesExistentes.add(clave);
+
+          nuevos.push({
+            id:'ext_'+Date.now()+'_'+idx,
+            fecha:fechaStr,fechaISO,concepto,importe,mes,
+            banco:bancoSeleccionado,
+            categoria:autocat(concepto,importe),
+          });
+          añadidos++;
+        });
+
+        setMovimientosReal(prev=>[...prev,...nuevos]);
+        alert(`✓ ${añadidos} movimientos añadidos (${bancoSeleccionado})${duplicados>0?` · ${duplicados} duplicados ignorados`:''}${saltados>0?` · ${saltados} filas sin fecha/importe`:''}`);
+      }catch(err){
+        alert('Error al leer el Excel: '+err.message);
+        console.error(err);
+      }
+    };
+    r.readAsArrayBuffer(file);
+    e.target.value='';
+  };
+
+  const updCat=(id,cat)=>setMovimientosReal(p=>p.map(m=>m.id===id?{...m,categoria:cat}:m));
+  const updBanco=(id,banco)=>setMovimientosReal(p=>p.map(m=>m.id===id?{...m,banco}:m));
+  const del=id=>setMovimientosReal(p=>p.filter(m=>m.id!==id));
+  const addBanco=()=>{const b=nuevoBanco.trim().toUpperCase();if(b&&!bancos.includes(b)){setBancos(p=>[...p,b]);}setNuevoBanco('');};
+
+  const filtrados=movimientosReal
+    .filter(m=>filtroMes==='todos'||m.mes===parseInt(filtroMes))
+    .filter(m=>filtroBanco==='todos'||m.banco===filtroBanco)
+    .sort((a,b)=>(b.fechaISO||'').localeCompare(a.fechaISO||''));
+
+  // Excluir "Sin categorizar" positivos (cobros de facturas pendientes de clasificar)
+  const totSalidas=filtrados.filter(m=>m.importe<0).reduce((s,m)=>s+m.importe,0);
+  const totEntradas=filtrados.filter(m=>m.importe>0&&m.categoria!=='Sin categorizar').reduce((s,m)=>s+m.importe,0);
+  const sinCat=filtrados.filter(m=>m.categoria==='Sin categorizar'&&m.importe>0);
+  const porCat={};
+  filtrados.filter(m=>m.categoria!=='Sin categorizar').forEach(m=>{
+    if(!porCat[m.categoria])porCat[m.categoria]=0;
+    porCat[m.categoria]+=m.importe;
+  });
+
+  return(
+    <div>
+      <div className="alert alert-info">
+        <i className="ti ti-info-circle"></i>
+        <span>Los <strong>cobros de facturas</strong> no se categorizan aquí — el sistema los coge de la pestaña Facturas. Aquí solo registras <strong>gastos, traspasos entre cuentas y nueva deuda</strong>. Los ingresos sin categoría aparecen destacados para que los clasifiques a mano.</span>
+      </div>
+
+      {/* Importador */}
+      <div className="card">
+        <div className="card-header"><h2>Subir extracto bancario (.xls / .xlsx)</h2></div>
+        <div className="card-body">
+          <div className="alert alert-ok" style={{marginBottom:12}}>
+            <i className="ti ti-stack"></i>
+            <span><strong>Acumulativo:</strong> cada subida añade movimientos nuevos sin modificar los anteriores. Duplicados (misma fecha+concepto+importe+banco) se ignoran automáticamente.</span>
+          </div>
+          <div style={{display:'flex',gap:16,flexWrap:'wrap',alignItems:'flex-start'}}>
+            {/* Selector de banco */}
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:'#555',marginBottom:6,textTransform:'uppercase',letterSpacing:'.03em'}}>1. Selecciona el banco</div>
+              <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}}>
+                {bancos.map(b=>(
+                  <button key={b} type="button"
+                    className={`btn btn-sm ${bancoSeleccionado===b?'btn-primary':''}`}
+                    onClick={()=>setBancoSeleccionado(b)}
+                    style={{fontWeight:bancoSeleccionado===b?700:400}}>
+                    {b}
+                  </button>
+                ))}
+              </div>
+              <div style={{display:'flex',gap:6}}>
+                <input value={nuevoBanco} onChange={e=>setNuevoBanco(e.target.value)}
+                  onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();addBanco();setBancoSeleccionado(nuevoBanco.trim().toUpperCase());}}}
+                  placeholder="Nuevo banco..." style={{width:130,fontSize:11}}/>
+                <button className="btn btn-sm" type="button" onClick={()=>{addBanco();if(nuevoBanco.trim())setBancoSeleccionado(nuevoBanco.trim().toUpperCase());}}>
+                  <i className="ti ti-plus"></i> Añadir
+                </button>
+              </div>
+            </div>
+            {/* Upload */}
+            <div style={{flex:1,minWidth:280}}>
+              <div style={{fontSize:11,fontWeight:700,color:'#555',marginBottom:6,textTransform:'uppercase',letterSpacing:'.03em'}}>2. Sube el extracto de <strong style={{color:'#1a2b4a'}}>{bancoSeleccionado}</strong></div>
+              <label className="upload-area" style={{display:'block',cursor:'pointer'}}>
+                <i className="ti ti-file-spreadsheet" style={{fontSize:22,display:'block',marginBottom:4,color:'#1a7a45'}}></i>
+                <strong>Subir extracto .xls / .xlsx</strong>
+                <div style={{fontSize:10,color:'#888',marginTop:4,lineHeight:1.7}}>
+                  Columnas detectadas automáticamente: Fecha · Concepto · Importe<br/>
+                  Formato de fecha: DD/MM/YYYY o YYYY-MM-DD
+                </div>
+                <input type="file" accept=".xls,.xlsx" style={{display:'none'}} onChange={importarExcel}/>
+              </label>
+            </div>
+          </div>
+
+          {movimientosReal.length>0&&(
+            <div style={{marginTop:12,display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+              <span style={{fontSize:11,color:'#666'}}>{movimientosReal.length} movimientos acumulados en total</span>
+              <button className="btn btn-sm btn-danger" onClick={()=>{if(confirm('¿Borrar TODOS los movimientos del extracto?'))setMovimientosReal([]);}}>
+                <i className="ti ti-trash"></i> Borrar todo
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {movimientosReal.length>0&&(<>
+        {/* Alerta ingresos sin categorizar */}
+        {sinCat.length>0&&(
+          <div className="alert alert-warn">
+            <i className="ti ti-alert-triangle"></i>
+            <span><strong>{sinCat.length} ingreso{sinCat.length>1?'s':''} sin categorizar</strong> ({fmt(sinCat.reduce((s,m)=>s+m.importe,0))}). Clasifícalos como "Traspaso entre cuentas" o "Nueva deuda" en la tabla. Si son cobros de facturas, ignóralos — el sistema los gestiona desde la pestaña Facturas.</span>
+          </div>
+        )}
+
+        <div className="metrics">
+          <div className="metric"><div className="metric-label">Entradas clasificadas</div><div className="metric-val green">{fmt(totEntradas)}</div></div>
+          <div className="metric"><div className="metric-label">Salidas (pagos)</div><div className="metric-val red">{fmt(totSalidas)}</div></div>
+          <div className="metric"><div className="metric-label">Sin categorizar</div><div className={`metric-val ${sinCat.length>0?'orange':'gray'}`}>{sinCat.length} mov.</div></div>
+          <div className="metric"><div className="metric-label">Total movimientos</div><div className="metric-val blue">{movimientosReal.length}</div></div>
+        </div>
+
+        {/* Resumen por categoría */}
+        <div className="grid2">
+          <div className="card">
+            <div className="card-header">
+              <h2>Resumen por categoría</h2>
+              <div style={{display:'flex',gap:6}}>
+                <select value={filtroMes} onChange={e=>setFiltroMes(e.target.value)} style={{fontSize:11}}>
+                  <option value="todos">Todos los meses</option>
+                  {MESES_FULL.map((m,i)=><option key={i} value={i}>{m}</option>)}
+                </select>
+                <select value={filtroBanco} onChange={e=>setFiltroBanco(e.target.value)} style={{fontSize:11}}>
+                  <option value="todos">Todos los bancos</option>
+                  {bancos.map(b=><option key={b} value={b}>{b}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{padding:0}}>
+            <table>
+              <thead><tr><th>Categoría</th><th className="num">Total</th><th className="num">Movs.</th></tr></thead>
+              <tbody>
+              {Object.entries(porCat).sort((a,b)=>a[1]-b[1]).map(([cat,tot])=>(
+                <tr key={cat}>
+                  <td style={{fontSize:12}}>{cat}</td>
+                  <td className={`num ${tot>=0?'green':'red'}`} style={{fontWeight:600}}>{fmt(tot)}</td>
+                  <td className="num gray">{filtrados.filter(m=>m.categoria===cat).length}</td>
+                </tr>
+              ))}
+              {sinCat.length>0&&(
+                <tr style={{background:'#fff8e6'}}>
+                  <td style={{fontSize:12,color:'#b06000',fontWeight:600}}>⚠ Sin categorizar (ingresos)</td>
+                  <td className="num warn-num" style={{fontWeight:600}}>{fmt(sinCat.reduce((s,m)=>s+m.importe,0))}</td>
+                  <td className="num">{sinCat.length}</td>
+                </tr>
+              )}
+              </tbody>
+            </table>
+            </div>
+          </div>
+
+          {/* Por banco */}
+          <div className="card">
+            <div className="card-header"><h2>Por banco</h2></div>
+            <div style={{padding:0}}>
+            <table>
+              <thead><tr><th>Banco</th><th className="num">Entradas</th><th className="num">Salidas</th><th className="num">Movs.</th></tr></thead>
+              <tbody>
+              {bancos.filter(b=>movimientosReal.some(m=>m.banco===b)).map(b=>{
+                const movsBanco=movimientosReal.filter(m=>m.banco===b);
+                const ent=movsBanco.filter(m=>m.importe>0&&m.categoria!=='Sin categorizar').reduce((s,m)=>s+m.importe,0);
+                const sal=movsBanco.filter(m=>m.importe<0).reduce((s,m)=>s+m.importe,0);
+                return(
+                  <tr key={b}>
+                    <td style={{fontWeight:600}}>{b}</td>
+                    <td className="num green">{fmt(ent)}</td>
+                    <td className="num red">{fmt(sal)}</td>
+                    <td className="num gray">{movsBanco.length}</td>
+                  </tr>
+                );
+              })}
+              </tbody>
+            </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabla de movimientos */}
+        <div className="card">
+          <div className="card-header">
+            <h2>Movimientos ({filtrados.length})</h2>
+            <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+              <select value={filtroMes} onChange={e=>setFiltroMes(e.target.value)} style={{fontSize:11}}>
+                <option value="todos">Todos los meses</option>
+                {MESES_FULL.map((m,i)=><option key={i} value={i}>{m}</option>)}
+              </select>
+              <select value={filtroBanco} onChange={e=>setFiltroBanco(e.target.value)} style={{fontSize:11}}>
+                <option value="todos">Todos los bancos</option>
+                {bancos.map(b=><option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{overflowX:'auto'}}>
+          <table>
+            <thead><tr>
+              <th style={{minWidth:90}}>Fecha</th>
+              <th style={{minWidth:220}}>Concepto</th>
+              <th style={{minWidth:90}}>Banco</th>
+              <th className="num" style={{minWidth:90}}>Importe</th>
+              <th style={{minWidth:60}}>Mes</th>
+              <th style={{minWidth:190}}>Categoría</th>
+              <th></th>
+            </tr></thead>
+            <tbody>
+            {filtrados.map(mv=>{
+              const sinCatFlag=mv.categoria==='Sin categorizar';
+              return(
+                <tr key={mv.id} style={{background:sinCatFlag&&mv.importe>0?'#fffbe6':''}}>
+                  <td style={{fontSize:11,whiteSpace:'nowrap'}}>{mv.fecha}</td>
+                  <td style={{fontSize:11,maxWidth:280,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}
+                    title={mv.concepto}>{mv.concepto}</td>
+                  <td>
+                    <select value={mv.banco} onChange={e=>updBanco(mv.id,e.target.value)}
+                      style={{fontSize:10,padding:'1px 3px',border:'1px solid #ddd',borderRadius:3,width:85}}>
+                      {bancos.map(b=><option key={b} value={b}>{b}</option>)}
+                    </select>
+                  </td>
+                  <td className={`num ${mv.importe>=0?'green':'red'}`} style={{fontWeight:600}}>{fmt(mv.importe)}</td>
+                  <td style={{fontSize:11}}>{MESES[mv.mes]}</td>
+                  <td>
+                    <select value={CATS.includes(mv.categoria)?mv.categoria:'Sin categorizar'}
+                      onChange={e=>updCat(mv.id,e.target.value)}
+                      style={{fontSize:10,padding:'2px 4px',border:`1px solid ${sinCatFlag&&mv.importe>0?'#e0a000':'#ddd'}`,
+                        borderRadius:4,width:190,
+                        background:sinCatFlag&&mv.importe>0?'#fffbe6':'#fff'}}>
+                      {CATS.map(c=><option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </td>
+                  <td><button className="btn btn-sm btn-danger" onClick={()=>del(mv.id)}><i className="ti ti-x"></i></button></td>
+                </tr>
+              );
+            })}
+            {filtrados.length===0&&<tr><td colSpan={7} style={{textAlign:'center',padding:20,color:'#aaa'}}>Sin movimientos con los filtros seleccionados</td></tr>}
+            </tbody>
+          </table>
+          </div>
+        </div>
+      </>)}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+// TAB GASTOS FIJOS
+// ══════════════════════════════════════════════
+function TabGastos({gastos,setGastos,addGasto,impuestos,setImpuestos,mesesCerrados,setMesesCerrados}){
+  const [nuevo,setNuevo]=useState({concepto:'',grupo:'estructura',importe:'',iva:0.21,irpf:0});
+
+  const handleAdd=()=>{
+    if(!nuevo.concepto.trim())return;
+    addGasto(nuevo.concepto,nuevo.grupo,nuevo.importe,parseFloat(nuevo.iva)||0,parseFloat(nuevo.irpf)||0);
+    setNuevo({concepto:'',grupo:'estructura',importe:'',iva:0.21,irpf:0});
+  };
+
+  const upd=(id,m,v)=>setGastos(p=>p.map(g=>g.id===id?{...g,importes:g.importes.map((x,i)=>i===m?parseFloat(v)||0:x)}:g));
+  const updField=(id,field,v)=>setGastos(p=>p.map(g=>g.id===id?{...g,[field]:parseFloat(v)||0}:g));
+  const updI=(id,m,v)=>setImpuestos(p=>p.map(i=>i.id===id?{...i,importes:i.importes.map((x,j)=>j===m?parseFloat(v)||0:x)}:i));
+  const del=id=>{if(confirm('¿Eliminar partida?'))setGastos(p=>p.filter(g=>g.id!==id));};
+  const toggleCerrado=m=>setMesesCerrados(p=>({...p,[m]:!p[m]}));
+  const grupos=['personal','colaboradores','estructura'];
+
+  // Cálculo caja por gasto: base × (1 + IVA - IRPF)
+  const cajaMesGasto=(g,m)=>{
+    const base=g.importes[m]||0;
+    return base*(1+(g.iva||0)-(g.irpf||0));
+  };
+  const totalBaseAnual=gastos.reduce((s,g)=>s+g.importes.reduce((a,v)=>a+v,0),0);
+  const totalCajaAnual=gastos.reduce((s,g)=>s+MESES.reduce((_,__,m)=>_+cajaMesGasto(g,m),0),0);
+
+  return(
+    <div>
+      <div className="alert alert-info">
+        <i className="ti ti-info-circle"></i>
+        Base contable (PyG) vs caja real: <strong>Caja = Base + Base×IVA − Base×IRPF</strong>. Nóminas y SS tienen IVA/IRPF a 0 (ya son netos). Colaboradores y estructura usan sus tipos propios.
+      </div>
+      <div style={{display:'flex',gap:16,marginBottom:10,fontSize:11,flexWrap:'wrap',alignItems:'center'}}>
+        <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:14,background:'#fff8f8',border:'1px solid #e4c0c0',borderRadius:2,display:'inline-block'}}></span>Previsión</span>
+        <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:14,background:'#fdecea',border:'1px solid #e09090',borderRadius:2,display:'inline-block'}}></span><i className="ti ti-lock" style={{fontSize:11,color:'#b83232'}}></i> Mes cerrado</span>
+        <span style={{color:'#888'}}>Clic en el mes para abrirlo/cerrarlo</span>
+      </div>
+      <div className="card">
+        <div className="card-header">
+          <h2>Gastos fijos y estructura</h2>
+          <div style={{display:'flex',gap:16,fontSize:11}}>
+            <span style={{color:'#b83232',fontWeight:600}}>Base anual: {fmt(totalBaseAnual)}</span>
+            <span style={{color:'#1a2b4a',fontWeight:600}}>Caja anual: {fmt(totalCajaAnual)}</span>
+          </div>
+        </div>
+        <div className="card-body">
+          <div className="form-row">
+            <div className="form-group"><label>Concepto</label>
+              <input value={nuevo.concepto} onChange={e=>setNuevo(p=>({...p,concepto:e.target.value}))}
+                onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();handleAdd();}}}
+                style={{width:200}} placeholder="Nueva partida..."/>
+            </div>
+            <div className="form-group"><label>Grupo</label>
+              <select value={nuevo.grupo} onChange={e=>setNuevo(p=>({...p,grupo:e.target.value}))} style={{width:120}}>
+                {grupos.map(g=><option key={g} value={g}>{g}</option>)}
+              </select>
+            </div>
+            <div className="form-group"><label>Importe/mes</label>
+              <input type="number" value={nuevo.importe} onChange={e=>setNuevo(p=>({...p,importe:e.target.value}))} style={{width:100}} placeholder="Negativo"/>
+            </div>
+            <div className="form-group"><label>IVA %</label>
+              <select value={nuevo.iva} onChange={e=>setNuevo(p=>({...p,iva:parseFloat(e.target.value)}))} style={{width:65}}>
+                <option value={0.21}>21%</option><option value={0.1}>10%</option><option value={0}>0%</option>
+              </select>
+            </div>
+            <div className="form-group"><label>IRPF %</label>
+              <select value={nuevo.irpf} onChange={e=>setNuevo(p=>({...p,irpf:parseFloat(e.target.value)}))} style={{width:65}}>
+                <option value={0}>0%</option><option value={0.15}>15%</option><option value={0.19}>19%</option>
+                <option value={0.07}>7%</option><option value={0.02}>2%</option>
+              </select>
+            </div>
+            <div className="form-group"><label>&nbsp;</label>
+              <button className="btn btn-primary btn-sm" type="button" onClick={handleAdd}><i className="ti ti-plus"></i> Añadir</button>
+            </div>
+          </div>
+        </div>
+        <div style={{overflowX:'auto'}}>
+        <table style={{minWidth:1300}}>
+          <thead><tr>
+            <th className="sticky-col" style={{minWidth:200}}>Concepto</th>
+            <th style={{width:55,fontSize:9,textAlign:'center'}}>IVA</th>
+            <th style={{width:55,fontSize:9,textAlign:'center'}}>IRPF</th>
+            {MESES.map((m,i)=>{const cerrado=mesesCerrados[i];return(
+              <th key={i} className="num" style={{cursor:'pointer',minWidth:68,userSelect:'none',
+                background:cerrado?'#fdecea':'#f4f6f9',color:cerrado?'#b83232':'#555'}}
+                onClick={()=>toggleCerrado(i)} title={cerrado?`${m}: cerrado`:`${m}: previsión`}>
+                {cerrado?<i className="ti ti-lock" style={{fontSize:9,marginRight:1}}></i>
+                        :<i className="ti ti-pencil" style={{fontSize:9,marginRight:1,opacity:.4}}></i>}
+                {m}
+              </th>
+            );})}
+            <th className="num" style={{fontSize:9}}>Base año</th>
+            <th className="num" style={{fontSize:9,color:'#1a2b4a'}}>Caja año</th>
+            <th></th>
+          </tr></thead>
+          <tbody>
+          {grupos.map(gr=>{
+            const filas=gastos.filter(g=>g.grupo===gr);
+            if(!filas.length)return null;
+            return[
+              <tr key={'gr_'+gr} className="section-row"><td colSpan={19}>{gr.toUpperCase()}</td></tr>,
+              ...filas.map(g=>{
+                const baseAnual=g.importes.reduce((s,v)=>s+v,0);
+                const cajaAnual=MESES.reduce((s,_,m)=>s+cajaMesGasto(g,m),0);
+                const tieneImpuesto=(g.iva||0)!==0||(g.irpf||0)!==0;
+                return(
+                  <tr key={g.id}>
+                    <td className="sticky-col">
+                      <input style={{background:'transparent',border:'none',borderBottom:'1px dashed transparent',
+                        fontWeight:500,fontSize:12,width:'100%',minWidth:160,padding:'1px 2px'}}
+                        value={g.concepto}
+                        onChange={e=>setGastos(p=>p.map(x=>x.id===g.id?{...x,concepto:e.target.value}:x))}
+                        onFocus={e=>e.target.style.borderBottomColor='#b83232'}
+                        onBlur={e=>e.target.style.borderBottomColor='transparent'}
+                        title="Clic para editar nombre"/>
+                    </td>
+                    <td style={{textAlign:'center'}}>
+                      <select value={g.iva||0} onChange={e=>updField(g.id,'iva',e.target.value)}
+                        style={{fontSize:10,padding:'1px 2px',border:'1px solid #ddd',borderRadius:3,width:50,
+                          background:(g.iva||0)>0?'#f0f8ff':'#f8f8f8',color:(g.iva||0)>0?'#1a2b4a':'#aaa'}}>
+                        <option value={0}>0%</option><option value={0.1}>10%</option><option value={0.21}>21%</option>
+                      </select>
+                    </td>
+                    <td style={{textAlign:'center'}}>
+                      <select value={g.irpf||0} onChange={e=>updField(g.id,'irpf',e.target.value)}
+                        style={{fontSize:10,padding:'1px 2px',border:'1px solid #ddd',borderRadius:3,width:50,
+                          background:(g.irpf||0)>0?'#fff8e6':'#f8f8f8',color:(g.irpf||0)>0?'#b06000':'#aaa'}}>
+                        <option value={0}>0%</option><option value={0.02}>2%</option><option value={0.07}>7%</option>
+                        <option value={0.15}>15%</option><option value={0.19}>19%</option>
+                      </select>
+                    </td>
+                    {g.importes.map((v,m)=>{const cerrado=mesesCerrados[m];const caja=cajaMesGasto(g,m);return(
+                      <td key={m} className="num" style={{background:cerrado?'#fdecea':'',borderLeft:cerrado?'1px solid #e09090':''}}>
+                        <input className="inline-edit" type="number" value={v||''} placeholder="0"
+                          onChange={e=>upd(g.id,m,e.target.value)}
+                          style={{color:v<0?'#b83232':'#1a7a45',borderBottomColor:cerrado?'#e09090':'#ccc'}}/>
+                        {tieneImpuesto&&v!==0&&<div style={{fontSize:8,color:'#1a2b4a',textAlign:'right',marginTop:1}}>{fmt(caja)}</div>}
+                      </td>
+                    );})}
+                    <td className="num red" style={{fontWeight:600,fontSize:11}}>{fmt(baseAnual)}</td>
+                    <td className="num" style={{fontWeight:700,fontSize:11,
+                      color:Math.abs(cajaAnual)<Math.abs(baseAnual)?'#1a7a45':'#b83232'}}>
+                      {fmt(cajaAnual)}
+                    </td>
+                    <td><button className="btn btn-sm btn-danger" onClick={()=>del(g.id)}><i className="ti ti-trash"></i></button></td>
+                  </tr>
+                );
+              })
+            ];
+          })}
+          <tr className="total-row">
+            <td className="sticky-col">TOTAL BASE</td><td></td><td></td>
+            {MESES.map((_,m)=>{const cerrado=mesesCerrados[m];return(
+              <td key={m} className="num red" style={{background:cerrado?'#f8d8d8':'',fontWeight:700}}>
+                <strong>{fmt(gastos.reduce((s,g)=>s+(g.importes[m]||0),0))}</strong>
+              </td>
+            );})}
+            <td className="num red"><strong>{fmt(totalBaseAnual)}</strong></td>
+            <td></td><td></td>
+          </tr>
+          <tr style={{background:'#f0f4f8'}}>
+            <td className="sticky-col" style={{fontWeight:700,fontSize:11,color:'#1a2b4a'}}>
+              <i className="ti ti-building-bank" style={{marginRight:4}}></i>TOTAL CAJA (base+IVA−IRPF)
+            </td><td></td><td></td>
+            {MESES.map((_,m)=>{
+              const cajaMes=gastos.reduce((s,g)=>s+cajaMesGasto(g,m),0);
+              const cerrado=mesesCerrados[m];
+              return(
+                <td key={m} className="num" style={{fontWeight:700,color:'#1a2b4a',background:cerrado?'#e0e8f4':'#f0f4f8'}}>
+                  {fmt(cajaMes)}
+                </td>
+              );
+            })}
+            <td className="num" style={{fontWeight:700,color:'#1a2b4a'}}>{fmt(totalCajaAnual)}</td>
+            <td></td><td></td>
+          </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header"><h2>Impuestos y pagos variables</h2></div>
+        <div style={{overflowX:'auto'}}>
+        <table style={{minWidth:1200}}>
+          <thead><tr>
+            <th className="sticky-col" style={{minWidth:220}}>Concepto</th><th></th>
+            {MESES.map((m,i)=>{const cerrado=mesesCerrados[i];return(
+              <th key={i} className="num" style={{background:cerrado?'#fdecea':'#f4f6f9',color:cerrado?'#b83232':'#555',minWidth:72}}>
+                {cerrado&&<i className="ti ti-lock" style={{fontSize:9,marginRight:2}}></i>}{m}
+              </th>
+            );})}
+            <th className="num">Total</th>
+          </tr></thead>
+          <tbody>
+          {impuestos.map(imp=>(
+            <tr key={imp.id}>
+              <td className="sticky-col">
+                <input style={{background:'transparent',border:'none',borderBottom:'1px dashed transparent',fontWeight:500,fontSize:12,width:'100%',minWidth:180,padding:'1px 2px'}}
+                  value={imp.concepto}
+                  onChange={e=>setImpuestos(p=>p.map(x=>x.id===imp.id?{...x,concepto:e.target.value}:x))}
+                  onFocus={e=>e.target.style.borderBottomColor='#b83232'}
+                  onBlur={e=>e.target.style.borderBottomColor='transparent'}/>
+              </td><td></td>
+              {imp.importes.map((v,m)=>{const cerrado=mesesCerrados[m];return(
+                <td key={m} className="num" style={{background:cerrado?'#fdecea':''}}>
+                  <input className="inline-edit" type="number" value={v||''} placeholder="0"
+                    onChange={e=>updI(imp.id,m,e.target.value)}
+                    style={{color:v<0?'#b83232':'#1a7a45',borderBottomColor:cerrado?'#e09090':'#ccc'}}/>
+                </td>
+              );})}
+              <td className="num red" style={{fontWeight:600}}>{fmt(imp.importes.reduce((s,v)=>s+v,0))}</td>
+            </tr>
+          ))}
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

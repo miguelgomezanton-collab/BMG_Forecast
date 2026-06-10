@@ -143,6 +143,19 @@ const IMPTOS0=[
   {id:'is',   concepto:'Pago fraccionado IS (mod. 202)',  imp:Array(12).fill(0)},
 ];
 
+// Plan de caja: filas editables manualmente
+// Cada fila: {id, concepto, tipo:'cobro'|'pago', imp:[12 meses]}
+const CAJA0=[
+  {id:'cob_fact',  concepto:'Cobros de facturación',           tipo:'cobro', subtipo:'cobro',       imp:Array(12).fill(0)},
+  {id:'cob_otros', concepto:'Otros cobros',                    tipo:'cobro', subtipo:'cobro',       imp:Array(12).fill(0)},
+  {id:'pag_pers',  concepto:'Nóminas y Seguridad Social',      tipo:'pago',  subtipo:'explotacion', imp:Array(12).fill(0)},
+  {id:'pag_colab', concepto:'Colaboradores',                   tipo:'pago',  subtipo:'explotacion', imp:Array(12).fill(0)},
+  {id:'pag_estr',  concepto:'Gastos de estructura',            tipo:'pago',  subtipo:'explotacion', imp:Array(12).fill(0)},
+  {id:'pag_iva',   concepto:'Liquidación IVA (mod. 303)',      tipo:'pago',  subtipo:'impuestos',   imp:Array(12).fill(0)},
+  {id:'pag_irpf',  concepto:'Retenciones IRPF (mod. 111/115)', tipo:'pago',  subtipo:'impuestos',   imp:Array(12).fill(0)},
+  {id:'pag_is',    concepto:'Pago fraccionado IS (mod. 202)',  tipo:'pago',  subtipo:'impuestos',   imp:Array(12).fill(0)},
+];
+
 const fmt=(n,dec=0)=>{if(n===null||n===undefined||isNaN(n))return'—';const s=Math.abs(n).toLocaleString('es-ES',{minimumFractionDigits:dec,maximumFractionDigits:dec});return(n<0?'-':'')+'€\u202f'+s;};
 const pn=v=>{const s=String(v||0).replace(/[€\s]/g,'').replace(',','.');const n=parseFloat(s);return isNaN(n)?0:n;};
 const load=()=>{try{const r=localStorage.getItem(SK);return r?JSON.parse(r):null;}catch{return null;}};
@@ -241,19 +254,41 @@ function App(){
   const [fact,setFact]        =useState(()=>sv?.fact    ||JSON.parse(JSON.stringify(FACT0)));
   const [gastos,setGastos]    =useState(()=>sv?.gastos  ||JSON.parse(JSON.stringify(GASTOS0)));
   const [imptos,setImptos]    =useState(()=>sv?.imptos  ||JSON.parse(JSON.stringify(IMPTOS0)));
+  const [caja,setCaja]        =useState(()=>sv?.caja||JSON.parse(JSON.stringify(CAJA0)));
   const [saldo0,setSaldo0]    =useState(()=>sv?.saldo0??45000);
   const [locked,setLocked]    =useState(()=>sv?.locked||false);
   const [lockedAt,setLockedAt]=useState(()=>sv?.lockedAt||null);
   const [sub,setSub]          =useState('facturacion');
   const [modal,setModal]      =useState(null); // 'cliente' | {tipo:'gasto',grupo}
 
-  const save=useCallback((p)=>{persist({clientes,fact,gastos,imptos,saldo0,locked,lockedAt,...p});},[clientes,fact,gastos,imptos,saldo0,locked,lockedAt]);
+  const save=useCallback((p)=>{persist({clientes,fact,gastos,imptos,caja,saldo0,locked,lockedAt,...p});},[clientes,fact,gastos,imptos,caja,saldo0,locked,lockedAt]);
 
   // Edición celdas
   const setF=(cid,m,v)=>{if(locked)return;const arr=(fact[cid]||Array(12).fill(0)).slice();arr[m]=pn(v);const n={...fact,[cid]:arr};setFact(n);save({fact:n});};
   const setG=(gid,m,v)=>{if(locked)return;let val=pn(v);if(val>0)val=-val;const n=gastos.map(g=>g.id!==gid?g:{...g,imp:g.imp.map((x,i)=>i===m?val:x)});setGastos(n);save({gastos:n});};
   const setI=(iid,m,v)=>{if(locked)return;let val=pn(v);if(val>0)val=-val;const n=imptos.map(i=>i.id!==iid?i:{...i,imp:i.imp.map((x,j)=>j===m?val:x)});setImptos(n);save({imptos:n});};
   const setS=v=>{if(locked)return;const n=pn(v);setSaldo0(n);save({saldo0:n});};
+  const setCajaRow=(rid,m,v)=>{
+    if(locked)return;
+    const val=pn(v);
+    const n=caja.map(r=>r.id!==rid?r:{...r,imp:r.imp.map((x,i)=>i===m?val:x)});
+    setCaja(n);save({caja:n});
+  };
+  const addCajaRow=(tipo,subtipo)=>{
+    if(locked)return;
+    const id='cj'+Date.now().toString(36);
+    const label=subtipo==='impuestos'?'Nombre del impuesto / retención:':tipo==='cobro'?'Nombre del cobro:':'Nombre del pago:';
+    const concepto=prompt(label);
+    if(!concepto||!concepto.trim())return;
+    const n=[...caja,{id,concepto:concepto.trim(),tipo,subtipo:subtipo||tipo,imp:Array(12).fill(0)}];
+    setCaja(n);save({caja:n});
+  };
+  const delCajaRow=(rid)=>{
+    if(locked)return;
+    if(!confirm('¿Eliminar esta fila?'))return;
+    const n=caja.filter(r=>r.id!==rid);
+    setCaja(n);save({caja:n});
+  };
 
   // Añadir/eliminar clientes
   const addCliente=c=>{
@@ -304,7 +339,7 @@ function App(){
   const TR=MESES.reduce((_,__,m)=>_+resM(m),0);
   const SF=saldoM(11);
 
-  const props={clientes,fact,gastos,imptos,locked,ingM,ingIVAM,cvM,mbM,ebitM,imptM,resM,pagoCM,flujoM,saldoM,gfijM,setF,setG,setI,setS,saldo0,addCliente,delCliente,addGasto,delGasto,setModal,CV};
+  const props={clientes,setClientes,fact,gastos,setGastos,imptos,caja,locked,ingM,ingIVAM,cvM,mbM,ebitM,imptM,resM,pagoCM,flujoM,saldoM,gfijM,setF,setG,setI,setS,saldo0,addCliente,delCliente,addGasto,delGasto,setModal,save,CV,setCajaRow,addCajaRow,delCajaRow};
 
   return(
     <div className="app">
@@ -360,12 +395,23 @@ function App(){
 }
 
 // ── FACTURACIÓN ──────────────────────────────────────────────────
-function TabFact({clientes,fact,locked,ingM,ingIVAM,setF,delCliente,setModal}){
-  const grupos=[...new Set(clientes.map(c=>c.grupo))];
+function TabFact({clientes,setClientes,fact,locked,ingM,ingIVAM,setF,delCliente,setModal,save}){
   const TI=MESES.reduce((_,__,m)=>_+ingM(m),0);
+
+  // IVA editable inline — actualiza el cliente en el array de estado
+  const setIVA=(cid,val)=>{
+    if(locked)return;
+    const iva=Math.min(100,Math.max(0,parseFloat(val)||0))/100;
+    const n=clientes.map(c=>c.id===cid?{...c,iva}:c);
+    setClientes(n);save({clientes:n});
+  };
+
   return(
     <div>
-      <div className="alert alert-info"><i className="ti ti-info-circle"></i><span>Importes en <strong>base imponible (sin IVA)</strong>. El IVA se aplica automáticamente en tesorería.</span></div>
+      <div className="alert alert-info">
+        <i className="ti ti-info-circle"></i>
+        <span>Importes en <strong>base imponible (sin IVA)</strong>. El % de IVA es editable por cliente y se aplica automáticamente en tesorería.</span>
+      </div>
       <div className="card">
         <div className="card-header">
           <h2>Facturación por cliente · 2026</h2>
@@ -374,46 +420,61 @@ function TabFact({clientes,fact,locked,ingM,ingIVAM,setF,delCliente,setModal}){
         <div className="overflow-x">
         <table style={{minWidth:1120}}>
           <thead><tr>
-            <th className="sticky" style={{minWidth:190}}>Cliente</th>
-            <th style={{minWidth:70}}>Grupo</th>
-            <th style={{minWidth:46,textAlign:'center',fontSize:9}}>IVA</th>
+            <th className="sticky" style={{minWidth:200}}>Cliente</th>
+            <th style={{minWidth:72,textAlign:'center'}}>IVA %</th>
             {MESES.map(m=><th key={m} className="mh" style={{minWidth:68}}>{m}</th>)}
             <th className="mh mh-total" style={{minWidth:82}}>Total año</th>
             {!locked&&<th style={{width:32}}></th>}
           </tr></thead>
           <tbody>
-          {grupos.map(gr=>{
-            const gc=clientes.filter(c=>c.grupo===gr);
-            const tgM=m=>gc.reduce((s,c)=>(fact[c.id]?.[m]||0)+s,0);
-            const tgA=MESES.reduce((_,__,m)=>_+tgM(m),0);
-            return[
-              <tr key={`g${gr}`} className="section-row">
-                <td className="sticky" colSpan={3}>{gr}</td>
-                {MESES.map((_,m)=><td key={m} className="num">{fmt(tgM(m))}</td>)}
-                <td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(tgA)}</td>
-                {!locked&&<td></td>}
-              </tr>,
-              ...gc.map(c=>{
-                const tcA=MESES.reduce((_,__,m)=>_+(fact[c.id]?.[m]||0),0);
-                return(<tr key={c.id}>
-                  <td className="sticky" style={{paddingLeft:16}}>{c.nombre}</td>
-                  <td style={{fontSize:10,color:'#888'}}>{c.grupo}</td>
-                  <td style={{textAlign:'center'}}><span className={c.iva>0?'tag tag-iva':'tag tag-exento'}>{c.iva>0?`${c.iva*100}%`:'Exento'}</span></td>
-                  {MESES.map((_,m)=>(<td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}><input type="number" className="cell-edit" value={fact[c.id]?.[m]||0} disabled={locked} onChange={e=>setF(c.id,m,e.target.value)} min={0}/></td>))}
-                  <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#f4f8ff'}}>{fmt(tcA)}</td>
-                  {!locked&&<td style={{padding:'2px 4px'}}><button className="btn btn-sm btn-danger" title="Eliminar" onClick={()=>delCliente(c.id)}><i className="ti ti-trash"></i></button></td>}
-                </tr>);
-              })
-            ];
+          {clientes.map(c=>{
+            const tcA=MESES.reduce((_,__,m)=>_+(fact[c.id]?.[m]||0),0);
+            return(
+              <tr key={c.id}>
+                <td className="sticky" style={{fontWeight:500}}>{c.nombre}</td>
+                <td style={{textAlign:'center',padding:'3px 6px'}}>
+                  {locked
+                    ? <span className={c.iva>0?'tag tag-iva':'tag tag-exento'}>{c.iva>0?`${+(c.iva*100).toFixed(1)}%`:'Exento'}</span>
+                    : <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:2}}>
+                        <input
+                          type="number"
+                          value={+(c.iva*100).toFixed(1)}
+                          onChange={e=>setIVA(c.id,e.target.value)}
+                          min={0} max={100} step={0.1}
+                          style={{width:46,textAlign:'center',border:'1px solid #dde0e6',borderRadius:4,padding:'2px 4px',fontSize:11,fontFamily:'monospace',background:'#f8f9ff'}}
+                        />
+                        <span style={{fontSize:10,color:'#888'}}>%</span>
+                      </div>
+                  }
+                </td>
+                {MESES.map((_,m)=>(
+                  <td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}>
+                    <input type="number" className="cell-edit" value={fact[c.id]?.[m]||0} disabled={locked} onChange={e=>setF(c.id,m,e.target.value)} min={0}/>
+                  </td>
+                ))}
+                <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#f4f8ff'}}>{fmt(tcA)}</td>
+                {!locked&&<td style={{padding:'2px 4px'}}><button className="btn btn-sm btn-danger" title="Eliminar" onClick={()=>delCliente(c.id)}><i className="ti ti-trash"></i></button></td>}
+              </tr>
+            );
           })}
+          {/* Fila añadir nueva línea */}
+          {!locked&&(
+            <tr>
+              <td colSpan={MESES.length+3} style={{padding:'6px 8px'}}>
+                <button className="btn-add" onClick={()=>setModal('cliente')}>
+                  <i className="ti ti-plus"></i>Añadir cliente / línea de facturación
+                </button>
+              </td>
+            </tr>
+          )}
           <tr className="total-row">
-            <td className="sticky" colSpan={3}>TOTAL FACTURACIÓN</td>
+            <td className="sticky" colSpan={2}>TOTAL FACTURACIÓN</td>
             {MESES.map((_,m)=><td key={m} className="num">{fmt(ingM(m))}</td>)}
             <td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(TI)}</td>
             {!locked&&<td></td>}
           </tr>
           <tr style={{background:'#f0fbf6'}}>
-            <td className="sticky" colSpan={3} style={{color:'#1a7a45',fontWeight:600,paddingLeft:8,fontSize:11}}>↳ Cobros caja (+ IVA)</td>
+            <td className="sticky" colSpan={2} style={{color:'#1a7a45',fontWeight:600,paddingLeft:8,fontSize:11}}>↳ Cobros caja (+ IVA)</td>
             {MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a7a45',fontWeight:600}}>{fmt(ingIVAM(m))}</td>)}
             <td className="num" style={{borderLeft:'2px solid #1a2b4a',color:'#1a7a45',fontWeight:700}}>{fmt(MESES.reduce((_,__,m)=>_+ingIVAM(m),0))}</td>
             {!locked&&<td></td>}
@@ -427,21 +488,52 @@ function TabFact({clientes,fact,locked,ingM,ingIVAM,setF,delCliente,setModal}){
 }
 
 // ── GASTOS ───────────────────────────────────────────────────────
-function TabGastos({gastos,imptos,locked,gfijM,imptM,setG,setI,delGasto,setModal}){
+function TabGastos({gastos,setGastos,locked,gfijM,setG,delGasto,setModal,save}){
   const grupos=GRUPOS_GASTO;
   const TG=MESES.reduce((_,__,m)=>_+gfijM(m),0);
-  const TI2=MESES.reduce((_,__,m)=>_+imptM(m),0);
+
+  // IVA e IRPF editables inline
+  const setGastoMeta=(gid,field,rawVal)=>{
+    if(locked)return;
+    const val=Math.min(100,Math.max(0,parseFloat(rawVal)||0))/100;
+    const n=gastos.map(g=>g.id!==gid?g:{...g,[field]:val});
+    setGastos(n);save({gastos:n});
+  };
 
   const GRow=({g})=>{
     const tot=MESES.reduce((_,__,m)=>_+(g.imp[m]||0),0);
     return(
       <tr>
-        <td className="sticky" style={{paddingLeft:16}}>
-          {g.concepto}
-          {g.iva>0&&<span className="tag tag-iva">+{g.iva*100}%IVA</span>}
-          {g.irpf>0&&<span className="tag" style={{background:'#fff4e0',color:'#7a4000'}}>-{g.irpf*100}%IRPF</span>}
+        <td className="sticky" style={{fontWeight:500,minWidth:180}}>{g.concepto}</td>
+        {/* IVA editable */}
+        <td style={{textAlign:'center',padding:'3px 5px',minWidth:62}}>
+          {locked
+            ? <span className="tag tag-iva">{g.iva>0?`${+(g.iva*100).toFixed(0)}%`:'—'}</span>
+            : <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:2}}>
+                <input type="number" value={+(g.iva*100).toFixed(1)} onChange={e=>setGastoMeta(g.id,'iva',e.target.value)}
+                  min={0} max={100} step={1}
+                  style={{width:40,textAlign:'center',border:'1px solid #dde0e6',borderRadius:4,padding:'2px 3px',fontSize:11,fontFamily:'monospace',background:'#f8f9ff'}}/>
+                <span style={{fontSize:10,color:'#888'}}>%</span>
+              </div>
+          }
         </td>
-        {MESES.map((_,m)=>(<td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}><input type="number" className="cell-edit" value={Math.abs(g.imp[m]||0)} disabled={locked} onChange={e=>setG(g.id,m,e.target.value)} min={0}/></td>))}
+        {/* IRPF editable */}
+        <td style={{textAlign:'center',padding:'3px 5px',minWidth:62}}>
+          {locked
+            ? <span className="tag" style={{background:'#fff4e0',color:'#7a4000'}}>{g.irpf>0?`${+(g.irpf*100).toFixed(0)}%`:'—'}</span>
+            : <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:2}}>
+                <input type="number" value={+(g.irpf*100).toFixed(1)} onChange={e=>setGastoMeta(g.id,'irpf',e.target.value)}
+                  min={0} max={100} step={1}
+                  style={{width:40,textAlign:'center',border:'1px solid #dde0e6',borderRadius:4,padding:'2px 3px',fontSize:11,fontFamily:'monospace',background:'#fff9f0'}}/>
+                <span style={{fontSize:10,color:'#888'}}>%</span>
+              </div>
+          }
+        </td>
+        {MESES.map((_,m)=>(
+          <td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}>
+            <input type="number" className="cell-edit" value={Math.abs(g.imp[m]||0)} disabled={locked} onChange={e=>setG(g.id,m,e.target.value)} min={0}/>
+          </td>
+        ))}
         <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#fdf8f0',color:'#b83232'}}>{fmt(tot)}</td>
         {!locked&&<td style={{padding:'2px 4px'}}><button className="btn btn-sm btn-danger" title="Eliminar" onClick={()=>delGasto(g.id)}><i className="ti ti-trash"></i></button></td>}
       </tr>
@@ -450,13 +542,18 @@ function TabGastos({gastos,imptos,locked,gfijM,imptM,setG,setI,delGasto,setModal
 
   return(
     <div>
-      <div className="alert alert-info"><i className="ti ti-info-circle"></i><span>Introduce los importes en valor absoluto. El signo se aplica automáticamente en PyG.</span></div>
+      <div className="alert alert-info">
+        <i className="ti ti-info-circle"></i>
+        <span>Importes en valor absoluto. IVA e IRPF editables por partida — se usan en la proyección de tesorería. Los impuestos (IVA/IRPF/IS) van en la pestaña <strong>Tesorería</strong>.</span>
+      </div>
       <div className="card">
         <div className="card-header"><h2>Gastos por partida · 2026</h2></div>
         <div className="overflow-x">
-        <table style={{minWidth:1120}}>
+        <table style={{minWidth:1200}}>
           <thead><tr>
-            <th className="sticky" style={{minWidth:240}}>Partida</th>
+            <th className="sticky" style={{minWidth:200}}>Partida</th>
+            <th style={{minWidth:62,textAlign:'center',fontSize:9}}>IVA %</th>
+            <th style={{minWidth:62,textAlign:'center',fontSize:9}}>IRPF %</th>
             {MESES.map(m=><th key={m} className="mh" style={{minWidth:72}}>{m}</th>)}
             <th className="mh mh-total" style={{minWidth:82}}>Total año</th>
             {!locked&&<th style={{width:32}}></th>}
@@ -467,16 +564,17 @@ function TabGastos({gastos,imptos,locked,gfijM,imptM,setG,setI,delGasto,setModal
             const tgM=m=>gg.reduce((s,g)=>s+(g.imp[m]||0),0);
             const tgA=MESES.reduce((_,__,m)=>_+tgM(m),0);
             return[
-              <tr key={`sg${gr}`} className="section-row"><td className="sticky" colSpan={locked?14:15}>{gr}</td></tr>,
+              <tr key={`sg${gr}`} className="section-row"><td className="sticky" colSpan={locked?16:17}>{gr}</td></tr>,
               ...gg.map(g=><GRow key={g.id} g={g}/>),
-              /* Botón añadir al final del grupo */
-              !locked&&<tr key={`add${gr}`}><td className="sticky" colSpan={locked?14:15} style={{padding:'4px 8px'}}>
-                <button className="btn-add" onClick={()=>setModal({tipo:'gasto',grupo:gr})}>
-                  <i className="ti ti-plus"></i>Añadir partida en {gr}
-                </button>
-              </td></tr>,
+              !locked&&<tr key={`add${gr}`}>
+                <td colSpan={17} style={{padding:'4px 8px',background:'#fafafa'}}>
+                  <button className="btn-add" onClick={()=>setModal({tipo:'gasto',grupo:gr})}>
+                    <i className="ti ti-plus"></i>Añadir partida en {gr}
+                  </button>
+                </td>
+              </tr>,
               <tr key={`tot${gr}`} style={{background:'#f4f6f9'}}>
-                <td className="sticky" style={{fontWeight:700,paddingLeft:8,fontSize:11,color:'#1a2b4a'}}>Subtotal {gr}</td>
+                <td className="sticky" style={{fontWeight:700,paddingLeft:8,fontSize:11,color:'#1a2b4a'}} colSpan={3}>Subtotal {gr}</td>
                 {MESES.map((_,m)=><td key={m} className="num" style={{fontWeight:600,color:'#b83232'}}>{fmt(tgM(m))}</td>)}
                 <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#b83232'}}>{fmt(tgA)}</td>
                 {!locked&&<td></td>}
@@ -484,25 +582,9 @@ function TabGastos({gastos,imptos,locked,gfijM,imptM,setG,setI,delGasto,setModal
             ].filter(Boolean);
           })}
           <tr className="total-row">
-            <td className="sticky">TOTAL GASTOS OPERATIVOS</td>
+            <td className="sticky" colSpan={3}>TOTAL GASTOS</td>
             {MESES.map((_,m)=><td key={m} className="num red">{fmt(gfijM(m))}</td>)}
             <td className="num red" style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(TG)}</td>
-            {!locked&&<td></td>}
-          </tr>
-          <tr className="section-row"><td className="sticky" colSpan={locked?14:15}>Impuestos y retenciones</td></tr>
-          {imptos.map(i=>{
-            const tot=MESES.reduce((_,__,m)=>_+(i.imp[m]||0),0);
-            return(<tr key={i.id}>
-              <td className="sticky" style={{paddingLeft:16}}>{i.concepto}</td>
-              {MESES.map((_,m)=>(<td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}><input type="number" className="cell-edit" value={Math.abs(i.imp[m]||0)} disabled={locked} onChange={e=>setI(i.id,m,e.target.value)} min={0}/></td>))}
-              <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#fdf8f0',color:'#b83232'}}>{fmt(tot)}</td>
-              {!locked&&<td></td>}
-            </tr>);
-          })}
-          <tr className="result-row">
-            <td className="sticky">TOTAL GASTOS + IMPUESTOS</td>
-            {MESES.map((_,m)=><td key={m} className="num">{fmt(gfijM(m)+imptM(m))}</td>)}
-            <td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.3)',fontSize:13}}>{fmt(TG+TI2)}</td>
             {!locked&&<td></td>}
           </tr>
           </tbody>
@@ -514,14 +596,15 @@ function TabGastos({gastos,imptos,locked,gfijM,imptM,setG,setI,delGasto,setModal
 }
 
 // ── PyG (solo lectura calculado) ─────────────────────────────────
-function TabPyG({clientes,gastos,imptos,ingM,cvM,mbM,ebitM,imptM,resM,CV}){
+function TabPyG({gastos,ingM,cvM,mbM,ebitM,CV}){
   const TI=MESES.reduce((_,__,m)=>_+ingM(m),0);
   const TMB=MESES.reduce((_,__,m)=>_+mbM(m),0);
   const TEB=MESES.reduce((_,__,m)=>_+ebitM(m),0);
-  const TR=MESES.reduce((_,__,m)=>_+resM(m),0);
   return(
     <div>
-      <div className="alert alert-info"><i className="ti ti-info-circle"></i><span>Vista calculada automáticamente. Para editar, ve a <strong>Facturación</strong> o <strong>Gastos</strong>.</span></div>
+      <div className="alert alert-info"><i className="ti ti-info-circle"></i>
+        <span>Vista calculada automáticamente desde Facturación y Gastos. Los impuestos no forman parte del PyG operativo — están en Tesorería.</span>
+      </div>
       <div className="card">
         <div className="card-header"><h2>Cuenta de explotación · 2026</h2><span style={{fontSize:10,color:'#888'}}>Solo lectura — calculado automáticamente</span></div>
         <div className="overflow-x">
@@ -532,23 +615,55 @@ function TabPyG({clientes,gastos,imptos,ingM,cvM,mbM,ebitM,imptM,resM,CV}){
             <th className="mh mh-total" style={{minWidth:82}}>Total año</th>
           </tr></thead>
           <tbody>
+            {/* INGRESOS */}
             <tr className="section-row"><td className="sticky" colSpan={14}>Ingresos</td></tr>
-            <tr style={{background:'#f4fbf6'}}><td className="sticky" style={{fontWeight:700,paddingLeft:16,color:'#1a7a45'}}>Ingresos netos</td>{MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a7a45',fontWeight:600}}>{fmt(ingM(m))}</td>)}<td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a7a45'}}>{fmt(TI)}</td></tr>
+            <tr style={{background:'#f4fbf6'}}>
+              <td className="sticky" style={{fontWeight:700,paddingLeft:16,color:'#1a7a45'}}>Ingresos netos</td>
+              {MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a7a45',fontWeight:600}}>{fmt(ingM(m))}</td>)}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a7a45'}}>{fmt(TI)}</td>
+            </tr>
 
+            {/* COSTES VARIABLES */}
             <tr className="section-row"><td className="sticky" colSpan={14}>Costes variables</td></tr>
-            {gastos.filter(g=>CV.includes(g.id)).map(g=>{const tot=MESES.reduce((_,__,m)=>_+(g.imp[m]||0),0);return(<tr key={g.id}><td className="sticky" style={{paddingLeft:16}}>{g.concepto}</td>{MESES.map((_,m)=><td key={m} className="num" style={{color:g.imp[m]<0?'#b83232':'#888'}}>{fmt(g.imp[m]||0)}</td>)}<td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#b83232',background:'#fdf8f0'}}>{fmt(tot)}</td></tr>);})}
-            <tr className="total-row"><td className="sticky" style={{paddingLeft:8}}>MARGEN BRUTO</td>{MESES.map((_,m)=><td key={m} className={`num ${mbM(m)>=0?'green':'red'}`}>{fmt(mbM(m))}</td>)}<td className={`num ${TMB>=0?'green':'red'}`} style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(TMB)}</td></tr>
-            <tr className="pct-row"><td className="sticky" style={{paddingLeft:8}}>% sobre ventas</td>{MESES.map((_,m)=><td key={m} className="num">{pct(mbM(m),ingM(m))}%</td>)}<td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{pct(TMB,TI)}%</td></tr>
+            {gastos.filter(g=>CV.includes(g.id)).map(g=>{
+              const tot=MESES.reduce((_,__,m)=>_+(g.imp[m]||0),0);
+              return(<tr key={g.id}>
+                <td className="sticky" style={{paddingLeft:16,color:'#555'}}>{g.concepto}</td>
+                {MESES.map((_,m)=><td key={m} className="num" style={{color:'#b83232'}}>{fmt(g.imp[m]||0)}</td>)}
+                <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#b83232',background:'#fdf8f0'}}>{fmt(tot)}</td>
+              </tr>);
+            })}
+            <tr className="total-row">
+              <td className="sticky" style={{paddingLeft:8}}>MARGEN BRUTO</td>
+              {MESES.map((_,m)=><td key={m} className={`num ${mbM(m)>=0?'green':'red'}`}>{fmt(mbM(m))}</td>)}
+              <td className={`num ${TMB>=0?'green':'red'}`} style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(TMB)}</td>
+            </tr>
+            <tr className="pct-row">
+              <td className="sticky" style={{paddingLeft:8}}>% sobre ventas</td>
+              {MESES.map((_,m)=><td key={m} className="num">{pct(mbM(m),ingM(m))}%</td>)}
+              <td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{pct(TMB,TI)}%</td>
+            </tr>
 
-            <tr className="section-row"><td className="sticky" colSpan={14}>Gastos estructura y colaboradores</td></tr>
-            {gastos.filter(g=>!CV.includes(g.id)).map(g=>{const tot=MESES.reduce((_,__,m)=>_+(g.imp[m]||0),0);return(<tr key={g.id}><td className="sticky" style={{paddingLeft:16}}>{g.concepto}</td>{MESES.map((_,m)=><td key={m} className="num" style={{color:g.imp[m]<0?'#b83232':'#888'}}>{fmt(g.imp[m]||0)}</td>)}<td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#b83232',background:'#fdf8f0'}}>{fmt(tot)}</td></tr>);})}
-            <tr className="total-row"><td className="sticky" style={{paddingLeft:8}}>EBITDA</td>{MESES.map((_,m)=><td key={m} className={`num ${ebitM(m)>=0?'green':'red'}`}>{fmt(ebitM(m))}</td>)}<td className={`num ${TEB>=0?'green':'red'}`} style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(TEB)}</td></tr>
-            <tr className="pct-row"><td className="sticky" style={{paddingLeft:8}}>% sobre ventas</td>{MESES.map((_,m)=><td key={m} className="num">{pct(ebitM(m),ingM(m))}%</td>)}<td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{pct(TEB,TI)}%</td></tr>
-
-            <tr className="section-row"><td className="sticky" colSpan={14}>Impuestos</td></tr>
-            {imptos.map(i=>{const tot=MESES.reduce((_,__,m)=>_+(i.imp[m]||0),0);return(<tr key={i.id}><td className="sticky" style={{paddingLeft:16}}>{i.concepto}</td>{MESES.map((_,m)=><td key={m} className="num" style={{color:i.imp[m]<0?'#b83232':'#888'}}>{fmt(i.imp[m]||0)}</td>)}<td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#b83232',background:'#fdf8f0'}}>{fmt(tot)}</td></tr>);})}
-            <tr className="result-row"><td className="sticky">RESULTADO NETO</td>{MESES.map((_,m)=><td key={m} className="num">{fmt(resM(m))}</td>)}<td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.3)',fontSize:13}}>{fmt(TR)}</td></tr>
-            <tr className="pct-row"><td className="sticky" style={{paddingLeft:8}}>% sobre ventas</td>{MESES.map((_,m)=><td key={m} className="num">{pct(resM(m),ingM(m))}%</td>)}<td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{pct(TR,TI)}%</td></tr>
+            {/* GASTOS ESTRUCTURA */}
+            <tr className="section-row"><td className="sticky" colSpan={14}>Gastos de estructura y colaboradores</td></tr>
+            {gastos.filter(g=>!CV.includes(g.id)).map(g=>{
+              const tot=MESES.reduce((_,__,m)=>_+(g.imp[m]||0),0);
+              return(<tr key={g.id}>
+                <td className="sticky" style={{paddingLeft:16,color:'#555'}}>{g.concepto}</td>
+                {MESES.map((_,m)=><td key={m} className="num" style={{color:'#b83232'}}>{fmt(g.imp[m]||0)}</td>)}
+                <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#b83232',background:'#fdf8f0'}}>{fmt(tot)}</td>
+              </tr>);
+            })}
+            <tr className="result-row">
+              <td className="sticky">EBITDA</td>
+              {MESES.map((_,m)=><td key={m} className="num">{fmt(ebitM(m))}</td>)}
+              <td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.3)',fontSize:13}}>{fmt(TEB)}</td>
+            </tr>
+            <tr className="pct-row">
+              <td className="sticky" style={{paddingLeft:8}}>% sobre ventas</td>
+              {MESES.map((_,m)=><td key={m} className="num">{pct(ebitM(m),ingM(m))}%</td>)}
+              <td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{pct(TEB,TI)}%</td>
+            </tr>
           </tbody>
         </table>
         </div>
@@ -557,48 +672,180 @@ function TabPyG({clientes,gastos,imptos,ingM,cvM,mbM,ebitM,imptM,resM,CV}){
   );
 }
 
+
 // ── TESORERÍA ────────────────────────────────────────────────────
-function TabTes({gastos,imptos,locked,saldo0,ingIVAM,pagoCM,flujoM,saldoM,setS}){
-  const TC=MESES.reduce((_,__,m)=>_+ingIVAM(m),0);
-  const TP=MESES.reduce((_,__,m)=>_+pagoCM(m),0);
+function TabTes({caja,locked,saldo0,setS,setCajaRow,addCajaRow,delCajaRow}){
+  // Cobros y pagos totales por mes desde las filas manuales
+  const cobrosM =m=>caja.filter(r=>r.tipo==='cobro').reduce((s,r)=>s+(r.imp[m]||0),0);
+  const pagosM  =m=>caja.filter(r=>r.tipo==='pago') .reduce((s,r)=>s+(r.imp[m]||0),0);
+  const flujoM  =m=>cobrosM(m)-pagosM(m);
+  const saldoM  =m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=flujoM(i);return s;};
+
+  const TC=MESES.reduce((_,__,m)=>_+cobrosM(m),0);
+  const TP=MESES.reduce((_,__,m)=>_+pagosM(m),0);
   const SF=saldoM(11);
-  const minS=Math.min(...MESES.map((_,m)=>saldoM(m)));
-  const mesBajo=MESES.findIndex((_,m)=>saldoM(m)===minS);
+  const saldos=MESES.map((_,m)=>saldoM(m));
+  const minS=Math.min(...saldos);
+  const mesBajo=saldos.findIndex(s=>s===minS);
+
+  const CRow=({r})=>{
+    const tot=r.imp.reduce((s,v)=>s+v,0);
+    const esCobro=r.tipo==='cobro';
+    return(
+      <tr>
+        <td className="sticky" style={{paddingLeft:16,fontWeight:500}}>{r.concepto}</td>
+        {MESES.map((_,m)=>(
+          <td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}>
+            <input type="number" className="cell-edit"
+              value={r.imp[m]||0}
+              disabled={locked}
+              onChange={e=>setCajaRow(r.id,m,e.target.value)}
+              min={0}
+              style={{color:esCobro?'#1a7a45':'#b83232'}}
+            />
+          </td>
+        ))}
+        <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:esCobro?'#f4fbf6':'#fdf8f0',color:esCobro?'#1a7a45':'#b83232'}}>{fmt(tot)}</td>
+        {!locked&&<td style={{padding:'2px 4px'}}>
+          <button className="btn btn-sm btn-danger" title="Eliminar" onClick={()=>delCajaRow(r.id)}><i className="ti ti-trash"></i></button>
+        </td>}
+      </tr>
+    );
+  };
+
   return(
     <div>
+      <div className="alert alert-info">
+        <i className="ti ti-info-circle"></i>
+        <span>Plan de caja <strong>100% manual</strong>. Introduce directamente los cobros y pagos previstos cada mes. El saldo acumulado se calcula automáticamente.</span>
+      </div>
+
+      {/* Saldo inicial */}
       <div className="card" style={{marginBottom:14}}>
         <div className="card-header"><h2>Saldo bancario inicial · 1 enero 2026</h2></div>
         <div className="card-body" style={{display:'flex',alignItems:'center',gap:20,flexWrap:'wrap'}}>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
             <span style={{fontSize:12,color:'#555'}}>Saldo apertura:</span>
-            <input type="number" style={{width:150,padding:'6px 10px',border:'1px solid #dde0e6',borderRadius:5,fontSize:15,fontWeight:700,fontFamily:'monospace',color:'#1a2b4a'}} value={saldo0} disabled={locked} onChange={e=>setS(e.target.value)}/>
+            <input type="number"
+              style={{width:150,padding:'6px 10px',border:'1px solid #dde0e6',borderRadius:5,fontSize:15,fontWeight:700,fontFamily:'monospace',color:'#1a2b4a'}}
+              value={saldo0} disabled={locked} onChange={e=>setS(e.target.value)}/>
           </div>
-          <div style={{fontSize:11}}>Saldo fin de año: <strong style={{color:SF>=0?'#1a7a45':'#b83232',fontSize:14}}>{fmt(SF)}</strong></div>
-          {minS<20000&&<div style={{fontSize:11,background:'#fff8e0',color:'#7a5000',padding:'5px 10px',borderRadius:5,border:'1px solid #f0d070',display:'flex',alignItems:'center',gap:5}}><i className="ti ti-alert-triangle"></i>Mes más ajustado: <strong>{MESES[mesBajo]}</strong> ({fmt(minS)})</div>}
+          <div style={{fontSize:11,color:'#555'}}>
+            Saldo fin de año: <strong style={{color:SF>=0?'#1a7a45':'#b83232',fontSize:14}}>{fmt(SF)}</strong>
+          </div>
+          {minS<20000&&(
+            <div style={{fontSize:11,background:'#fff8e0',color:'#7a5000',padding:'5px 10px',borderRadius:5,border:'1px solid #f0d070',display:'flex',alignItems:'center',gap:5}}>
+              <i className="ti ti-alert-triangle"></i>Mes más ajustado: <strong>{MESES[mesBajo]}</strong> ({fmt(minS)})
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Tabla plan de caja */}
       <div className="card">
-        <div className="card-header"><h2>Plan de caja mensual · 2026</h2></div>
+        <div className="card-header">
+          <h2>Plan de caja mensual · 2026</h2>
+          <span style={{fontSize:10,color:'#888'}}>{locked?'Solo lectura':'Editable — introduce los importes directamente'}</span>
+        </div>
         <div className="overflow-x">
-        <table style={{minWidth:1120}}>
-          <thead><tr><th className="sticky" style={{minWidth:220}}>Concepto</th>{MESES.map(m=><th key={m} className="mh" style={{minWidth:72}}>{m}</th>)}<th className="mh mh-total" style={{minWidth:82}}>Total año</th></tr></thead>
+        <table style={{minWidth:1200}}>
+          <thead><tr>
+            <th className="sticky" style={{minWidth:220}}>Concepto</th>
+            {MESES.map(m=><th key={m} className="mh" style={{minWidth:72}}>{m}</th>)}
+            <th className="mh mh-total" style={{minWidth:82}}>Total año</th>
+            {!locked&&<th style={{width:32}}></th>}
+          </tr></thead>
           <tbody>
-            <tr className="section-row"><td className="sticky" colSpan={14}>Cobros</td></tr>
-            <tr style={{background:'#f4fbf6'}}><td className="sticky" style={{fontWeight:700,paddingLeft:16,color:'#1a7a45'}}>Total cobros (+IVA)</td>{MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a7a45',fontWeight:600}}>{fmt(ingIVAM(m))}</td>)}<td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a7a45'}}>{fmt(TC)}</td></tr>
-            <tr className="section-row"><td className="sticky" colSpan={14}>Pagos</td></tr>
-            {gastos.map(g=>{const cM=m=>(g.imp[m]||0)*(1+(g.iva||0)-(g.irpf||0));const tot=MESES.reduce((_,__,m)=>_+cM(m),0);return(<tr key={g.id}><td className="sticky" style={{paddingLeft:16,fontSize:12}}>{g.concepto}{g.iva>0&&<span className="tag tag-iva">+IVA</span>}{g.irpf>0&&<span className="tag" style={{background:'#fff4e0',color:'#7a4000'}}>-IRPF</span>}</td>{MESES.map((_,m)=><td key={m} className="num" style={{fontSize:11,color:cM(m)<0?'#b83232':'#888'}}>{fmt(cM(m))}</td>)}<td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#fdf8f0',color:'#b83232'}}>{fmt(tot)}</td></tr>);})}
-            <tr className="section-row"><td className="sticky" colSpan={14}>Pagos fiscales</td></tr>
-            {imptos.map(i=>{const tot=MESES.reduce((_,__,m)=>_+(i.imp[m]||0),0);return(<tr key={i.id}><td className="sticky" style={{paddingLeft:16,fontSize:12}}>{i.concepto}</td>{MESES.map((_,m)=><td key={m} className="num" style={{fontSize:11,color:(i.imp[m]||0)<0?'#b83232':'#888'}}>{fmt(i.imp[m]||0)}</td>)}<td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#fdf8f0',color:'#b83232'}}>{fmt(tot)}</td></tr>);})}
-            <tr className="total-row"><td className="sticky">TOTAL PAGOS</td>{MESES.map((_,m)=><td key={m} className="num red">{fmt(pagoCM(m))}</td>)}<td className="num red" style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(TP)}</td></tr>
-            <tr style={{background:'#e4ecf4'}}><td className="sticky" style={{fontWeight:700}}>FLUJO NETO</td>{MESES.map((_,m)=><td key={m} className={`num ${flujoM(m)>=0?'green':'red'}`} style={{fontWeight:700}}>{fmt(flujoM(m))}</td>)}<td className={`num ${(TC+TP)>=0?'green':'red'}`} style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(TC+TP)}</td></tr>
-            <tr className="result-row"><td className="sticky">SALDO ACUMULADO</td>{MESES.map((_,m)=>{const s=saldoM(m);return<td key={m} className="num" style={{fontWeight:700,background:s<20000?'#8b2020':undefined}}>{fmt(s)}</td>;})} <td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.3)'}}>{fmt(SF)}</td></tr>
+            {/* COBROS */}
+            <tr className="section-row"><td className="sticky" colSpan={locked?14:15}>Cobros</td></tr>
+            {caja.filter(r=>r.tipo==='cobro').map(r=><CRow key={r.id} r={r}/>)}
+            {!locked&&<tr><td colSpan={locked?14:15} style={{padding:'4px 8px',background:'#fafafa'}}>
+              <button className="btn-add" style={{borderColor:'#a0d4b0',color:'#1a7a45'}} onClick={()=>addCajaRow('cobro')}>
+                <i className="ti ti-plus"></i>Añadir línea de cobro
+              </button>
+            </td></tr>}
+            <tr style={{background:'#e4f4ec'}}>
+              <td className="sticky" style={{fontWeight:700,color:'#1a7a45',paddingLeft:8}}>TOTAL COBROS</td>
+              {MESES.map((_,m)=><td key={m} className="num green" style={{fontWeight:700}}>{fmt(cobrosM(m))}</td>)}
+              <td className="num green" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(TC)}</td>
+              {!locked&&<td></td>}
+            </tr>
+
+            {/* PAGOS EXPLOTACIÓN */}
+            <tr className="section-row"><td className="sticky" colSpan={locked?14:15}>Pagos de explotación</td></tr>
+            {caja.filter(r=>r.tipo==='pago'&&(r.subtipo==='explotacion'||!r.subtipo)).map(r=><CRow key={r.id} r={r}/>)}
+            {!locked&&<tr><td colSpan={locked?14:15} style={{padding:'4px 8px',background:'#fafafa'}}>
+              <button className="btn-add" style={{borderColor:'#e4b0b0',color:'#b83232'}} onClick={()=>addCajaRow('pago','explotacion')}>
+                <i className="ti ti-plus"></i>Añadir pago de explotación
+              </button>
+            </td></tr>}
+            <tr style={{background:'#f4e8e8'}}>
+              <td className="sticky" style={{fontWeight:700,color:'#b83232',paddingLeft:8,fontSize:11}}>Subtotal explotación</td>
+              {MESES.map((_,m)=>{
+                const t=caja.filter(r=>r.tipo==='pago'&&(r.subtipo==='explotacion'||!r.subtipo)).reduce((s,r)=>s+(r.imp[m]||0),0);
+                return<td key={m} className="num red" style={{fontWeight:600}}>{fmt(t)}</td>;
+              })}
+              <td className="num red" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a'}}>
+                {fmt(MESES.reduce((_,__,m)=>_+caja.filter(r=>r.tipo==='pago'&&(r.subtipo==='explotacion'||!r.subtipo)).reduce((s,r)=>s+(r.imp[m]||0),0),0))}
+              </td>
+              {!locked&&<td></td>}
+            </tr>
+
+            {/* PAGOS IMPUESTOS */}
+            <tr className="section-row"><td className="sticky" colSpan={locked?14:15}>Pagos fiscales (IVA, IRPF, IS)</td></tr>
+            {caja.filter(r=>r.tipo==='pago'&&r.subtipo==='impuestos').map(r=><CRow key={r.id} r={r}/>)}
+            {!locked&&<tr><td colSpan={locked?14:15} style={{padding:'4px 8px',background:'#fafafa'}}>
+              <button className="btn-add" style={{borderColor:'#c8b0d8',color:'#6a2b9a'}} onClick={()=>addCajaRow('pago','impuestos')}>
+                <i className="ti ti-plus"></i>Añadir pago fiscal
+              </button>
+            </td></tr>}
+            <tr style={{background:'#f0e8f8'}}>
+              <td className="sticky" style={{fontWeight:700,color:'#6a2b9a',paddingLeft:8,fontSize:11}}>Subtotal fiscal</td>
+              {MESES.map((_,m)=>{
+                const t=caja.filter(r=>r.tipo==='pago'&&r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
+                return<td key={m} className="num" style={{fontWeight:600,color:'#6a2b9a'}}>{fmt(t)}</td>;
+              })}
+              <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#6a2b9a'}}>
+                {fmt(MESES.reduce((_,__,m)=>_+caja.filter(r=>r.tipo==='pago'&&r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0),0))}
+              </td>
+              {!locked&&<td></td>}
+            </tr>
+
+            {/* TOTAL PAGOS */}
+            <tr style={{background:'#fdecea'}}>
+              <td className="sticky" style={{fontWeight:700,color:'#b83232',paddingLeft:8}}>TOTAL PAGOS</td>
+              {MESES.map((_,m)=><td key={m} className="num red" style={{fontWeight:700}}>{fmt(pagosM(m))}</td>)}
+              <td className="num red" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(TP)}</td>
+              {!locked&&<td></td>}
+            </tr>
+
+            {/* FLUJO Y SALDO */}
+            <tr style={{background:'#e4ecf4'}}>
+              <td className="sticky" style={{fontWeight:700}}>FLUJO NETO MENSUAL</td>
+              {MESES.map((_,m)=><td key={m} className={`num ${flujoM(m)>=0?'green':'red'}`} style={{fontWeight:700}}>{fmt(flujoM(m))}</td>)}
+              <td className={`num ${(TC-TP)>=0?'green':'red'}`} style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(TC-TP)}</td>
+              {!locked&&<td></td>}
+            </tr>
+            <tr className="result-row">
+              <td className="sticky">SALDO ACUMULADO</td>
+              {MESES.map((_,m)=>{
+                const s=saldoM(m);
+                return<td key={m} className="num" style={{fontWeight:700,background:s<20000?'#8b2020':undefined}}>{fmt(s)}</td>;
+              })}
+              <td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.3)',fontWeight:700}}>{fmt(SF)}</td>
+              {!locked&&<td></td>}
+            </tr>
           </tbody>
         </table>
+        </div>
+        <div style={{padding:'7px 14px',fontSize:10,color:'#888',borderTop:'1px solid #f0f0f0',background:'#fafafa'}}>
+          <i className="ti ti-info-circle" style={{marginRight:4}}></i>Saldo en rojo oscuro = por debajo de 20.000 € (umbral de alerta operativa)
         </div>
       </div>
     </div>
   );
 }
+
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>

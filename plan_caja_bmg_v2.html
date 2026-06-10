@@ -317,96 +317,9 @@ function App(){
     setPptSaldoInicial(45000);setPptFechaFijacion(null);
   };
 
-  const tabs=[
-    {id:'control',     label:'Panel de control',        icon:'ti-dashboard'},
-    {id:'comparativa', label:'Comparativa',              icon:'ti-chart-arrows-vertical'},
-    {id:'presupuesto', label:'Presupuesto',              icon:'ti-target'},
-    {id:'facturacion', label:'Forecast facturación',     icon:'ti-chart-bar'},
-    {id:'pyg',         label:'Cuenta PyG',               icon:'ti-report-money'},
-    {id:'caja',        label:'Plan de caja',             icon:'ti-building-bank'},
-    {id:'facturas',    label:'Facturas pendientes',      icon:'ti-file-invoice'},
-    {id:'extracto',    label:'Extracto real',            icon:'ti-credit-card'},
-    {id:'gastos_tab',  label:'Gastos fijos (forecast)',  icon:'ti-adjustments'},
-  ];
-
-  const sharedProps={
-    // Forecast
-    facturacion,setFacturacion,clientes,setClientes,addCliente,
-    gastos,setGastos,addGasto,impuestos,setImpuestos,
-    facturas,setFacturas,saldoInicial,setSaldoInicial,
-    movimientosReal,setMovimientosReal,mesesCerrados,setMesesCerrados,
-    // Presupuesto
-    pptFact,setPptFact,pptClientes,setPptClientes,addPptCliente,
-    pptGastos,setPptGastos,addPptGasto,pptImpuestos,setPptImpuestos,
-    pptSaldoInicial,setPptSaldoInicial,pptFechaFijacion,
-    copiarForecastAPresupuesto,
-    // Cálculos presupuesto
-    pptIngMes,pptMbMes,pptGastosFijosMes,pptImptosMes,pptResultadoMes,
-    pptGastoCajaMes,pptPagosCajaMes,pptIngConIVAMes,pptFlujoCajaMes,pptSaldoAcum,
-    // Cálculos forecast
-    MES_ACTUAL,ingPresupMes,ingConIVAMes,mbMes,gastosFijosMes,gastoCajaMes,
-    imptosMes,resultadoMes,
-    // Cálculos real
-    cobrosRealesMes,cobrosExtractoMes,pagosExtractoMes,realIngMes,realPagosMes,
-    realFlujoCajaMes,realSaldoAcum,
-    cobrosFacturasMes,previsionSinFacturasMes,cobrosEsperadosMes,entradasExtractoMes,
-    pagosRealesMes,cobrosPresupCajaMes,pagosPresupCajaMes:pagosPresupCajaMes2,
-    flujoPresupMes,flujoRealMes,saldoPresupAcum,saldoRealAcum,
-    // Legacy frozen (para panel control)
-    presupuestoFrozen,frozenAt,frozenIngMes,frozenGastosMes,frozenFlujoCajaMes,frozenSaldoAcum,
-    hayFacturasMes,hayFacturasPendientesMes,mesCerrado,hayExtractoMes,fuenteMes,
-  };
-
-  return(
-    <div className="app">
-      <div className="header">
-        <div>
-          <h1><i className="ti ti-building-skyscraper" style={{marginRight:7}}></i>BMG Law Services · Plan de Caja 2026</h1>
-          <p>Presupuesto · Forecast · Real</p>
-        </div>
-        <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
-          <span style={{fontSize:10,color:'#a0c4a0'}}>
-            <i className="ti ti-device-floppy" style={{marginRight:3}}></i>
-            {savedAt?`Guardado ${new Date(savedAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`: 'Guardando...'}
-          </span>
-          {pptFechaFijacion
-            ?<span style={{fontSize:10,color:'#a0c4a0'}}><i className="ti ti-target" style={{marginRight:3}}></i>Presupuesto: {pptFechaFijacion}</span>
-            :<span style={{fontSize:10,color:'#f0c060'}}><i className="ti ti-alert-triangle" style={{marginRight:3}}></i>Sin presupuesto base</span>
-          }
-          <button className="btn btn-sm" style={{background:'rgba(255,255,255,.1)',color:'#fff',borderColor:'rgba(255,255,255,.2)',fontSize:10}} onClick={exportarDatos}>
-            <i className="ti ti-download"></i> Backup
-          </button>
-          <label className="btn btn-sm" style={{background:'rgba(255,255,255,.1)',color:'#fff',borderColor:'rgba(255,255,255,.2)',fontSize:10,cursor:'pointer'}}>
-            <i className="ti ti-upload"></i> Restaurar
-            <input type="file" accept=".json" style={{display:'none'}} onChange={importarDatos}/>
-          </label>
-          <button className="btn btn-sm" style={{background:'rgba(255,0,0,.15)',color:'#ffaaaa',borderColor:'rgba(255,100,100,.3)',fontSize:10}} onClick={resetearDatos} title="Resetear todo">
-            <i className="ti ti-trash"></i>
-          </button>
-        </div>
-      </div>
-
-      <div className="nav">
-        {tabs.map(t=>(
-          <button key={t.id} className={tab===t.id?'active':''} onClick={()=>setTab(t.id)}>
-            <i className={`ti ${t.icon}`}></i>{t.label}
-          </button>
-        ))}
-      </div>
-
-      {tab==='control'    &&<TabControl {...sharedProps}/>}
-      {tab==='comparativa'&&<TabComparativa {...sharedProps}/>}
-      {tab==='presupuesto'&&<TabPresupuesto {...sharedProps}/>}
-      {tab==='facturacion'&&<TabFacturacion {...sharedProps}/>}
-      {tab==='pyg'        &&<TabPyG {...sharedProps}/>}
-      {tab==='caja'       &&<TabCaja {...sharedProps}/>}
-      {tab==='facturas'   &&<TabFacturas {...sharedProps}/>}
-      {tab==='extracto'   &&<TabExtracto {...sharedProps}/>}
-      {tab==='gastos_tab' &&<TabGastos {...sharedProps}/>}
-    </div>
-  );
-}
+  // ── CÁLCULOS FORECAST ──
   const ingPresupMes=m=>clientes.reduce((s,c)=>(facturacion[c.id]?.[m]||0)+s,0);
+
   // Ingresos con IVA por cliente (para proyección de caja)
   const ingConIVAMes=m=>clientes.reduce((s,c)=>{
     const base=facturacion[c.id]?.[m]||0;
@@ -603,6 +516,7 @@ function App(){
     const imp=parseFloat(importe)||0;
     setPptGastos(p=>[...p,{id:'g_'+Date.now(),concepto:concepto.trim(),grupo,iva,irpf,importes:Array(12).fill(imp<=0?imp:-imp),dia:1}]);
   };
+  const addCliente=(nombre)=>{
     if(!nombre||!nombre.trim())return;
     const id='c_'+Date.now();
     setClientes(p=>[...p,{id,nombre:nombre.trim(),grupo:'varios',iva:0.21}]);
@@ -614,6 +528,96 @@ function App(){
     const imp=parseFloat(importe)||0;
     setGastos(p=>[...p,{id:'g_'+Date.now(),concepto:concepto.trim(),grupo,iva,irpf,importes:Array(12).fill(imp<=0?imp:-imp),dia:1}]);
   };
+
+  const tabs=[
+    {id:'control',     label:'Panel de control',        icon:'ti-dashboard'},
+    {id:'comparativa', label:'Comparativa',              icon:'ti-chart-arrows-vertical'},
+    {id:'presupuesto', label:'Presupuesto',              icon:'ti-target'},
+    {id:'facturacion', label:'Forecast facturación',     icon:'ti-chart-bar'},
+    {id:'pyg',         label:'Cuenta PyG',               icon:'ti-report-money'},
+    {id:'caja',        label:'Plan de caja',             icon:'ti-building-bank'},
+    {id:'facturas',    label:'Facturas pendientes',      icon:'ti-file-invoice'},
+    {id:'extracto',    label:'Extracto real',            icon:'ti-credit-card'},
+    {id:'gastos_tab',  label:'Gastos fijos (forecast)',  icon:'ti-adjustments'},
+  ];
+
+  const sharedProps={
+    // Forecast
+    facturacion,setFacturacion,clientes,setClientes,addCliente,
+    gastos,setGastos,addGasto,impuestos,setImpuestos,
+    facturas,setFacturas,saldoInicial,setSaldoInicial,
+    movimientosReal,setMovimientosReal,mesesCerrados,setMesesCerrados,
+    // Presupuesto
+    pptFact,setPptFact,pptClientes,setPptClientes,addPptCliente,
+    pptGastos,setPptGastos,addPptGasto,pptImpuestos,setPptImpuestos,
+    pptSaldoInicial,setPptSaldoInicial,pptFechaFijacion,
+    copiarForecastAPresupuesto,
+    // Cálculos presupuesto
+    pptIngMes,pptMbMes,pptGastosFijosMes,pptImptosMes,pptResultadoMes,
+    pptGastoCajaMes,pptPagosCajaMes,pptIngConIVAMes,pptFlujoCajaMes,pptSaldoAcum,
+    // Cálculos forecast
+    MES_ACTUAL,ingPresupMes,ingConIVAMes,mbMes,gastosFijosMes,gastoCajaMes,
+    imptosMes,resultadoMes,
+    // Cálculos real
+    cobrosRealesMes,cobrosExtractoMes,pagosExtractoMes,realIngMes,realPagosMes,
+    realFlujoCajaMes,realSaldoAcum,
+    cobrosFacturasMes,previsionSinFacturasMes,cobrosEsperadosMes,entradasExtractoMes,
+    pagosRealesMes,cobrosPresupCajaMes,pagosPresupCajaMes:pagosPresupCajaMes2,
+    flujoPresupMes,flujoRealMes,saldoPresupAcum,saldoRealAcum,
+    // Legacy frozen (para panel control)
+    presupuestoFrozen,frozenAt,frozenIngMes,frozenGastosMes,frozenFlujoCajaMes,frozenSaldoAcum,
+    hayFacturasMes,hayFacturasPendientesMes,mesCerrado,hayExtractoMes,fuenteMes,
+  };
+
+  return(
+    <div className="app">
+      <div className="header">
+        <div>
+          <h1><i className="ti ti-building-skyscraper" style={{marginRight:7}}></i>BMG Law Services · Plan de Caja 2026</h1>
+          <p>Presupuesto · Forecast · Real</p>
+        </div>
+        <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+          <span style={{fontSize:10,color:'#a0c4a0'}}>
+            <i className="ti ti-device-floppy" style={{marginRight:3}}></i>
+            {savedAt?`Guardado ${new Date(savedAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`: 'Guardando...'}
+          </span>
+          {pptFechaFijacion
+            ?<span style={{fontSize:10,color:'#a0c4a0'}}><i className="ti ti-target" style={{marginRight:3}}></i>Presupuesto: {pptFechaFijacion}</span>
+            :<span style={{fontSize:10,color:'#f0c060'}}><i className="ti ti-alert-triangle" style={{marginRight:3}}></i>Sin presupuesto base</span>
+          }
+          <button className="btn btn-sm" style={{background:'rgba(255,255,255,.1)',color:'#fff',borderColor:'rgba(255,255,255,.2)',fontSize:10}} onClick={exportarDatos}>
+            <i className="ti ti-download"></i> Backup
+          </button>
+          <label className="btn btn-sm" style={{background:'rgba(255,255,255,.1)',color:'#fff',borderColor:'rgba(255,255,255,.2)',fontSize:10,cursor:'pointer'}}>
+            <i className="ti ti-upload"></i> Restaurar
+            <input type="file" accept=".json" style={{display:'none'}} onChange={importarDatos}/>
+          </label>
+          <button className="btn btn-sm" style={{background:'rgba(255,0,0,.15)',color:'#ffaaaa',borderColor:'rgba(255,100,100,.3)',fontSize:10}} onClick={resetearDatos} title="Resetear todo">
+            <i className="ti ti-trash"></i>
+          </button>
+        </div>
+      </div>
+
+      <div className="nav">
+        {tabs.map(t=>(
+          <button key={t.id} className={tab===t.id?'active':''} onClick={()=>setTab(t.id)}>
+            <i className={`ti ${t.icon}`}></i>{t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab==='control'    &&<TabControl {...sharedProps}/>}
+      {tab==='comparativa'&&<TabComparativa {...sharedProps}/>}
+      {tab==='presupuesto'&&<TabPresupuesto {...sharedProps}/>}
+      {tab==='facturacion'&&<TabFacturacion {...sharedProps}/>}
+      {tab==='pyg'        &&<TabPyG {...sharedProps}/>}
+      {tab==='caja'       &&<TabCaja {...sharedProps}/>}
+      {tab==='facturas'   &&<TabFacturas {...sharedProps}/>}
+      {tab==='extracto'   &&<TabExtracto {...sharedProps}/>}
+      {tab==='gastos_tab' &&<TabGastos {...sharedProps}/>}
+    </div>
+  );
+}
 
 // ══════════════════════════════════════════════
 // PANEL DE CONTROL

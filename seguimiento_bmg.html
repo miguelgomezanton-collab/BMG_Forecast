@@ -90,11 +90,14 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 const {useState,useCallback,useMemo}=React;
 const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const MESES_FULL=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const GRUPOS_GASTO=['Personal','Colaboradores','Estructura'];
+const GRUPOS_CLIENTE=['Bancos','Servicios','Varios'];
+const uid=()=>'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 const MES_ACTUAL=5; // Junio (0-indexed)
 const SK='bmg_seguimiento_2026_v1';
 
 // ─── Clientes BMG ───────────────────────────────────────────────
-const CLIENTES=[
+const CLIENTES0=[
   {id:'bsabadell',nombre:'Banco Sabadell',iva:0.21},
   {id:'link',nombre:'Link Finanzas',iva:0.21},
   {id:'aiqon',nombre:'Aiqon',iva:0},
@@ -167,15 +170,16 @@ const pilEstado=e=>{
 // ══════════════════════════════════════════════════════════════════
 function App(){
   const sv=load();
-  const [factReal,setFactReal]=useState(()=>sv?.factReal||Object.fromEntries(CLIENTES.map(c=>[c.id,Array(12).fill(0)])));
-  const [factFcst,setFactFcst]=useState(()=>sv?.factFcst||Object.fromEntries(CLIENTES.map(c=>[c.id,Array(12).fill(0)])));
+  const [clientes,setClientes]=useState(()=>sv?.clientes||JSON.parse(JSON.stringify(CLIENTES0)));
+  const [factReal,setFactReal]=useState(()=>sv?.factReal||Object.fromEntries(CLIENTES0.map(c=>[c.id,Array(12).fill(0)])));
+  const [factFcst,setFactFcst]=useState(()=>sv?.factFcst||Object.fromEntries(CLIENTES0.map(c=>[c.id,Array(12).fill(0)])));
   const [facturas,setFacturas]=useState(()=>sv?.facturas||[]);
   const [movs,setMovs]=useState(()=>sv?.movs||[]);
   const [sub,setSub]=useState('facturacion');
 
   const save=useCallback((patch)=>{
-    persist({factReal,factFcst,gastosReal,gastosFcst,imptosReal,imptosFcst,facturas,movs,...patch});
-  },[factReal,factFcst,gastosReal,gastosFcst,imptosReal,imptosFcst,facturas,movs]);
+    persist({clientes,factReal,factFcst,gastosReal,gastosFcst,imptosReal,imptosFcst,facturas,movs,...patch});
+  },[clientes,factReal,factFcst,gastosReal,gastosFcst,imptosReal,imptosFcst,facturas,movs]);
 
   // Gastos reales (meses cerrados) y forecast (meses futuros)
   const [gastosReal,setGastosReal]=useState(()=>sv?.gastosReal||JSON.parse(JSON.stringify(GASTOS0)));
@@ -183,10 +187,19 @@ function App(){
   const [imptosReal,setImptosReal]=useState(()=>sv?.imptosReal||JSON.parse(JSON.stringify(IMPTOS0)));
   const [imptosFcst,setImptosFcst]=useState(()=>sv?.imptosFcst||JSON.parse(JSON.stringify(IMPTOS0)));
 
-  const ingRealM=m=>CLIENTES.reduce((s,c)=>(factReal[c.id]?.[m]||0)+s,0);
-  const ingFcstM=m=>CLIENTES.reduce((s,c)=>(factFcst[c.id]?.[m]||0)+s,0);
+  // Añadir/eliminar clientes
+  const addCliente=c=>{const nc=[...clientes,c];const nr={...factReal,[c.id]:Array(12).fill(0)};const nf={...factFcst,[c.id]:Array(12).fill(0)};setClientes(nc);setFactReal(nr);setFactFcst(nf);save({clientes:nc,factReal:nr,factFcst:nf});};
+  const delCliente=id=>{if(!confirm('¿Eliminar este cliente?'))return;const nc=clientes.filter(c=>c.id!==id);const nr={...factReal};const nf={...factFcst};delete nr[id];delete nf[id];setClientes(nc);setFactReal(nr);setFactFcst(nf);save({clientes:nc,factReal:nr,factFcst:nf});};
+  // Añadir/eliminar gastos
+  const addGastoR=g=>{const nr=[...gastosReal,g];const nf=[...gastosFcst,{...g}];setGastosReal(nr);setGastosFcst(nf);save({gastosReal:nr,gastosFcst:nf});};
+  const delGastoR=id=>{if(!confirm('¿Eliminar esta partida?'))return;const nr=gastosReal.filter(g=>g.id!==id);const nf=gastosFcst.filter(g=>g.id!==id);setGastosReal(nr);setGastosFcst(nf);save({gastosReal:nr,gastosFcst:nf});};
+
+  const [modal,setModal]=useState(null);
+
+  const ingRealM=m=>clientes.reduce((s,c)=>(factReal[c.id]?.[m]||0)+s,0);
+  const ingFcstM=m=>clientes.reduce((s,c)=>(factFcst[c.id]?.[m]||0)+s,0);
   const ingM=m=>m<=MES_ACTUAL?ingRealM(m):ingFcstM(m);
-  const ingIVARealM=m=>CLIENTES.reduce((s,c)=>{const b=factReal[c.id]?.[m]||0;return s+b*(1+(c.iva??0.21));},0);
+  const ingIVARealM=m=>clientes.reduce((s,c)=>{const b=factReal[c.id]?.[m]||0;return s+b*(1+(c.iva??0.21));},0);
 
   // Para un gasto: usa real si mes cerrado, forecast si futuro
   const gastoM=(gid,m)=>{
@@ -283,8 +296,10 @@ function App(){
         <button className={sub==='extracto'?'active':''} onClick={()=>setSub('extracto')}><i className="ti ti-credit-card"></i>Extracto bancario</button>
       </div>
 
-      {sub==='facturacion'&&<TabFacturacionReal factReal={factReal} setFactReal={setFactReal} factFcst={factFcst} setFactFcst={setFactFcst} ingRealM={ingRealM} ingFcstM={ingFcstM} ingM={ingM} ingIVARealM={ingIVARealM} save={save}/>}
-      {sub==='gastos'&&<TabGastosReal gastosReal={gastosReal} setGastosReal={setGastosReal} gastosFcst={gastosFcst} setGastosFcst={setGastosFcst} imptosReal={imptosReal} setImptosReal={setImptosReal} imptosFcst={imptosFcst} setImptosFcst={setImptosFcst} gCombM={gCombM} iCombM={iCombM} save={save}/>}
+      {modal==='cliente'&&<ModalClienteSeg onAdd={addCliente} onClose={()=>setModal(null)}/>}
+      {modal?.tipo==='gasto'&&<ModalGastoSeg grupoDefault={modal.grupo} onAdd={addGastoR} onClose={()=>setModal(null)}/>}
+      {sub==='facturacion'&&<TabFacturacionReal clientes={clientes} factReal={factReal} setFactReal={setFactReal} factFcst={factFcst} setFactFcst={setFactFcst} ingRealM={ingRealM} ingFcstM={ingFcstM} ingM={ingM} ingIVARealM={ingIVARealM} save={save} addCliente={addCliente} delCliente={delCliente} setModal={setModal}/>}
+      {sub==='gastos'&&<TabGastosReal gastosReal={gastosReal} setGastosReal={setGastosReal} gastosFcst={gastosFcst} setGastosFcst={setGastosFcst} imptosReal={imptosReal} setImptosReal={setImptosReal} imptosFcst={imptosFcst} setImptosFcst={setImptosFcst} gCombM={gCombM} iCombM={iCombM} save={save} addGasto={addGastoR} delGasto={delGastoR} setModal={setModal}/>}
       {sub==='facturas'&&<TabFacturasPendientes facturas={facturas} setFacturas={setFacturas} save={save} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM}/>}
       {sub==='pyg'&&<TabPyGReal ingM={ingM} gCombM={gCombM} iCombM={iCombM} gastosReal={gastosReal} gastosFcst={gastosFcst} imptosReal={imptosReal} imptosFcst={imptosFcst}/>}
       {sub==='caja'&&<TabCajaReal facturas={facturas} movs={movs} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} pagosExtractoM={pagosExtractoM} flujoCajaM={flujoCajaM}/>}
@@ -293,10 +308,51 @@ function App(){
   );
 }
 
+// ── MODALS SEGUIMIENTO ─────────────────────────────────────────
+function ModalClienteSeg({onAdd,onClose}){
+  const [nombre,setNombre]=React.useState('');
+  const [grupo,setGrupo]=React.useState('Varios');
+  const [iva,setIva]=React.useState('0.21');
+  const ok=()=>{if(!nombre.trim())return;onAdd({id:'c'+Date.now().toString(36),nombre:nombre.trim(),grupo,iva:parseFloat(iva)||0});onClose();};
+  return(<div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.4)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center',padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+    <div style={{background:'#fff',borderRadius:10,padding:24,width:'100%',maxWidth:380,boxShadow:'0 16px 48px rgba(0,0,0,.18)'}}>
+      <div style={{fontSize:14,fontWeight:700,marginBottom:16,color:'#1a2b4a'}}><i className="ti ti-user-plus" style={{marginRight:7}}></i>Añadir cliente</div>
+      <div style={{marginBottom:10}}><label style={{fontSize:10,fontWeight:700,color:'#666',textTransform:'uppercase',letterSpacing:'.03em',display:'block',marginBottom:4}}>Nombre</label><input autoFocus value={nombre} onChange={e=>setNombre(e.target.value)} onKeyDown={e=>e.key==='Enter'&&ok()} style={{width:'100%',padding:'6px 9px',border:'1px solid #dde0e6',borderRadius:5,fontSize:12,fontFamily:'Arial,sans-serif'}} placeholder="Ej: Nuevo Cliente SA"/></div>
+      <div style={{marginBottom:10}}><label style={{fontSize:10,fontWeight:700,color:'#666',textTransform:'uppercase',letterSpacing:'.03em',display:'block',marginBottom:4}}>Grupo</label><select value={grupo} onChange={e=>setGrupo(e.target.value)} style={{width:'100%',padding:'6px 9px',border:'1px solid #dde0e6',borderRadius:5,fontSize:12,fontFamily:'Arial,sans-serif'}}>{GRUPOS_CLIENTE.map(g=><option key={g} value={g}>{g}</option>)}</select></div>
+      <div style={{marginBottom:16}}><label style={{fontSize:10,fontWeight:700,color:'#666',textTransform:'uppercase',letterSpacing:'.03em',display:'block',marginBottom:4}}>IVA</label><select value={iva} onChange={e=>setIva(e.target.value)} style={{width:'100%',padding:'6px 9px',border:'1px solid #dde0e6',borderRadius:5,fontSize:12,fontFamily:'Arial,sans-serif'}}><option value="0.21">21%</option><option value="0.10">10%</option><option value="0">Exento</option></select></div>
+      <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+        <button onClick={onClose} style={{padding:'5px 12px',borderRadius:5,border:'1px solid #dde0e6',background:'#fff',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:'Arial,sans-serif'}}>Cancelar</button>
+        <button onClick={ok} style={{padding:'5px 12px',borderRadius:5,border:'1px solid #1a2b4a',background:'#1a2b4a',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:'Arial,sans-serif'}}><i className="ti ti-plus"></i> Añadir</button>
+      </div>
+    </div>
+  </div>);
+}
+
+function ModalGastoSeg({grupoDefault,onAdd,onClose}){
+  const [concepto,setConcepto]=React.useState('');
+  const [grupo,setGrupo]=React.useState(grupoDefault||'Estructura');
+  const [iva,setIva]=React.useState('0.21');
+  const [irpf,setIrpf]=React.useState('0');
+  const ok=()=>{if(!concepto.trim())return;onAdd({id:'g'+Date.now().toString(36),concepto:concepto.trim(),grupo,iva:parseFloat(iva)||0,irpf:parseFloat(irpf)||0,imp:Array(12).fill(0)});onClose();};
+  return(<div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.4)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center',padding:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+    <div style={{background:'#fff',borderRadius:10,padding:24,width:'100%',maxWidth:380,boxShadow:'0 16px 48px rgba(0,0,0,.18)'}}>
+      <div style={{fontSize:14,fontWeight:700,marginBottom:16,color:'#1a2b4a'}}><i className="ti ti-plus" style={{marginRight:7}}></i>Añadir partida de gasto</div>
+      <div style={{marginBottom:10}}><label style={{fontSize:10,fontWeight:700,color:'#666',textTransform:'uppercase',letterSpacing:'.03em',display:'block',marginBottom:4}}>Concepto</label><input autoFocus value={concepto} onChange={e=>setConcepto(e.target.value)} onKeyDown={e=>e.key==='Enter'&&ok()} style={{width:'100%',padding:'6px 9px',border:'1px solid #dde0e6',borderRadius:5,fontSize:12,fontFamily:'Arial,sans-serif'}} placeholder="Ej: Asesoría externa"/></div>
+      <div style={{marginBottom:10}}><label style={{fontSize:10,fontWeight:700,color:'#666',textTransform:'uppercase',letterSpacing:'.03em',display:'block',marginBottom:4}}>Grupo</label><select value={grupo} onChange={e=>setGrupo(e.target.value)} style={{width:'100%',padding:'6px 9px',border:'1px solid #dde0e6',borderRadius:5,fontSize:12,fontFamily:'Arial,sans-serif'}}>{GRUPOS_GASTO.map(g=><option key={g} value={g}>{g}</option>)}</select></div>
+      <div style={{marginBottom:10}}><label style={{fontSize:10,fontWeight:700,color:'#666',textTransform:'uppercase',letterSpacing:'.03em',display:'block',marginBottom:4}}>IVA</label><select value={iva} onChange={e=>setIva(e.target.value)} style={{width:'100%',padding:'6px 9px',border:'1px solid #dde0e6',borderRadius:5,fontSize:12,fontFamily:'Arial,sans-serif'}}><option value="0.21">21%</option><option value="0.10">10%</option><option value="0">Sin IVA</option></select></div>
+      <div style={{marginBottom:16}}><label style={{fontSize:10,fontWeight:700,color:'#666',textTransform:'uppercase',letterSpacing:'.03em',display:'block',marginBottom:4}}>Retención IRPF</label><select value={irpf} onChange={e=>setIrpf(e.target.value)} style={{width:'100%',padding:'6px 9px',border:'1px solid #dde0e6',borderRadius:5,fontSize:12,fontFamily:'Arial,sans-serif'}}><option value="0">Sin retención</option><option value="0.15">15%</option><option value="0.19">19%</option><option value="0.07">7%</option></select></div>
+      <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+        <button onClick={onClose} style={{padding:'5px 12px',borderRadius:5,border:'1px solid #dde0e6',background:'#fff',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:'Arial,sans-serif'}}>Cancelar</button>
+        <button onClick={ok} style={{padding:'5px 12px',borderRadius:5,border:'1px solid #1a2b4a',background:'#1a2b4a',color:'#fff',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:'Arial,sans-serif'}}><i className="ti ti-plus"></i> Añadir</button>
+      </div>
+    </div>
+  </div>);
+}
+
 // ══════════════════════════════════════════════════════════════════
 // SUB-TAB: FACTURACIÓN REAL + FORECAST
 // ══════════════════════════════════════════════════════════════════
-function TabFacturacionReal({factReal,setFactReal,factFcst,setFactFcst,ingRealM,ingFcstM,ingM,ingIVARealM,save}){
+function TabFacturacionReal({clientes,factReal,setFactReal,factFcst,setFactFcst,ingRealM,ingFcstM,ingM,ingIVARealM,save,addCliente,delCliente,setModal}){
   const setR=(cid,m,v)=>{const val=pn(v);const n={...factReal,[cid]:factReal[cid].map((x,i)=>i===m?val:x)};setFactReal(n);save({factReal:n});};
   const setF=(cid,m,v)=>{const val=pn(v);const n={...factFcst,[cid]:factFcst[cid].map((x,i)=>i===m?val:x)};setFactFcst(n);save({factFcst:n});};
 
@@ -402,6 +458,7 @@ function TabFacturacionReal({factReal,setFactReal,factFcst,setFactFcst,ingRealM,
                 })}
                 <td className="num" style={{fontWeight:600,borderLeft:'2px solid #c0d0e0',background:'#f0f4f8',color:'#1a7a45'}}>{fmt(totReal)}</td>
                 <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#e8f0fb',color:'#1a2b4a'}}>{fmt(totCierre)}</td>
+                <td style={{padding:'2px 4px'}}><button title="Eliminar" onClick={()=>delCliente(c.id)} style={{padding:'2px 6px',borderRadius:4,border:'1px solid #e4c0c0',background:'transparent',color:'#b83232',cursor:'pointer',fontSize:10,fontFamily:'Arial,sans-serif'}}><i className="ti ti-trash"></i></button></td>
               </tr>
             );
           })}
@@ -494,7 +551,7 @@ const CV_IDS=['nominas','ss','rosalia','legalpigeon'];
 // ══════════════════════════════════════════════════════════════════
 // SUB-TAB: GASTOS REAL + FORECAST
 // ══════════════════════════════════════════════════════════════════
-function TabGastosReal({gastosReal,setGastosReal,gastosFcst,setGastosFcst,imptosReal,setImptosReal,imptosFcst,setImptosFcst,gCombM,iCombM,save}){
+function TabGastosReal({gastosReal,setGastosReal,gastosFcst,setGastosFcst,imptosReal,setImptosReal,imptosFcst,setImptosFcst,gCombM,iCombM,save,addGasto,delGasto,setModal}){
   const grupos=[...new Set(GASTOS0.map(g=>g.grupo))];
 
   const setG=(gid,m,v,esReal)=>{
@@ -561,6 +618,7 @@ function TabGastosReal({gastosReal,setGastosReal,gastosFcst,setGastosFcst,imptos
       <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#fdf8f0',color:'#b83232',fontSize:11}}>
         {fmt(MESES.reduce((_,__,m)=>_+(m<=MES_ACTUAL?gastosReal:gastosFcst).find(x=>x.id===g.id)?.imp[m]||0,0))}
       </td>
+      <td style={{padding:'2px 4px'}}><button title="Eliminar" onClick={()=>delGasto(g.id)} style={{padding:'2px 6px',borderRadius:4,border:'1px solid #e4c0c0',background:'transparent',color:'#b83232',cursor:'pointer',fontSize:10,fontFamily:'Arial,sans-serif'}}><i className="ti ti-trash"></i></button></td>
     </tr>
   );
 
@@ -635,6 +693,7 @@ function TabGastosReal({gastosReal,setGastosReal,gastosFcst,setGastosFcst,imptos
             return[
               <tr key={`sg${gr}`} className="section-row"><td className="sticky" colSpan={14}>{gr}</td></tr>,
               ...gg.map(g=><GRow key={g.id} g={g}/>),
+              <tr key={`add${gr}`}><td colSpan={14} style={{padding:'4px 8px',background:'#fafafa'}}><button onClick={()=>setModal({tipo:'gasto',grupo:gr})} style={{width:'100%',padding:'5px',border:'1.5px dashed #c0cad8',borderRadius:6,background:'transparent',color:'#888',cursor:'pointer',fontSize:11,display:'flex',alignItems:'center',justifyContent:'center',gap:5,fontFamily:'Arial,sans-serif'}}><i className="ti ti-plus"></i>Añadir partida en {gr}</button></td></tr>
               <tr key={`tot${gr}`} style={{background:'#f4f6f9'}}>
                 <td className="sticky" style={{fontWeight:700,paddingLeft:8,fontSize:11,color:'#1a2b4a'}}>Subtotal {gr}</td>
                 {MESES.map((_,m)=><td key={m} className="num" style={{fontWeight:600,color:'#b83232',background:m<=MES_ACTUAL?'#dcf0e4':'#dce8f8'}}>{fmt(tgCombM(m))}</td>)}

@@ -47,14 +47,17 @@ th.sticky{background:#f4f6f9;z-index:3}
 .result-row td.sticky{background:#1a2b4a;color:#fff}
 .cell-edit{background:transparent;border:none;border-bottom:1px dashed #ccc;width:72px;text-align:right;font-size:11px;padding:1px 2px;font-family:monospace;color:#1a1a1a}
 .cell-edit:focus{outline:none;border-bottom-color:#1a2b4a;background:#f0f4ff;border-radius:2px 2px 0 0}
-.cell-edit:disabled{border-bottom-color:transparent;color:#1a1a1a;background:transparent;cursor:default}
+.cell-edit:disabled{border-bottom-color:transparent;cursor:default}
 .locked-banner{display:flex;align-items:center;gap:8px;padding:9px 14px;background:#e8f4ec;border:1px solid #a0d4b0;border-radius:6px;font-size:11px;color:#1a5c30;margin-bottom:14px}
 .draft-banner{display:flex;align-items:center;gap:8px;padding:9px 14px;background:#fff8e6;border:1px solid #f0d070;border-radius:6px;font-size:11px;color:#7a5000;margin-bottom:14px}
 .btn{padding:5px 12px;border-radius:5px;border:1px solid #dde0e6;background:#fff;cursor:pointer;font-size:11px;font-weight:600;color:#333;transition:.1s;display:inline-flex;align-items:center;gap:5px}
 .btn:hover{background:#f4f6f9}
-.btn-success{background:#1a7a45;color:#fff;border-color:#1a7a45}
-.btn-success:hover{background:#156035}
+.btn-success{background:#1a7a45;color:#fff;border-color:#1a7a45}.btn-success:hover{background:#156035}
+.btn-primary{background:#1a2b4a;color:#fff;border-color:#1a2b4a}.btn-primary:hover{background:#243d6a}
+.btn-danger{color:#b83232;border-color:#e4c0c0}.btn-danger:hover{background:#fdecea}
 .btn-sm{padding:3px 8px;font-size:10px}
+.btn-add{width:100%;padding:6px;border:1.5px dashed #c0cad8;border-radius:6px;background:transparent;color:#888;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;gap:5px;transition:.12s;margin-top:4px}
+.btn-add:hover{border-color:#1a2b4a;color:#1a2b4a;background:#f4f7fb}
 .overflow-x{overflow-x:auto}
 .mh{font-size:9px;text-align:center;padding:4px 2px;white-space:nowrap;border-left:1px solid #e8e8e8}
 .mh-total{background:#e4ecf4;color:#1a2b4a;font-weight:700;border-left:2px solid #1a2b4a}
@@ -64,6 +67,15 @@ th.sticky{background:#f4f6f9;z-index:3}
 .tag{display:inline-block;font-size:9px;padding:1px 6px;border-radius:3px;font-weight:600;margin-left:4px}
 .tag-iva{background:#e8f0fb;color:#1a2b4a}
 .tag-exento{background:#f0f0f0;color:#666}
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:#fff;border-radius:10px;padding:24px;width:100%;max-width:420px;box-shadow:0 16px 48px rgba(0,0,0,.18)}
+.modal h3{font-size:14px;font-weight:700;margin-bottom:16px;color:#1a2b4a}
+.form-group{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.form-group label{font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.03em}
+.form-group input,.form-group select{font-size:12px;padding:6px 9px;border:1px solid #dde0e6;border-radius:5px;background:#fff;font-family:Arial,sans-serif}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:#1a2b4a}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 input[type=number]{-moz-appearance:textfield}
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
 </style>
@@ -74,8 +86,10 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 const {useState,useCallback}=React;
 const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const SK='bmg_presupuesto_2026_v1';
+const GRUPOS_GASTO=['Personal','Colaboradores','Estructura'];
+const GRUPOS_CLIENTE=['Bancos','Servicios','Varios'];
 
-const CLIENTES=[
+const CLIENTES0=[
   {id:'bsabadell', nombre:'Banco Sabadell',          grupo:'Bancos',    iva:0.21},
   {id:'link',      nombre:'Link Finanzas',            grupo:'Servicios', iva:0.21},
   {id:'aiqon',     nombre:'Aiqon',                    grupo:'Servicios', iva:0},
@@ -91,24 +105,22 @@ const CLIENTES=[
   {id:'procesal',  nombre:'Procesal',                 grupo:'Varios',    iva:0.21},
   {id:'consultoria',nombre:'Consultoría',             grupo:'Varios',    iva:0.21},
 ];
-
 const FACT0={
-  bsabadell: [43768,49962,57576,38583,42870,42870,42870,21435,42870,42870,42870,42870],
-  link:      [26683,12125,12545,18316,18316,18316,18316, 9158,18316,18316,18316,18316],
-  aiqon:     [14069,15837,14455,15822,15822,15822,15822, 7911,15822,15822,15822,15822],
-  claimup:   [ 1519,  490, 1065, 1179, 1179, 1179, 1179,  589, 1179, 1179, 1179, 1179],
-  reclamio:  [ 2463, 3277, 1573, 2681, 2681, 2681, 2681, 1341, 2681, 2681, 2681, 2681],
-  cajamar:   [19547, 5873, 7780, 8134, 8134, 8134, 8134, 4067, 8134, 8134, 8134, 8134],
-  caixabank: [ 8187,  972, 1322, 3843, 3843, 3843, 3843, 1921, 3843, 3843, 3843, 3843],
-  hispania:  [ 8175, 6642,12849, 6778, 9683, 9683, 9683, 4842, 9683, 9683, 9683, 9683],
-  otros:     [10850, 4100, 4300, 4941, 7058, 7058, 7058, 3529, 7058, 7058, 7058, 7058],
-  madrid:    [ 4000,    0,    0, 1400, 2000, 2000, 2000, 1000, 2000, 2000, 2000, 2000],
-  gestoria:  [    0, 7610,    0, 8000, 8000, 8000, 8000, 8000, 8000, 8000, 8000, 8000],
-  fiscal:    [  300,    0, 1580,  877, 1253, 1253, 1253,  627, 1253, 1253, 1253, 1253],
-  procesal:  [  850,    0,    0,  283,  283,  283,  283,  142,  283,  283,  283,  283],
-  consultoria:[  838, 1338, 1813, 1994, 1994, 1994, 1994, 1994, 1994, 1994, 1994, 1994],
+  bsabadell:[43768,49962,57576,38583,42870,42870,42870,21435,42870,42870,42870,42870],
+  link:[26683,12125,12545,18316,18316,18316,18316,9158,18316,18316,18316,18316],
+  aiqon:[14069,15837,14455,15822,15822,15822,15822,7911,15822,15822,15822,15822],
+  claimup:[1519,490,1065,1179,1179,1179,1179,589,1179,1179,1179,1179],
+  reclamio:[2463,3277,1573,2681,2681,2681,2681,1341,2681,2681,2681,2681],
+  cajamar:[19547,5873,7780,8134,8134,8134,8134,4067,8134,8134,8134,8134],
+  caixabank:[8187,972,1322,3843,3843,3843,3843,1921,3843,3843,3843,3843],
+  hispania:[8175,6642,12849,6778,9683,9683,9683,4842,9683,9683,9683,9683],
+  otros:[10850,4100,4300,4941,7058,7058,7058,3529,7058,7058,7058,7058],
+  madrid:[4000,0,0,1400,2000,2000,2000,1000,2000,2000,2000,2000],
+  gestoria:[0,7610,0,8000,8000,8000,8000,8000,8000,8000,8000,8000],
+  fiscal:[300,0,1580,877,1253,1253,1253,627,1253,1253,1253,1253],
+  procesal:[850,0,0,283,283,283,283,142,283,283,283,283],
+  consultoria:[838,1338,1813,1994,1994,1994,1994,1994,1994,1994,1994,1994],
 };
-
 const GASTOS0=[
   {id:'nominas',    concepto:'Nóminas personal fijo (neto)',            grupo:'Personal',      iva:0,    irpf:0,    imp:Array(12).fill(-37734)},
   {id:'ss',         concepto:'Seguridad Social empresa',                grupo:'Personal',      iva:0,    irpf:0,    imp:Array(12).fill(-12167)},
@@ -125,41 +137,143 @@ const GASTOS0=[
   {id:'it',         concepto:'Informática',                             grupo:'Estructura',    iva:0.21, irpf:0,    imp:Array(12).fill(-8500)},
   {id:'otros_g',    concepto:'Otros gastos operativos',                 grupo:'Estructura',    iva:0.21, irpf:0,    imp:Array(12).fill(-2000)},
 ];
-
 const IMPTOS0=[
   {id:'iva',  concepto:'Liquidación IVA (mod. 303)',      imp:[0,0,0,0,0,0,-25000,0,0,-25000,0,0]},
   {id:'irpf', concepto:'Retenciones IRPF (mod. 111/115)', imp:[0,0,0,0,0,0,-30000,0,0,-30000,0,0]},
   {id:'is',   concepto:'Pago fraccionado IS (mod. 202)',  imp:Array(12).fill(0)},
 ];
 
-const fmt=(n,dec=0)=>{
-  if(n===null||n===undefined||isNaN(n))return'—';
-  const s=Math.abs(n).toLocaleString('es-ES',{minimumFractionDigits:dec,maximumFractionDigits:dec});
-  return(n<0?'-':'')+'€\u202f'+s;
-};
+const fmt=(n,dec=0)=>{if(n===null||n===undefined||isNaN(n))return'—';const s=Math.abs(n).toLocaleString('es-ES',{minimumFractionDigits:dec,maximumFractionDigits:dec});return(n<0?'-':'')+'€\u202f'+s;};
 const pn=v=>{const s=String(v||0).replace(/[€\s]/g,'').replace(',','.');const n=parseFloat(s);return isNaN(n)?0:n;};
 const load=()=>{try{const r=localStorage.getItem(SK);return r?JSON.parse(r):null;}catch{return null;}};
 const persist=d=>{try{localStorage.setItem(SK,JSON.stringify(d));}catch{}};
 const pct=(a,b)=>b?Math.round(a/b*100):0;
-const CV=['nominas','ss','rosalia','legalpigeon'];
+const uid=()=>'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const CV_BASE=['nominas','ss','rosalia','legalpigeon'];
 
+// ── MODAL AÑADIR CLIENTE ──────────────────────────────────────────
+function ModalCliente({onAdd,onClose}){
+  const [nombre,setNombre]=useState('');
+  const [grupo,setGrupo]=useState('Varios');
+  const [iva,setIva]=useState('0.21');
+  const ok=()=>{
+    if(!nombre.trim())return;
+    onAdd({id:uid(),nombre:nombre.trim(),grupo,iva:parseFloat(iva)||0});
+    onClose();
+  };
+  return(
+    <div className="modal-bg" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <h3><i className="ti ti-user-plus" style={{marginRight:7}}></i>Añadir cliente / línea de facturación</h3>
+        <div className="form-group"><label>Nombre</label><input autoFocus value={nombre} onChange={e=>setNombre(e.target.value)} onKeyDown={e=>e.key==='Enter'&&ok()} placeholder="Ej: Nuevo Cliente SA"/></div>
+        <div className="form-group"><label>Grupo</label>
+          <select value={grupo} onChange={e=>setGrupo(e.target.value)}>
+            {GRUPOS_CLIENTE.map(g=><option key={g} value={g}>{g}</option>)}
+          </select>
+        </div>
+        <div className="form-group"><label>IVA</label>
+          <select value={iva} onChange={e=>setIva(e.target.value)}>
+            <option value="0.21">21% (general)</option>
+            <option value="0.10">10% (reducido)</option>
+            <option value="0">Exento</option>
+          </select>
+        </div>
+        <div className="modal-footer">
+          <button className="btn" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-primary" onClick={ok}><i className="ti ti-plus"></i>Añadir</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── MODAL AÑADIR GASTO ────────────────────────────────────────────
+function ModalGasto({grupoDefault,onAdd,onClose}){
+  const [concepto,setConcepto]=useState('');
+  const [grupo,setGrupo]=useState(grupoDefault||'Estructura');
+  const [iva,setIva]=useState('0.21');
+  const [irpf,setIrpf]=useState('0');
+  const ok=()=>{
+    if(!concepto.trim())return;
+    onAdd({id:uid(),concepto:concepto.trim(),grupo,iva:parseFloat(iva)||0,irpf:parseFloat(irpf)||0,imp:Array(12).fill(0)});
+    onClose();
+  };
+  return(
+    <div className="modal-bg" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <h3><i className="ti ti-plus" style={{marginRight:7}}></i>Añadir partida de gasto</h3>
+        <div className="form-group"><label>Concepto</label><input autoFocus value={concepto} onChange={e=>setConcepto(e.target.value)} onKeyDown={e=>e.key==='Enter'&&ok()} placeholder="Ej: Asesoría jurídica externa"/></div>
+        <div className="form-group"><label>Grupo</label>
+          <select value={grupo} onChange={e=>setGrupo(e.target.value)}>
+            {GRUPOS_GASTO.map(g=><option key={g} value={g}>{g}</option>)}
+          </select>
+        </div>
+        <div className="form-group"><label>IVA</label>
+          <select value={iva} onChange={e=>setIva(e.target.value)}>
+            <option value="0.21">21%</option>
+            <option value="0.10">10%</option>
+            <option value="0">Sin IVA</option>
+          </select>
+        </div>
+        <div className="form-group"><label>Retención IRPF</label>
+          <select value={irpf} onChange={e=>setIrpf(e.target.value)}>
+            <option value="0">Sin retención</option>
+            <option value="0.15">15%</option>
+            <option value="0.19">19%</option>
+            <option value="0.07">7%</option>
+          </select>
+        </div>
+        <div className="modal-footer">
+          <button className="btn" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-primary" onClick={ok}><i className="ti ti-plus"></i>Añadir</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+// APP
+// ══════════════════════════════════════════════════════════════════
 function App(){
   const sv=load();
-  const [fact,setFact]   =useState(()=>sv?.fact   ||JSON.parse(JSON.stringify(FACT0)));
-  const [gastos,setGastos]=useState(()=>sv?.gastos ||JSON.parse(JSON.stringify(GASTOS0)));
-  const [imptos,setImptos]=useState(()=>sv?.imptos ||JSON.parse(JSON.stringify(IMPTOS0)));
-  const [saldo0,setSaldo0]=useState(()=>sv?.saldo0??45000);
-  const [locked,setLocked]=useState(()=>sv?.locked||false);
+  const [clientes,setClientes]=useState(()=>sv?.clientes||JSON.parse(JSON.stringify(CLIENTES0)));
+  const [fact,setFact]        =useState(()=>sv?.fact    ||JSON.parse(JSON.stringify(FACT0)));
+  const [gastos,setGastos]    =useState(()=>sv?.gastos  ||JSON.parse(JSON.stringify(GASTOS0)));
+  const [imptos,setImptos]    =useState(()=>sv?.imptos  ||JSON.parse(JSON.stringify(IMPTOS0)));
+  const [saldo0,setSaldo0]    =useState(()=>sv?.saldo0??45000);
+  const [locked,setLocked]    =useState(()=>sv?.locked||false);
   const [lockedAt,setLockedAt]=useState(()=>sv?.lockedAt||null);
-  const [sub,setSub]=useState('facturacion');
+  const [sub,setSub]          =useState('facturacion');
+  const [modal,setModal]      =useState(null); // 'cliente' | {tipo:'gasto',grupo}
 
-  const save=useCallback((p)=>{persist({fact,gastos,imptos,saldo0,locked,lockedAt,...p});},[fact,gastos,imptos,saldo0,locked,lockedAt]);
+  const save=useCallback((p)=>{persist({clientes,fact,gastos,imptos,saldo0,locked,lockedAt,...p});},[clientes,fact,gastos,imptos,saldo0,locked,lockedAt]);
 
-  const setF=(cid,m,v)=>{if(locked)return;const n={...fact,[cid]:fact[cid].map((x,i)=>i===m?pn(v):x)};setFact(n);save({fact:n});};
+  // Edición celdas
+  const setF=(cid,m,v)=>{if(locked)return;const arr=(fact[cid]||Array(12).fill(0)).slice();arr[m]=pn(v);const n={...fact,[cid]:arr};setFact(n);save({fact:n});};
   const setG=(gid,m,v)=>{if(locked)return;let val=pn(v);if(val>0)val=-val;const n=gastos.map(g=>g.id!==gid?g:{...g,imp:g.imp.map((x,i)=>i===m?val:x)});setGastos(n);save({gastos:n});};
   const setI=(iid,m,v)=>{if(locked)return;let val=pn(v);if(val>0)val=-val;const n=imptos.map(i=>i.id!==iid?i:{...i,imp:i.imp.map((x,j)=>j===m?val:x)});setImptos(n);save({imptos:n});};
   const setS=v=>{if(locked)return;const n=pn(v);setSaldo0(n);save({saldo0:n});};
 
+  // Añadir/eliminar clientes
+  const addCliente=c=>{
+    const nc=[...clientes,c];const nf={...fact,[c.id]:Array(12).fill(0)};
+    setClientes(nc);setFact(nf);save({clientes:nc,fact:nf});
+  };
+  const delCliente=id=>{
+    if(!confirm('¿Eliminar este cliente y todos sus datos?'))return;
+    const nc=clientes.filter(c=>c.id!==id);const nf={...fact};delete nf[id];
+    setClientes(nc);setFact(nf);save({clientes:nc,fact:nf});
+  };
+
+  // Añadir/eliminar gastos
+  const addGasto=g=>{const n=[...gastos,g];setGastos(n);save({gastos:n});};
+  const delGasto=id=>{
+    if(!confirm('¿Eliminar esta partida y todos sus datos?'))return;
+    const n=gastos.filter(g=>g.id!==id);setGastos(n);save({gastos:n});
+  };
+
+  // Lock
   const doLock=()=>{
     if(!confirm('¿Fijar el presupuesto? No se podrá editar hasta desbloquearlo.'))return;
     const at=new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'});
@@ -170,18 +284,19 @@ function App(){
     setLocked(false);setLockedAt(null);save({locked:false,lockedAt:null});
   };
 
-  // Cálculos
-  const ingM  =m=>CLIENTES.reduce((s,c)=>(fact[c.id]?.[m]||0)+s,0);
-  const ingIVAM=m=>CLIENTES.reduce((s,c)=>{const b=fact[c.id]?.[m]||0;return s+b*(1+(c.iva??0.21));},0);
-  const cvM   =m=>gastos.filter(g=>CV.includes(g.id)).reduce((s,g)=>s+(g.imp[m]||0),0);
-  const gfijM =m=>gastos.reduce((s,g)=>s+(g.imp[m]||0),0);
-  const imptM =m=>imptos.reduce((s,i)=>s+(i.imp[m]||0),0);
-  const mbM   =m=>ingM(m)+cvM(m);
-  const ebitM =m=>ingM(m)+gfijM(m);
-  const resM  =m=>ebitM(m)+imptM(m);
-  const pagoCM=m=>gastos.reduce((s,g)=>(g.imp[m]||0)*(1+(g.iva||0)-(g.irpf||0))+s,0)+imptM(m);
-  const flujoM=m=>ingIVAM(m)+pagoCM(m);
-  const saldoM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=flujoM(i);return s;};
+  // Cálculos — usan clientes y gastos como estado
+  const CV=gastos.filter(g=>CV_BASE.includes(g.id)||g.grupo==='Personal').map(g=>g.id);
+  const ingM   =m=>clientes.reduce((s,c)=>(fact[c.id]?.[m]||0)+s,0);
+  const ingIVAM=m=>clientes.reduce((s,c)=>{const b=fact[c.id]?.[m]||0;return s+b*(1+(c.iva??0.21));},0);
+  const cvM    =m=>gastos.filter(g=>CV.includes(g.id)).reduce((s,g)=>s+(g.imp[m]||0),0);
+  const gfijM  =m=>gastos.reduce((s,g)=>s+(g.imp[m]||0),0);
+  const imptM  =m=>imptos.reduce((s,i)=>s+(i.imp[m]||0),0);
+  const mbM    =m=>ingM(m)+cvM(m);
+  const ebitM  =m=>ingM(m)+gfijM(m);
+  const resM   =m=>ebitM(m)+imptM(m);
+  const pagoCM =m=>gastos.reduce((s,g)=>(g.imp[m]||0)*(1+(g.iva||0)-(g.irpf||0))+s,0)+imptM(m);
+  const flujoM =m=>ingIVAM(m)+pagoCM(m);
+  const saldoM =m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=flujoM(i);return s;};
 
   const TI=MESES.reduce((_,__,m)=>_+ingM(m),0);
   const TMB=MESES.reduce((_,__,m)=>_+mbM(m),0);
@@ -189,8 +304,13 @@ function App(){
   const TR=MESES.reduce((_,__,m)=>_+resM(m),0);
   const SF=saldoM(11);
 
+  const props={clientes,fact,gastos,imptos,locked,ingM,ingIVAM,cvM,mbM,ebitM,imptM,resM,pagoCM,flujoM,saldoM,gfijM,setF,setG,setI,setS,saldo0,addCliente,delCliente,addGasto,delGasto,setModal,CV};
+
   return(
     <div className="app">
+      {modal==='cliente'&&<ModalCliente onAdd={addCliente} onClose={()=>setModal(null)}/>}
+      {modal?.tipo==='gasto'&&<ModalGasto grupoDefault={modal.grupo} onAdd={addGasto} onClose={()=>setModal(null)}/>}
+
       <div className="header">
         <div>
           <h1><i className="ti ti-building-skyscraper" style={{marginRight:7}}></i>BMG Law Services · Presupuesto 2026</h1>
@@ -212,7 +332,7 @@ function App(){
       </div>
 
       {locked
-        ?<div className="locked-banner"><i className="ti ti-lock" style={{fontSize:16}}></i><span>Presupuesto fijado el <strong>{lockedAt}</strong>. Solo lectura. Usa "Desbloquear" si necesitas corregir algo.</span></div>
+        ?<div className="locked-banner"><i className="ti ti-lock" style={{fontSize:16}}></i><span>Presupuesto fijado el <strong>{lockedAt}</strong>. Solo lectura.</span></div>
         :<div className="draft-banner"><i className="ti ti-pencil" style={{fontSize:16}}></i><span><strong>Borrador</strong> — edita directamente en las celdas. Pulsa <strong>Fijar presupuesto</strong> cuando todo esté correcto.</span></div>
       }
 
@@ -231,39 +351,48 @@ function App(){
         <button className={sub==='tesoreria'?'active':''} onClick={()=>setSub('tesoreria')}><i className="ti ti-building-bank"></i>Tesorería</button>
       </div>
 
-      {sub==='facturacion'&&<TabFact fact={fact} locked={locked} ingM={ingM} ingIVAM={ingIVAM} setF={setF}/>}
-      {sub==='gastos'&&<TabGastos gastos={gastos} imptos={imptos} locked={locked} gfijM={gfijM} imptM={imptM} setG={setG} setI={setI}/>}
-      {sub==='pyg'&&<TabPyG gastos={gastos} imptos={imptos} locked={locked} ingM={ingM} cvM={cvM} mbM={mbM} ebitM={ebitM} imptM={imptM} resM={resM} setG={setG} setI={setI}/>}
-      {sub==='tesoreria'&&<TabTes gastos={gastos} imptos={imptos} locked={locked} saldo0={saldo0} ingIVAM={ingIVAM} pagoCM={pagoCM} flujoM={flujoM} saldoM={saldoM} setS={setS}/>}
+      {sub==='facturacion'&&<TabFact {...props}/>}
+      {sub==='gastos'&&<TabGastos {...props}/>}
+      {sub==='pyg'&&<TabPyG {...props}/>}
+      {sub==='tesoreria'&&<TabTes {...props}/>}
     </div>
   );
 }
 
 // ── FACTURACIÓN ──────────────────────────────────────────────────
-function TabFact({fact,locked,ingM,ingIVAM,setF}){
-  const grupos=[...new Set(CLIENTES.map(c=>c.grupo))];
+function TabFact({clientes,fact,locked,ingM,ingIVAM,setF,delCliente,setModal}){
+  const grupos=[...new Set(clientes.map(c=>c.grupo))];
   const TI=MESES.reduce((_,__,m)=>_+ingM(m),0);
   return(
     <div>
       <div className="alert alert-info"><i className="ti ti-info-circle"></i><span>Importes en <strong>base imponible (sin IVA)</strong>. El IVA se aplica automáticamente en tesorería.</span></div>
       <div className="card">
-        <div className="card-header"><h2>Facturación por cliente · 2026</h2><span style={{fontSize:10,color:'#888'}}>{locked?'Solo lectura':'Clic en celda para editar'}</span></div>
+        <div className="card-header">
+          <h2>Facturación por cliente · 2026</h2>
+          {!locked&&<button className="btn btn-sm btn-primary" onClick={()=>setModal('cliente')}><i className="ti ti-plus"></i>Nuevo cliente</button>}
+        </div>
         <div className="overflow-x">
         <table style={{minWidth:1120}}>
           <thead><tr>
             <th className="sticky" style={{minWidth:190}}>Cliente</th>
-            <th style={{minWidth:75}}>Grupo</th>
+            <th style={{minWidth:70}}>Grupo</th>
             <th style={{minWidth:46,textAlign:'center',fontSize:9}}>IVA</th>
             {MESES.map(m=><th key={m} className="mh" style={{minWidth:68}}>{m}</th>)}
             <th className="mh mh-total" style={{minWidth:82}}>Total año</th>
+            {!locked&&<th style={{width:32}}></th>}
           </tr></thead>
           <tbody>
           {grupos.map(gr=>{
-            const gc=CLIENTES.filter(c=>c.grupo===gr);
+            const gc=clientes.filter(c=>c.grupo===gr);
             const tgM=m=>gc.reduce((s,c)=>(fact[c.id]?.[m]||0)+s,0);
             const tgA=MESES.reduce((_,__,m)=>_+tgM(m),0);
             return[
-              <tr key={`g${gr}`} className="section-row"><td className="sticky" colSpan={3}>{gr}</td>{MESES.map((_,m)=><td key={m} className="num">{fmt(tgM(m))}</td>)}<td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(tgA)}</td></tr>,
+              <tr key={`g${gr}`} className="section-row">
+                <td className="sticky" colSpan={3}>{gr}</td>
+                {MESES.map((_,m)=><td key={m} className="num">{fmt(tgM(m))}</td>)}
+                <td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(tgA)}</td>
+                {!locked&&<td></td>}
+              </tr>,
               ...gc.map(c=>{
                 const tcA=MESES.reduce((_,__,m)=>_+(fact[c.id]?.[m]||0),0);
                 return(<tr key={c.id}>
@@ -272,12 +401,23 @@ function TabFact({fact,locked,ingM,ingIVAM,setF}){
                   <td style={{textAlign:'center'}}><span className={c.iva>0?'tag tag-iva':'tag tag-exento'}>{c.iva>0?`${c.iva*100}%`:'Exento'}</span></td>
                   {MESES.map((_,m)=>(<td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}><input type="number" className="cell-edit" value={fact[c.id]?.[m]||0} disabled={locked} onChange={e=>setF(c.id,m,e.target.value)} min={0}/></td>))}
                   <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#f4f8ff'}}>{fmt(tcA)}</td>
+                  {!locked&&<td style={{padding:'2px 4px'}}><button className="btn btn-sm btn-danger" title="Eliminar" onClick={()=>delCliente(c.id)}><i className="ti ti-trash"></i></button></td>}
                 </tr>);
               })
             ];
           })}
-          <tr className="total-row"><td className="sticky" colSpan={3}>TOTAL FACTURACIÓN</td>{MESES.map((_,m)=><td key={m} className="num">{fmt(ingM(m))}</td>)}<td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(TI)}</td></tr>
-          <tr style={{background:'#f0fbf6'}}><td className="sticky" colSpan={3} style={{color:'#1a7a45',fontWeight:600,paddingLeft:8,fontSize:11}}>↳ Cobros caja (+ IVA)</td>{MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a7a45',fontWeight:600}}>{fmt(ingIVAM(m))}</td>)}<td className="num" style={{borderLeft:'2px solid #1a2b4a',color:'#1a7a45',fontWeight:700}}>{fmt(MESES.reduce((_,__,m)=>_+ingIVAM(m),0))}</td></tr>
+          <tr className="total-row">
+            <td className="sticky" colSpan={3}>TOTAL FACTURACIÓN</td>
+            {MESES.map((_,m)=><td key={m} className="num">{fmt(ingM(m))}</td>)}
+            <td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(TI)}</td>
+            {!locked&&<td></td>}
+          </tr>
+          <tr style={{background:'#f0fbf6'}}>
+            <td className="sticky" colSpan={3} style={{color:'#1a7a45',fontWeight:600,paddingLeft:8,fontSize:11}}>↳ Cobros caja (+ IVA)</td>
+            {MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a7a45',fontWeight:600}}>{fmt(ingIVAM(m))}</td>)}
+            <td className="num" style={{borderLeft:'2px solid #1a2b4a',color:'#1a7a45',fontWeight:700}}>{fmt(MESES.reduce((_,__,m)=>_+ingIVAM(m),0))}</td>
+            {!locked&&<td></td>}
+          </tr>
           </tbody>
         </table>
         </div>
@@ -286,12 +426,11 @@ function TabFact({fact,locked,ingM,ingIVAM,setF}){
   );
 }
 
-// ── GASTOS (pestaña propia) ──────────────────────────────────────
-function TabGastos({gastos,imptos,locked,gfijM,imptM,setG,setI}){
-  const grupos=[...new Set(gastos.map(g=>g.grupo))];
+// ── GASTOS ───────────────────────────────────────────────────────
+function TabGastos({gastos,imptos,locked,gfijM,imptM,setG,setI,delGasto,setModal}){
+  const grupos=GRUPOS_GASTO;
   const TG=MESES.reduce((_,__,m)=>_+gfijM(m),0);
   const TI2=MESES.reduce((_,__,m)=>_+imptM(m),0);
-  const TT=TG+TI2;
 
   const GRow=({g})=>{
     const tot=MESES.reduce((_,__,m)=>_+(g.imp[m]||0),0);
@@ -302,27 +441,25 @@ function TabGastos({gastos,imptos,locked,gfijM,imptM,setG,setI}){
           {g.iva>0&&<span className="tag tag-iva">+{g.iva*100}%IVA</span>}
           {g.irpf>0&&<span className="tag" style={{background:'#fff4e0',color:'#7a4000'}}>-{g.irpf*100}%IRPF</span>}
         </td>
-        {MESES.map((_,m)=>(
-          <td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}>
-            <input type="number" className="cell-edit" value={Math.abs(g.imp[m]||0)} disabled={locked} onChange={e=>setG(g.id,m,e.target.value)} min={0}/>
-          </td>
-        ))}
+        {MESES.map((_,m)=>(<td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}><input type="number" className="cell-edit" value={Math.abs(g.imp[m]||0)} disabled={locked} onChange={e=>setG(g.id,m,e.target.value)} min={0}/></td>))}
         <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#fdf8f0',color:'#b83232'}}>{fmt(tot)}</td>
+        {!locked&&<td style={{padding:'2px 4px'}}><button className="btn btn-sm btn-danger" title="Eliminar" onClick={()=>delGasto(g.id)}><i className="ti ti-trash"></i></button></td>}
       </tr>
     );
   };
 
   return(
     <div>
-      <div className="alert alert-info"><i className="ti ti-info-circle"></i><span>Introduce los importes en valor absoluto (positivo). La cuenta de resultados aplica el signo negativo automáticamente.</span></div>
+      <div className="alert alert-info"><i className="ti ti-info-circle"></i><span>Introduce los importes en valor absoluto. El signo se aplica automáticamente en PyG.</span></div>
       <div className="card">
-        <div className="card-header"><h2>Gastos por partida · 2026</h2><span style={{fontSize:10,color:'#888'}}>{locked?'Solo lectura':'Valor absoluto · el signo se aplica en PyG'}</span></div>
+        <div className="card-header"><h2>Gastos por partida · 2026</h2></div>
         <div className="overflow-x">
         <table style={{minWidth:1120}}>
           <thead><tr>
             <th className="sticky" style={{minWidth:240}}>Partida</th>
             {MESES.map(m=><th key={m} className="mh" style={{minWidth:72}}>{m}</th>)}
             <th className="mh mh-total" style={{minWidth:82}}>Total año</th>
+            {!locked&&<th style={{width:32}}></th>}
           </tr></thead>
           <tbody>
           {grupos.map(gr=>{
@@ -330,34 +467,43 @@ function TabGastos({gastos,imptos,locked,gfijM,imptM,setG,setI}){
             const tgM=m=>gg.reduce((s,g)=>s+(g.imp[m]||0),0);
             const tgA=MESES.reduce((_,__,m)=>_+tgM(m),0);
             return[
-              <tr key={`sg${gr}`} className="section-row"><td className="sticky" colSpan={14}>{gr}</td></tr>,
+              <tr key={`sg${gr}`} className="section-row"><td className="sticky" colSpan={locked?14:15}>{gr}</td></tr>,
               ...gg.map(g=><GRow key={g.id} g={g}/>),
+              /* Botón añadir al final del grupo */
+              !locked&&<tr key={`add${gr}`}><td className="sticky" colSpan={locked?14:15} style={{padding:'4px 8px'}}>
+                <button className="btn-add" onClick={()=>setModal({tipo:'gasto',grupo:gr})}>
+                  <i className="ti ti-plus"></i>Añadir partida en {gr}
+                </button>
+              </td></tr>,
               <tr key={`tot${gr}`} style={{background:'#f4f6f9'}}>
                 <td className="sticky" style={{fontWeight:700,paddingLeft:8,fontSize:11,color:'#1a2b4a'}}>Subtotal {gr}</td>
                 {MESES.map((_,m)=><td key={m} className="num" style={{fontWeight:600,color:'#b83232'}}>{fmt(tgM(m))}</td>)}
                 <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#b83232'}}>{fmt(tgA)}</td>
+                {!locked&&<td></td>}
               </tr>
-            ];
+            ].filter(Boolean);
           })}
           <tr className="total-row">
             <td className="sticky">TOTAL GASTOS OPERATIVOS</td>
             {MESES.map((_,m)=><td key={m} className="num red">{fmt(gfijM(m))}</td>)}
             <td className="num red" style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(TG)}</td>
+            {!locked&&<td></td>}
           </tr>
-
-          <tr className="section-row"><td className="sticky" colSpan={14}>Impuestos y retenciones</td></tr>
+          <tr className="section-row"><td className="sticky" colSpan={locked?14:15}>Impuestos y retenciones</td></tr>
           {imptos.map(i=>{
             const tot=MESES.reduce((_,__,m)=>_+(i.imp[m]||0),0);
             return(<tr key={i.id}>
               <td className="sticky" style={{paddingLeft:16}}>{i.concepto}</td>
               {MESES.map((_,m)=>(<td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}><input type="number" className="cell-edit" value={Math.abs(i.imp[m]||0)} disabled={locked} onChange={e=>setI(i.id,m,e.target.value)} min={0}/></td>))}
               <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#fdf8f0',color:'#b83232'}}>{fmt(tot)}</td>
+              {!locked&&<td></td>}
             </tr>);
           })}
           <tr className="result-row">
             <td className="sticky">TOTAL GASTOS + IMPUESTOS</td>
             {MESES.map((_,m)=><td key={m} className="num">{fmt(gfijM(m)+imptM(m))}</td>)}
-            <td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.3)',fontSize:13}}>{fmt(TT)}</td>
+            <td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.3)',fontSize:13}}>{fmt(TG+TI2)}</td>
+            {!locked&&<td></td>}
           </tr>
           </tbody>
         </table>
@@ -367,15 +513,15 @@ function TabGastos({gastos,imptos,locked,gfijM,imptM,setG,setI}){
   );
 }
 
-// ── PyG ──────────────────────────────────────────────────────────
-function TabPyG({gastos,imptos,locked,ingM,cvM,mbM,ebitM,imptM,resM,setG,setI}){
+// ── PyG (solo lectura calculado) ─────────────────────────────────
+function TabPyG({clientes,gastos,imptos,ingM,cvM,mbM,ebitM,imptM,resM,CV}){
   const TI=MESES.reduce((_,__,m)=>_+ingM(m),0);
   const TMB=MESES.reduce((_,__,m)=>_+mbM(m),0);
   const TEB=MESES.reduce((_,__,m)=>_+ebitM(m),0);
   const TR=MESES.reduce((_,__,m)=>_+resM(m),0);
   return(
     <div>
-      <div className="alert alert-info"><i className="ti ti-info-circle"></i><span>Vista calculada. Los ingresos vienen de <strong>Facturación</strong> y los gastos de <strong>Gastos</strong>. Para editar, ve a cada pestaña correspondiente.</span></div>
+      <div className="alert alert-info"><i className="ti ti-info-circle"></i><span>Vista calculada automáticamente. Para editar, ve a <strong>Facturación</strong> o <strong>Gastos</strong>.</span></div>
       <div className="card">
         <div className="card-header"><h2>Cuenta de explotación · 2026</h2><span style={{fontSize:10,color:'#888'}}>Solo lectura — calculado automáticamente</span></div>
         <div className="overflow-x">
@@ -387,44 +533,21 @@ function TabPyG({gastos,imptos,locked,ingM,cvM,mbM,ebitM,imptM,resM,setG,setI}){
           </tr></thead>
           <tbody>
             <tr className="section-row"><td className="sticky" colSpan={14}>Ingresos</td></tr>
-            <tr style={{background:'#f4fbf6'}}>
-              <td className="sticky" style={{fontWeight:700,paddingLeft:16,color:'#1a7a45'}}>Ingresos netos</td>
-              {MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a7a45',fontWeight:600}}>{fmt(ingM(m))}</td>)}
-              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a7a45'}}>{fmt(TI)}</td>
-            </tr>
+            <tr style={{background:'#f4fbf6'}}><td className="sticky" style={{fontWeight:700,paddingLeft:16,color:'#1a7a45'}}>Ingresos netos</td>{MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a7a45',fontWeight:600}}>{fmt(ingM(m))}</td>)}<td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a7a45'}}>{fmt(TI)}</td></tr>
 
             <tr className="section-row"><td className="sticky" colSpan={14}>Costes variables</td></tr>
-            {gastos.filter(g=>CV.includes(g.id)).map(g=>{
-              const tot=MESES.reduce((_,__,m)=>_+(g.imp[m]||0),0);
-              return(<tr key={g.id}><td className="sticky" style={{paddingLeft:16}}>{g.concepto}</td>{MESES.map((_,m)=><td key={m} className="num" style={{color:g.imp[m]<0?'#b83232':'#888'}}>{fmt(g.imp[m]||0)}</td>)}<td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#b83232',background:'#fdf8f0'}}>{fmt(tot)}</td></tr>);
-            })}
-            <tr className="total-row">
-              <td className="sticky" style={{paddingLeft:8}}>MARGEN BRUTO</td>
-              {MESES.map((_,m)=><td key={m} className={`num ${mbM(m)>=0?'green':'red'}`}>{fmt(mbM(m))}</td>)}
-              <td className={`num ${TMB>=0?'green':'red'}`} style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(TMB)}</td>
-            </tr>
+            {gastos.filter(g=>CV.includes(g.id)).map(g=>{const tot=MESES.reduce((_,__,m)=>_+(g.imp[m]||0),0);return(<tr key={g.id}><td className="sticky" style={{paddingLeft:16}}>{g.concepto}</td>{MESES.map((_,m)=><td key={m} className="num" style={{color:g.imp[m]<0?'#b83232':'#888'}}>{fmt(g.imp[m]||0)}</td>)}<td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#b83232',background:'#fdf8f0'}}>{fmt(tot)}</td></tr>);})}
+            <tr className="total-row"><td className="sticky" style={{paddingLeft:8}}>MARGEN BRUTO</td>{MESES.map((_,m)=><td key={m} className={`num ${mbM(m)>=0?'green':'red'}`}>{fmt(mbM(m))}</td>)}<td className={`num ${TMB>=0?'green':'red'}`} style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(TMB)}</td></tr>
             <tr className="pct-row"><td className="sticky" style={{paddingLeft:8}}>% sobre ventas</td>{MESES.map((_,m)=><td key={m} className="num">{pct(mbM(m),ingM(m))}%</td>)}<td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{pct(TMB,TI)}%</td></tr>
 
-            <tr className="section-row"><td className="sticky" colSpan={14}>Gastos de estructura y colaboradores fijos</td></tr>
-            {gastos.filter(g=>!CV.includes(g.id)).map(g=>{
-              const tot=MESES.reduce((_,__,m)=>_+(g.imp[m]||0),0);
-              return(<tr key={g.id}><td className="sticky" style={{paddingLeft:16}}>{g.concepto}</td>{MESES.map((_,m)=><td key={m} className="num" style={{color:g.imp[m]<0?'#b83232':'#888'}}>{fmt(g.imp[m]||0)}</td>)}<td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#b83232',background:'#fdf8f0'}}>{fmt(tot)}</td></tr>);
-            })}
-            <tr className="total-row">
-              <td className="sticky" style={{paddingLeft:8}}>EBITDA</td>
-              {MESES.map((_,m)=><td key={m} className={`num ${ebitM(m)>=0?'green':'red'}`}>{fmt(ebitM(m))}</td>)}
-              <td className={`num ${TEB>=0?'green':'red'}`} style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(TEB)}</td>
-            </tr>
+            <tr className="section-row"><td className="sticky" colSpan={14}>Gastos estructura y colaboradores</td></tr>
+            {gastos.filter(g=>!CV.includes(g.id)).map(g=>{const tot=MESES.reduce((_,__,m)=>_+(g.imp[m]||0),0);return(<tr key={g.id}><td className="sticky" style={{paddingLeft:16}}>{g.concepto}</td>{MESES.map((_,m)=><td key={m} className="num" style={{color:g.imp[m]<0?'#b83232':'#888'}}>{fmt(g.imp[m]||0)}</td>)}<td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#b83232',background:'#fdf8f0'}}>{fmt(tot)}</td></tr>);})}
+            <tr className="total-row"><td className="sticky" style={{paddingLeft:8}}>EBITDA</td>{MESES.map((_,m)=><td key={m} className={`num ${ebitM(m)>=0?'green':'red'}`}>{fmt(ebitM(m))}</td>)}<td className={`num ${TEB>=0?'green':'red'}`} style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(TEB)}</td></tr>
             <tr className="pct-row"><td className="sticky" style={{paddingLeft:8}}>% sobre ventas</td>{MESES.map((_,m)=><td key={m} className="num">{pct(ebitM(m),ingM(m))}%</td>)}<td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{pct(TEB,TI)}%</td></tr>
 
             <tr className="section-row"><td className="sticky" colSpan={14}>Impuestos</td></tr>
             {imptos.map(i=>{const tot=MESES.reduce((_,__,m)=>_+(i.imp[m]||0),0);return(<tr key={i.id}><td className="sticky" style={{paddingLeft:16}}>{i.concepto}</td>{MESES.map((_,m)=><td key={m} className="num" style={{color:i.imp[m]<0?'#b83232':'#888'}}>{fmt(i.imp[m]||0)}</td>)}<td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#b83232',background:'#fdf8f0'}}>{fmt(tot)}</td></tr>);})}
-
-            <tr className="result-row">
-              <td className="sticky">RESULTADO NETO</td>
-              {MESES.map((_,m)=><td key={m} className="num">{fmt(resM(m))}</td>)}
-              <td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.3)',fontSize:13}}>{fmt(TR)}</td>
-            </tr>
+            <tr className="result-row"><td className="sticky">RESULTADO NETO</td>{MESES.map((_,m)=><td key={m} className="num">{fmt(resM(m))}</td>)}<td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.3)',fontSize:13}}>{fmt(TR)}</td></tr>
             <tr className="pct-row"><td className="sticky" style={{paddingLeft:8}}>% sobre ventas</td>{MESES.map((_,m)=><td key={m} className="num">{pct(resM(m),ingM(m))}%</td>)}<td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{pct(TR,TI)}%</td></tr>
           </tbody>
         </table>
@@ -439,12 +562,10 @@ function TabTes({gastos,imptos,locked,saldo0,ingIVAM,pagoCM,flujoM,saldoM,setS})
   const TC=MESES.reduce((_,__,m)=>_+ingIVAM(m),0);
   const TP=MESES.reduce((_,__,m)=>_+pagoCM(m),0);
   const SF=saldoM(11);
-  const saldos=MESES.map((_,m)=>saldoM(m));
-  const minS=Math.min(...saldos);
-  const mesBajo=saldos.findIndex(s=>s===minS);
+  const minS=Math.min(...MESES.map((_,m)=>saldoM(m)));
+  const mesBajo=MESES.findIndex((_,m)=>saldoM(m)===minS);
   return(
     <div>
-      <div className="alert alert-info"><i className="ti ti-info-circle"></i><span>Cobros = facturación + IVA. Pagos = gastos × (1 + IVA − IRPF) + impuestos.</span></div>
       <div className="card" style={{marginBottom:14}}>
         <div className="card-header"><h2>Saldo bancario inicial · 1 enero 2026</h2></div>
         <div className="card-body" style={{display:'flex',alignItems:'center',gap:20,flexWrap:'wrap'}}>
@@ -452,7 +573,7 @@ function TabTes({gastos,imptos,locked,saldo0,ingIVAM,pagoCM,flujoM,saldoM,setS})
             <span style={{fontSize:12,color:'#555'}}>Saldo apertura:</span>
             <input type="number" style={{width:150,padding:'6px 10px',border:'1px solid #dde0e6',borderRadius:5,fontSize:15,fontWeight:700,fontFamily:'monospace',color:'#1a2b4a'}} value={saldo0} disabled={locked} onChange={e=>setS(e.target.value)}/>
           </div>
-          <div style={{fontSize:11,color:'#555'}}>Saldo fin de año: <strong style={{color:SF>=0?'#1a7a45':'#b83232',fontSize:14}}>{fmt(SF)}</strong></div>
+          <div style={{fontSize:11}}>Saldo fin de año: <strong style={{color:SF>=0?'#1a7a45':'#b83232',fontSize:14}}>{fmt(SF)}</strong></div>
           {minS<20000&&<div style={{fontSize:11,background:'#fff8e0',color:'#7a5000',padding:'5px 10px',borderRadius:5,border:'1px solid #f0d070',display:'flex',alignItems:'center',gap:5}}><i className="ti ti-alert-triangle"></i>Mes más ajustado: <strong>{MESES[mesBajo]}</strong> ({fmt(minS)})</div>}
         </div>
       </div>
@@ -460,28 +581,20 @@ function TabTes({gastos,imptos,locked,saldo0,ingIVAM,pagoCM,flujoM,saldoM,setS})
         <div className="card-header"><h2>Plan de caja mensual · 2026</h2></div>
         <div className="overflow-x">
         <table style={{minWidth:1120}}>
-          <thead><tr>
-            <th className="sticky" style={{minWidth:220}}>Concepto</th>
-            {MESES.map(m=><th key={m} className="mh" style={{minWidth:72}}>{m}</th>)}
-            <th className="mh mh-total" style={{minWidth:82}}>Total año</th>
-          </tr></thead>
+          <thead><tr><th className="sticky" style={{minWidth:220}}>Concepto</th>{MESES.map(m=><th key={m} className="mh" style={{minWidth:72}}>{m}</th>)}<th className="mh mh-total" style={{minWidth:82}}>Total año</th></tr></thead>
           <tbody>
-            <tr className="section-row"><td className="sticky" colSpan={14}>Cobros (facturación + IVA)</td></tr>
-            <tr style={{background:'#f4fbf6'}}><td className="sticky" style={{fontWeight:700,paddingLeft:16,color:'#1a7a45'}}>Total cobros</td>{MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a7a45',fontWeight:600}}>{fmt(ingIVAM(m))}</td>)}<td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a7a45'}}>{fmt(TC)}</td></tr>
-
-            <tr className="section-row"><td className="sticky" colSpan={14}>Pagos (gastos neto caja)</td></tr>
+            <tr className="section-row"><td className="sticky" colSpan={14}>Cobros</td></tr>
+            <tr style={{background:'#f4fbf6'}}><td className="sticky" style={{fontWeight:700,paddingLeft:16,color:'#1a7a45'}}>Total cobros (+IVA)</td>{MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a7a45',fontWeight:600}}>{fmt(ingIVAM(m))}</td>)}<td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a7a45'}}>{fmt(TC)}</td></tr>
+            <tr className="section-row"><td className="sticky" colSpan={14}>Pagos</td></tr>
             {gastos.map(g=>{const cM=m=>(g.imp[m]||0)*(1+(g.iva||0)-(g.irpf||0));const tot=MESES.reduce((_,__,m)=>_+cM(m),0);return(<tr key={g.id}><td className="sticky" style={{paddingLeft:16,fontSize:12}}>{g.concepto}{g.iva>0&&<span className="tag tag-iva">+IVA</span>}{g.irpf>0&&<span className="tag" style={{background:'#fff4e0',color:'#7a4000'}}>-IRPF</span>}</td>{MESES.map((_,m)=><td key={m} className="num" style={{fontSize:11,color:cM(m)<0?'#b83232':'#888'}}>{fmt(cM(m))}</td>)}<td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#fdf8f0',color:'#b83232'}}>{fmt(tot)}</td></tr>);})}
-
             <tr className="section-row"><td className="sticky" colSpan={14}>Pagos fiscales</td></tr>
             {imptos.map(i=>{const tot=MESES.reduce((_,__,m)=>_+(i.imp[m]||0),0);return(<tr key={i.id}><td className="sticky" style={{paddingLeft:16,fontSize:12}}>{i.concepto}</td>{MESES.map((_,m)=><td key={m} className="num" style={{fontSize:11,color:(i.imp[m]||0)<0?'#b83232':'#888'}}>{fmt(i.imp[m]||0)}</td>)}<td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#fdf8f0',color:'#b83232'}}>{fmt(tot)}</td></tr>);})}
-
             <tr className="total-row"><td className="sticky">TOTAL PAGOS</td>{MESES.map((_,m)=><td key={m} className="num red">{fmt(pagoCM(m))}</td>)}<td className="num red" style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(TP)}</td></tr>
             <tr style={{background:'#e4ecf4'}}><td className="sticky" style={{fontWeight:700}}>FLUJO NETO</td>{MESES.map((_,m)=><td key={m} className={`num ${flujoM(m)>=0?'green':'red'}`} style={{fontWeight:700}}>{fmt(flujoM(m))}</td>)}<td className={`num ${(TC+TP)>=0?'green':'red'}`} style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(TC+TP)}</td></tr>
             <tr className="result-row"><td className="sticky">SALDO ACUMULADO</td>{MESES.map((_,m)=>{const s=saldoM(m);return<td key={m} className="num" style={{fontWeight:700,background:s<20000?'#8b2020':undefined}}>{fmt(s)}</td>;})} <td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.3)'}}>{fmt(SF)}</td></tr>
           </tbody>
         </table>
         </div>
-        <div style={{padding:'7px 14px',fontSize:10,color:'#888',borderTop:'1px solid #f0f0f0',background:'#fafafa'}}><i className="ti ti-info-circle" style={{marginRight:4}}></i>Celdas en rojo oscuro = saldo por debajo de 20.000 €</div>
       </div>
     </div>
   );

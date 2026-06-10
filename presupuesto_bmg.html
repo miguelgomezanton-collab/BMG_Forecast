@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presupuesto 2026 · BMG Law Services</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#1a1a1a}
+.app{max-width:1600px;margin:0 auto;padding:16px}
+.header{background:#1a2b4a;color:#fff;padding:14px 20px;border-radius:8px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.header h1{font-size:15px;font-weight:700}
+.header-sub{font-size:11px;color:#a0b4d0;margin-top:2px}
+.main-nav{display:flex;gap:2px;background:#fff;border-radius:8px;padding:4px;margin-bottom:14px;border:1px solid #e0e0e0}
+.main-nav button{padding:7px 16px;border:none;background:transparent;border-radius:5px;cursor:pointer;font-size:12px;color:#555;font-weight:500;display:flex;align-items:center;gap:5px;transition:.12s}
+.main-nav button.active{background:#1a2b4a;color:#fff}
+.main-nav button:hover:not(.active){background:#f0f2f5}
+.sub-nav{display:flex;gap:0;border-bottom:2px solid #e4e8ee;margin-bottom:16px;flex-wrap:wrap}
+.sub-nav button{padding:8px 18px;border:none;background:transparent;cursor:pointer;font-size:12px;font-weight:600;color:#888;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.12s;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.sub-nav button.active{color:#1a2b4a;border-bottom-color:#1a2b4a}
+.sub-nav button:hover:not(.active){color:#333}
+.card{background:#fff;border-radius:8px;border:1px solid #e0e0e0;margin-bottom:14px;overflow:hidden}
+.card-header{padding:11px 16px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:#fafafa}
+.card-header h2{font-size:12px;font-weight:700;color:#1a2b4a;text-transform:uppercase;letter-spacing:.04em}
+.card-body{padding:14px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:14px}
+.metric{background:#fff;border-radius:7px;padding:12px 14px;border:1px solid #e0e0e0}
+.metric-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.metric-val{font-size:19px;font-weight:700;line-height:1.1}
+.metric-sub{font-size:10px;color:#888;margin-top:3px}
+.green{color:#1a7a45}.red{color:#b83232}.blue{color:#1a2b4a}.orange{color:#b06000}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#f4f6f9;padding:6px 8px;text-align:left;font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid #e4e8ee;white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid #f2f2f2;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafbfc}
+.num{text-align:right;font-variant-numeric:tabular-nums;font-family:monospace;font-size:11px}
+.sticky{position:sticky;left:0;background:#fff;z-index:2}
+th.sticky{background:#f4f6f9;z-index:3}
+.section-row td{background:#eef2f7;font-weight:700;font-size:10px;color:#1a2b4a;text-transform:uppercase;letter-spacing:.04em}
+.total-row td{background:#e4ecf4;font-weight:700;font-size:11px;border-top:2px solid #1a2b4a}
+.result-row td{background:#1a2b4a;color:#fff;font-weight:700;font-size:12px}
+.result-row td.sticky{background:#1a2b4a;color:#fff}
+.cell-edit{background:transparent;border:none;border-bottom:1px dashed #ccc;width:72px;text-align:right;font-size:11px;padding:1px 2px;font-family:monospace;color:#1a1a1a}
+.cell-edit:focus{outline:none;border-bottom-color:#1a2b4a;background:#f0f4ff;border-radius:2px 2px 0 0}
+.cell-edit:disabled{border-bottom-color:transparent;color:#1a1a1a;background:transparent;cursor:default}
+.locked-banner{display:flex;align-items:center;gap:8px;padding:9px 14px;background:#e8f4ec;border:1px solid #a0d4b0;border-radius:6px;font-size:11px;color:#1a5c30;margin-bottom:14px}
+.draft-banner{display:flex;align-items:center;gap:8px;padding:9px 14px;background:#fff8e6;border:1px solid #f0d070;border-radius:6px;font-size:11px;color:#7a5000;margin-bottom:14px}
+.btn{padding:5px 12px;border-radius:5px;border:1px solid #dde0e6;background:#fff;cursor:pointer;font-size:11px;font-weight:600;color:#333;transition:.1s;display:inline-flex;align-items:center;gap:5px}
+.btn:hover{background:#f4f6f9}
+.btn-success{background:#1a7a45;color:#fff;border-color:#1a7a45}
+.btn-success:hover{background:#156035}
+.btn-sm{padding:3px 8px;font-size:10px}
+.overflow-x{overflow-x:auto}
+.mh{font-size:9px;text-align:center;padding:4px 2px;white-space:nowrap;border-left:1px solid #e8e8e8}
+.mh-total{background:#e4ecf4;color:#1a2b4a;font-weight:700;border-left:2px solid #1a2b4a}
+.pct-row td{font-size:10px;color:#888;font-style:italic;background:#fafafa}
+.alert{padding:8px 12px;border-radius:6px;font-size:11px;margin-bottom:12px;display:flex;align-items:flex-start;gap:6px}
+.alert-info{background:#e8f0fb;color:#1a2b4a;border:1px solid #c0d0e8}
+.tag{display:inline-block;font-size:9px;padding:1px 6px;border-radius:3px;font-weight:600;margin-left:4px}
+.tag-iva{background:#e8f0fb;color:#1a2b4a}
+.tag-exento{background:#f0f0f0;color:#666}
+input[type=number]{-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useCallback}=React;
+const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const SK='bmg_presupuesto_2026_v1';
+
+const CLIENTES=[
+  {id:'bsabadell', nombre:'Banco Sabadell',          grupo:'Bancos',    iva:0.21},
+  {id:'link',      nombre:'Link Finanzas',            grupo:'Servicios', iva:0.21},
+  {id:'aiqon',     nombre:'Aiqon',                    grupo:'Servicios', iva:0},
+  {id:'claimup',   nombre:'Claim Up',                 grupo:'Servicios', iva:0.21},
+  {id:'reclamio',  nombre:'Reclamio',                 grupo:'Servicios', iva:0.21},
+  {id:'cajamar',   nombre:'Cajamar',                  grupo:'Bancos',    iva:0.21},
+  {id:'caixabank', nombre:'CaixaBank',                grupo:'Bancos',    iva:0.21},
+  {id:'hispania',  nombre:'Hispania / EOS / Sareb',   grupo:'Servicios', iva:0.21},
+  {id:'otros',     nombre:'Otros clientes',           grupo:'Varios',    iva:0.21},
+  {id:'madrid',    nombre:'Madrid',                   grupo:'Varios',    iva:0.21},
+  {id:'gestoria',  nombre:'Gestoría',                 grupo:'Varios',    iva:0.21},
+  {id:'fiscal',    nombre:'Fiscal',                   grupo:'Varios',    iva:0.21},
+  {id:'procesal',  nombre:'Procesal',                 grupo:'Varios',    iva:0.21},
+  {id:'consultoria',nombre:'Consultoría',             grupo:'Varios',    iva:0.21},
+];
+
+const FACT0={
+  bsabadell: [43768,49962,57576,38583,42870,42870,42870,21435,42870,42870,42870,42870],
+  link:      [26683,12125,12545,18316,18316,18316,18316, 9158,18316,18316,18316,18316],
+  aiqon:     [14069,15837,14455,15822,15822,15822,15822, 7911,15822,15822,15822,15822],
+  claimup:   [ 1519,  490, 1065, 1179, 1179, 1179, 1179,  589, 1179, 1179, 1179, 1179],
+  reclamio:  [ 2463, 3277, 1573, 2681, 2681, 2681, 2681, 1341, 2681, 2681, 2681, 2681],
+  cajamar:   [19547, 5873, 7780, 8134, 8134, 8134, 8134, 4067, 8134, 8134, 8134, 8134],
+  caixabank: [ 8187,  972, 1322, 3843, 3843, 3843, 3843, 1921, 3843, 3843, 3843, 3843],
+  hispania:  [ 8175, 6642,12849, 6778, 9683, 9683, 9683, 4842, 9683, 9683, 9683, 9683],
+  otros:     [10850, 4100, 4300, 4941, 7058, 7058, 7058, 3529, 7058, 7058, 7058, 7058],
+  madrid:    [ 4000,    0,    0, 1400, 2000, 2000, 2000, 1000, 2000, 2000, 2000, 2000],
+  gestoria:  [    0, 7610,    0, 8000, 8000, 8000, 8000, 8000, 8000, 8000, 8000, 8000],
+  fiscal:    [  300,    0, 1580,  877, 1253, 1253, 1253,  627, 1253, 1253, 1253, 1253],
+  procesal:  [  850,    0,    0,  283,  283,  283,  283,  142,  283,  283,  283,  283],
+  consultoria:[  838, 1338, 1813, 1994, 1994, 1994, 1994, 1994, 1994, 1994, 1994, 1994],
+};
+
+const GASTOS0=[
+  {id:'nominas',    concepto:'Nóminas personal fijo (neto)',            grupo:'Personal',      iva:0,    irpf:0,    imp:Array(12).fill(-37734)},
+  {id:'ss',         concepto:'Seguridad Social empresa',                grupo:'Personal',      iva:0,    irpf:0,    imp:Array(12).fill(-12167)},
+  {id:'rosalia',    concepto:'Rosalía / LexConnect / Alejandro / Laura',grupo:'Colaboradores', iva:0.21, irpf:0.15, imp:Array(12).fill(-10031)},
+  {id:'legalpigeon',concepto:'Legal Pigeon',                            grupo:'Colaboradores', iva:0.21, irpf:0.15, imp:[0,0,0,0,0,-5487,-5487,-5487,-5487,-5487,-5487,-5487]},
+  {id:'mario',      concepto:'623 Mario',                               grupo:'Colaboradores', iva:0.21, irpf:0.15, imp:Array(12).fill(-8554)},
+  {id:'miguel_fee', concepto:'623 Miguel',                              grupo:'Colaboradores', iva:0.21, irpf:0.15, imp:Array(12).fill(-2550)},
+  {id:'marc',       concepto:'623 Marc',                                grupo:'Colaboradores', iva:0.21, irpf:0.15, imp:Array(12).fill(-2550)},
+  {id:'apoint',     concepto:'623 Apoint',                              grupo:'Colaboradores', iva:0.21, irpf:0.15, imp:Array(12).fill(-4250)},
+  {id:'ignacio',    concepto:'623 Ignacio',                             grupo:'Colaboradores', iva:0.21, irpf:0.15, imp:Array(12).fill(-5000)},
+  {id:'jorge',      concepto:'623 Jorge',                               grupo:'Colaboradores', iva:0.21, irpf:0.15, imp:Array(12).fill(-1000)},
+  {id:'luis',       concepto:'623 Luis Miralbell (fee -50%)',           grupo:'Colaboradores', iva:0.21, irpf:0.15, imp:Array(12).fill(-2500)},
+  {id:'alquiler',   concepto:'Alquiler oficina Barcelona',              grupo:'Estructura',    iva:0.21, irpf:0.19, imp:Array(12).fill(-9892)},
+  {id:'it',         concepto:'Informática',                             grupo:'Estructura',    iva:0.21, irpf:0,    imp:Array(12).fill(-8500)},
+  {id:'otros_g',    concepto:'Otros gastos operativos',                 grupo:'Estructura',    iva:0.21, irpf:0,    imp:Array(12).fill(-2000)},
+];
+
+const IMPTOS0=[
+  {id:'iva',  concepto:'Liquidación IVA (mod. 303)',      imp:[0,0,0,0,0,0,-25000,0,0,-25000,0,0]},
+  {id:'irpf', concepto:'Retenciones IRPF (mod. 111/115)', imp:[0,0,0,0,0,0,-30000,0,0,-30000,0,0]},
+  {id:'is',   concepto:'Pago fraccionado IS (mod. 202)',  imp:Array(12).fill(0)},
+];
+
+const fmt=(n,dec=0)=>{
+  if(n===null||n===undefined||isNaN(n))return'—';
+  const s=Math.abs(n).toLocaleString('es-ES',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+  return(n<0?'-':'')+'€\u202f'+s;
+};
+const pn=v=>{const s=String(v||0).replace(/[€\s]/g,'').replace(',','.');const n=parseFloat(s);return isNaN(n)?0:n;};
+const load=()=>{try{const r=localStorage.getItem(SK);return r?JSON.parse(r):null;}catch{return null;}};
+const persist=d=>{try{localStorage.setItem(SK,JSON.stringify(d));}catch{}};
+const pct=(a,b)=>b?Math.round(a/b*100):0;
+const CV=['nominas','ss','rosalia','legalpigeon'];
+
+function App(){
+  const sv=load();
+  const [fact,setFact]   =useState(()=>sv?.fact   ||JSON.parse(JSON.stringify(FACT0)));
+  const [gastos,setGastos]=useState(()=>sv?.gastos ||JSON.parse(JSON.stringify(GASTOS0)));
+  const [imptos,setImptos]=useState(()=>sv?.imptos ||JSON.parse(JSON.stringify(IMPTOS0)));
+  const [saldo0,setSaldo0]=useState(()=>sv?.saldo0??45000);
+  const [locked,setLocked]=useState(()=>sv?.locked||false);
+  const [lockedAt,setLockedAt]=useState(()=>sv?.lockedAt||null);
+  const [sub,setSub]=useState('facturacion');
+
+  const save=useCallback((p)=>{persist({fact,gastos,imptos,saldo0,locked,lockedAt,...p});},[fact,gastos,imptos,saldo0,locked,lockedAt]);
+
+  const setF=(cid,m,v)=>{if(locked)return;const n={...fact,[cid]:fact[cid].map((x,i)=>i===m?pn(v):x)};setFact(n);save({fact:n});};
+  const setG=(gid,m,v)=>{if(locked)return;let val=pn(v);if(val>0)val=-val;const n=gastos.map(g=>g.id!==gid?g:{...g,imp:g.imp.map((x,i)=>i===m?val:x)});setGastos(n);save({gastos:n});};
+  const setI=(iid,m,v)=>{if(locked)return;let val=pn(v);if(val>0)val=-val;const n=imptos.map(i=>i.id!==iid?i:{...i,imp:i.imp.map((x,j)=>j===m?val:x)});setImptos(n);save({imptos:n});};
+  const setS=v=>{if(locked)return;const n=pn(v);setSaldo0(n);save({saldo0:n});};
+
+  const doLock=()=>{
+    if(!confirm('¿Fijar el presupuesto? No se podrá editar hasta desbloquearlo.'))return;
+    const at=new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'});
+    setLocked(true);setLockedAt(at);save({locked:true,lockedAt:at});
+  };
+  const doUnlock=()=>{
+    if(!confirm('¿Desbloquear para editar? Esto modifica la foto base.'))return;
+    setLocked(false);setLockedAt(null);save({locked:false,lockedAt:null});
+  };
+
+  // Cálculos
+  const ingM  =m=>CLIENTES.reduce((s,c)=>(fact[c.id]?.[m]||0)+s,0);
+  const ingIVAM=m=>CLIENTES.reduce((s,c)=>{const b=fact[c.id]?.[m]||0;return s+b*(1+(c.iva??0.21));},0);
+  const cvM   =m=>gastos.filter(g=>CV.includes(g.id)).reduce((s,g)=>s+(g.imp[m]||0),0);
+  const gfijM =m=>gastos.reduce((s,g)=>s+(g.imp[m]||0),0);
+  const imptM =m=>imptos.reduce((s,i)=>s+(i.imp[m]||0),0);
+  const mbM   =m=>ingM(m)+cvM(m);
+  const ebitM =m=>ingM(m)+gfijM(m);
+  const resM  =m=>ebitM(m)+imptM(m);
+  const pagoCM=m=>gastos.reduce((s,g)=>(g.imp[m]||0)*(1+(g.iva||0)-(g.irpf||0))+s,0)+imptM(m);
+  const flujoM=m=>ingIVAM(m)+pagoCM(m);
+  const saldoM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=flujoM(i);return s;};
+
+  const TI=MESES.reduce((_,__,m)=>_+ingM(m),0);
+  const TMB=MESES.reduce((_,__,m)=>_+mbM(m),0);
+  const TEB=MESES.reduce((_,__,m)=>_+ebitM(m),0);
+  const TR=MESES.reduce((_,__,m)=>_+resM(m),0);
+  const SF=saldoM(11);
+
+  return(
+    <div className="app">
+      <div className="header">
+        <div>
+          <h1><i className="ti ti-building-skyscraper" style={{marginRight:7}}></i>BMG Law Services · Presupuesto 2026</h1>
+          <div className="header-sub">Base anual fija · referencia para el seguimiento mensual</div>
+        </div>
+        <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+          {locked
+            ?<><span style={{fontSize:11,color:'#90e0a0'}}><i className="ti ti-lock" style={{marginRight:4}}></i>Fijado el {lockedAt}</span>
+               <button className="btn btn-sm" style={{background:'rgba(255,255,255,.1)',color:'#fff',borderColor:'rgba(255,255,255,.25)'}} onClick={doUnlock}><i className="ti ti-lock-open"></i> Desbloquear</button></>
+            :<button className="btn btn-success" onClick={doLock}><i className="ti ti-lock"></i> Fijar presupuesto</button>
+          }
+        </div>
+      </div>
+
+      <div className="main-nav">
+        <button className="active"><i className="ti ti-target"></i>Presupuesto</button>
+        <button style={{color:'#bbb',cursor:'default'}}><i className="ti ti-chart-arrows-vertical"></i>Seguimiento</button>
+        <button style={{color:'#bbb',cursor:'default'}}><i className="ti ti-dashboard"></i>Dashboard</button>
+      </div>
+
+      {locked
+        ?<div className="locked-banner"><i className="ti ti-lock" style={{fontSize:16}}></i><span>Presupuesto fijado el <strong>{lockedAt}</strong>. Solo lectura. Usa "Desbloquear" si necesitas corregir algo.</span></div>
+        :<div className="draft-banner"><i className="ti ti-pencil" style={{fontSize:16}}></i><span><strong>Borrador</strong> — edita directamente en las celdas. Pulsa <strong>Fijar presupuesto</strong> cuando todo esté correcto.</span></div>
+      }
+
+      <div className="metrics">
+        <div className="metric"><div className="metric-label">Ingresos año</div><div className="metric-val green">{fmt(TI)}</div><div className="metric-sub">Base imponible</div></div>
+        <div className="metric"><div className="metric-label">Margen bruto</div><div className={`metric-val ${TMB>=0?'green':'red'}`}>{fmt(TMB)}</div><div className="metric-sub">{pct(TMB,TI)}% sobre ventas</div></div>
+        <div className="metric"><div className="metric-label">EBITDA</div><div className={`metric-val ${TEB>=0?'green':'red'}`}>{fmt(TEB)}</div><div className="metric-sub">{pct(TEB,TI)}% sobre ventas</div></div>
+        <div className="metric"><div className="metric-label">Resultado neto</div><div className={`metric-val ${TR>=0?'green':'red'}`}>{fmt(TR)}</div><div className="metric-sub">{pct(TR,TI)}% sobre ventas</div></div>
+        <div className="metric"><div className="metric-label">Saldo fin de año</div><div className={`metric-val ${SF>=0?'green':'red'}`}>{fmt(SF)}</div><div className="metric-sub">Saldo inicial: {fmt(saldo0)}</div></div>
+      </div>
+
+      <div className="sub-nav">
+        <button className={sub==='facturacion'?'active':''} onClick={()=>setSub('facturacion')}><i className="ti ti-chart-bar"></i>Facturación</button>
+        <button className={sub==='gastos'?'active':''} onClick={()=>setSub('gastos')}><i className="ti ti-receipt"></i>Gastos</button>
+        <button className={sub==='pyg'?'active':''} onClick={()=>setSub('pyg')}><i className="ti ti-report-money"></i>Cuenta PyG</button>
+        <button className={sub==='tesoreria'?'active':''} onClick={()=>setSub('tesoreria')}><i className="ti ti-building-bank"></i>Tesorería</button>
+      </div>
+
+      {sub==='facturacion'&&<TabFact fact={fact} locked={locked} ingM={ingM} ingIVAM={ingIVAM} setF={setF}/>}
+      {sub==='gastos'&&<TabGastos gastos={gastos} imptos={imptos} locked={locked} gfijM={gfijM} imptM={imptM} setG={setG} setI={setI}/>}
+      {sub==='pyg'&&<TabPyG gastos={gastos} imptos={imptos} locked={locked} ingM={ingM} cvM={cvM} mbM={mbM} ebitM={ebitM} imptM={imptM} resM={resM} setG={setG} setI={setI}/>}
+      {sub==='tesoreria'&&<TabTes gastos={gastos} imptos={imptos} locked={locked} saldo0={saldo0} ingIVAM={ingIVAM} pagoCM={pagoCM} flujoM={flujoM} saldoM={saldoM} setS={setS}/>}
+    </div>
+  );
+}
+
+// ── FACTURACIÓN ──────────────────────────────────────────────────
+function TabFact({fact,locked,ingM,ingIVAM,setF}){
+  const grupos=[...new Set(CLIENTES.map(c=>c.grupo))];
+  const TI=MESES.reduce((_,__,m)=>_+ingM(m),0);
+  return(
+    <div>
+      <div className="alert alert-info"><i className="ti ti-info-circle"></i><span>Importes en <strong>base imponible (sin IVA)</strong>. El IVA se aplica automáticamente en tesorería.</span></div>
+      <div className="card">
+        <div className="card-header"><h2>Facturación por cliente · 2026</h2><span style={{fontSize:10,color:'#888'}}>{locked?'Solo lectura':'Clic en celda para editar'}</span></div>
+        <div className="overflow-x">
+        <table style={{minWidth:1120}}>
+          <thead><tr>
+            <th className="sticky" style={{minWidth:190}}>Cliente</th>
+            <th style={{minWidth:75}}>Grupo</th>
+            <th style={{minWidth:46,textAlign:'center',fontSize:9}}>IVA</th>
+            {MESES.map(m=><th key={m} className="mh" style={{minWidth:68}}>{m}</th>)}
+            <th className="mh mh-total" style={{minWidth:82}}>Total año</th>
+          </tr></thead>
+          <tbody>
+          {grupos.map(gr=>{
+            const gc=CLIENTES.filter(c=>c.grupo===gr);
+            const tgM=m=>gc.reduce((s,c)=>(fact[c.id]?.[m]||0)+s,0);
+            const tgA=MESES.reduce((_,__,m)=>_+tgM(m),0);
+            return[
+              <tr key={`g${gr}`} className="section-row"><td className="sticky" colSpan={3}>{gr}</td>{MESES.map((_,m)=><td key={m} className="num">{fmt(tgM(m))}</td>)}<td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(tgA)}</td></tr>,
+              ...gc.map(c=>{
+                const tcA=MESES.reduce((_,__,m)=>_+(fact[c.id]?.[m]||0),0);
+                return(<tr key={c.id}>
+                  <td className="sticky" style={{paddingLeft:16}}>{c.nombre}</td>
+                  <td style={{fontSize:10,color:'#888'}}>{c.grupo}</td>
+                  <td style={{textAlign:'center'}}><span className={c.iva>0?'tag tag-iva':'tag tag-exento'}>{c.iva>0?`${c.iva*100}%`:'Exento'}</span></td>
+                  {MESES.map((_,m)=>(<td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}><input type="number" className="cell-edit" value={fact[c.id]?.[m]||0} disabled={locked} onChange={e=>setF(c.id,m,e.target.value)} min={0}/></td>))}
+                  <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#f4f8ff'}}>{fmt(tcA)}</td>
+                </tr>);
+              })
+            ];
+          })}
+          <tr className="total-row"><td className="sticky" colSpan={3}>TOTAL FACTURACIÓN</td>{MESES.map((_,m)=><td key={m} className="num">{fmt(ingM(m))}</td>)}<td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(TI)}</td></tr>
+          <tr style={{background:'#f0fbf6'}}><td className="sticky" colSpan={3} style={{color:'#1a7a45',fontWeight:600,paddingLeft:8,fontSize:11}}>↳ Cobros caja (+ IVA)</td>{MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a7a45',fontWeight:600}}>{fmt(ingIVAM(m))}</td>)}<td className="num" style={{borderLeft:'2px solid #1a2b4a',color:'#1a7a45',fontWeight:700}}>{fmt(MESES.reduce((_,__,m)=>_+ingIVAM(m),0))}</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── GASTOS (pestaña propia) ──────────────────────────────────────
+function TabGastos({gastos,imptos,locked,gfijM,imptM,setG,setI}){
+  const grupos=[...new Set(gastos.map(g=>g.grupo))];
+  const TG=MESES.reduce((_,__,m)=>_+gfijM(m),0);
+  const TI2=MESES.reduce((_,__,m)=>_+imptM(m),0);
+  const TT=TG+TI2;
+
+  const GRow=({g})=>{
+    const tot=MESES.reduce((_,__,m)=>_+(g.imp[m]||0),0);
+    return(
+      <tr>
+        <td className="sticky" style={{paddingLeft:16}}>
+          {g.concepto}
+          {g.iva>0&&<span className="tag tag-iva">+{g.iva*100}%IVA</span>}
+          {g.irpf>0&&<span className="tag" style={{background:'#fff4e0',color:'#7a4000'}}>-{g.irpf*100}%IRPF</span>}
+        </td>
+        {MESES.map((_,m)=>(
+          <td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}>
+            <input type="number" className="cell-edit" value={Math.abs(g.imp[m]||0)} disabled={locked} onChange={e=>setG(g.id,m,e.target.value)} min={0}/>
+          </td>
+        ))}
+        <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#fdf8f0',color:'#b83232'}}>{fmt(tot)}</td>
+      </tr>
+    );
+  };
+
+  return(
+    <div>
+      <div className="alert alert-info"><i className="ti ti-info-circle"></i><span>Introduce los importes en valor absoluto (positivo). La cuenta de resultados aplica el signo negativo automáticamente.</span></div>
+      <div className="card">
+        <div className="card-header"><h2>Gastos por partida · 2026</h2><span style={{fontSize:10,color:'#888'}}>{locked?'Solo lectura':'Valor absoluto · el signo se aplica en PyG'}</span></div>
+        <div className="overflow-x">
+        <table style={{minWidth:1120}}>
+          <thead><tr>
+            <th className="sticky" style={{minWidth:240}}>Partida</th>
+            {MESES.map(m=><th key={m} className="mh" style={{minWidth:72}}>{m}</th>)}
+            <th className="mh mh-total" style={{minWidth:82}}>Total año</th>
+          </tr></thead>
+          <tbody>
+          {grupos.map(gr=>{
+            const gg=gastos.filter(g=>g.grupo===gr);
+            const tgM=m=>gg.reduce((s,g)=>s+(g.imp[m]||0),0);
+            const tgA=MESES.reduce((_,__,m)=>_+tgM(m),0);
+            return[
+              <tr key={`sg${gr}`} className="section-row"><td className="sticky" colSpan={14}>{gr}</td></tr>,
+              ...gg.map(g=><GRow key={g.id} g={g}/>),
+              <tr key={`tot${gr}`} style={{background:'#f4f6f9'}}>
+                <td className="sticky" style={{fontWeight:700,paddingLeft:8,fontSize:11,color:'#1a2b4a'}}>Subtotal {gr}</td>
+                {MESES.map((_,m)=><td key={m} className="num" style={{fontWeight:600,color:'#b83232'}}>{fmt(tgM(m))}</td>)}
+                <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#b83232'}}>{fmt(tgA)}</td>
+              </tr>
+            ];
+          })}
+          <tr className="total-row">
+            <td className="sticky">TOTAL GASTOS OPERATIVOS</td>
+            {MESES.map((_,m)=><td key={m} className="num red">{fmt(gfijM(m))}</td>)}
+            <td className="num red" style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(TG)}</td>
+          </tr>
+
+          <tr className="section-row"><td className="sticky" colSpan={14}>Impuestos y retenciones</td></tr>
+          {imptos.map(i=>{
+            const tot=MESES.reduce((_,__,m)=>_+(i.imp[m]||0),0);
+            return(<tr key={i.id}>
+              <td className="sticky" style={{paddingLeft:16}}>{i.concepto}</td>
+              {MESES.map((_,m)=>(<td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}><input type="number" className="cell-edit" value={Math.abs(i.imp[m]||0)} disabled={locked} onChange={e=>setI(i.id,m,e.target.value)} min={0}/></td>))}
+              <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#fdf8f0',color:'#b83232'}}>{fmt(tot)}</td>
+            </tr>);
+          })}
+          <tr className="result-row">
+            <td className="sticky">TOTAL GASTOS + IMPUESTOS</td>
+            {MESES.map((_,m)=><td key={m} className="num">{fmt(gfijM(m)+imptM(m))}</td>)}
+            <td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.3)',fontSize:13}}>{fmt(TT)}</td>
+          </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── PyG ──────────────────────────────────────────────────────────
+function TabPyG({gastos,imptos,locked,ingM,cvM,mbM,ebitM,imptM,resM,setG,setI}){
+  const TI=MESES.reduce((_,__,m)=>_+ingM(m),0);
+  const TMB=MESES.reduce((_,__,m)=>_+mbM(m),0);
+  const TEB=MESES.reduce((_,__,m)=>_+ebitM(m),0);
+  const TR=MESES.reduce((_,__,m)=>_+resM(m),0);
+  return(
+    <div>
+      <div className="alert alert-info"><i className="ti ti-info-circle"></i><span>Vista calculada. Los ingresos vienen de <strong>Facturación</strong> y los gastos de <strong>Gastos</strong>. Para editar, ve a cada pestaña correspondiente.</span></div>
+      <div className="card">
+        <div className="card-header"><h2>Cuenta de explotación · 2026</h2><span style={{fontSize:10,color:'#888'}}>Solo lectura — calculado automáticamente</span></div>
+        <div className="overflow-x">
+        <table style={{minWidth:1120}}>
+          <thead><tr>
+            <th className="sticky" style={{minWidth:230}}>Partida</th>
+            {MESES.map(m=><th key={m} className="mh" style={{minWidth:72}}>{m}</th>)}
+            <th className="mh mh-total" style={{minWidth:82}}>Total año</th>
+          </tr></thead>
+          <tbody>
+            <tr className="section-row"><td className="sticky" colSpan={14}>Ingresos</td></tr>
+            <tr style={{background:'#f4fbf6'}}>
+              <td className="sticky" style={{fontWeight:700,paddingLeft:16,color:'#1a7a45'}}>Ingresos netos</td>
+              {MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a7a45',fontWeight:600}}>{fmt(ingM(m))}</td>)}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a7a45'}}>{fmt(TI)}</td>
+            </tr>
+
+            <tr className="section-row"><td className="sticky" colSpan={14}>Costes variables</td></tr>
+            {gastos.filter(g=>CV.includes(g.id)).map(g=>{
+              const tot=MESES.reduce((_,__,m)=>_+(g.imp[m]||0),0);
+              return(<tr key={g.id}><td className="sticky" style={{paddingLeft:16}}>{g.concepto}</td>{MESES.map((_,m)=><td key={m} className="num" style={{color:g.imp[m]<0?'#b83232':'#888'}}>{fmt(g.imp[m]||0)}</td>)}<td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#b83232',background:'#fdf8f0'}}>{fmt(tot)}</td></tr>);
+            })}
+            <tr className="total-row">
+              <td className="sticky" style={{paddingLeft:8}}>MARGEN BRUTO</td>
+              {MESES.map((_,m)=><td key={m} className={`num ${mbM(m)>=0?'green':'red'}`}>{fmt(mbM(m))}</td>)}
+              <td className={`num ${TMB>=0?'green':'red'}`} style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(TMB)}</td>
+            </tr>
+            <tr className="pct-row"><td className="sticky" style={{paddingLeft:8}}>% sobre ventas</td>{MESES.map((_,m)=><td key={m} className="num">{pct(mbM(m),ingM(m))}%</td>)}<td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{pct(TMB,TI)}%</td></tr>
+
+            <tr className="section-row"><td className="sticky" colSpan={14}>Gastos de estructura y colaboradores fijos</td></tr>
+            {gastos.filter(g=>!CV.includes(g.id)).map(g=>{
+              const tot=MESES.reduce((_,__,m)=>_+(g.imp[m]||0),0);
+              return(<tr key={g.id}><td className="sticky" style={{paddingLeft:16}}>{g.concepto}</td>{MESES.map((_,m)=><td key={m} className="num" style={{color:g.imp[m]<0?'#b83232':'#888'}}>{fmt(g.imp[m]||0)}</td>)}<td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#b83232',background:'#fdf8f0'}}>{fmt(tot)}</td></tr>);
+            })}
+            <tr className="total-row">
+              <td className="sticky" style={{paddingLeft:8}}>EBITDA</td>
+              {MESES.map((_,m)=><td key={m} className={`num ${ebitM(m)>=0?'green':'red'}`}>{fmt(ebitM(m))}</td>)}
+              <td className={`num ${TEB>=0?'green':'red'}`} style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(TEB)}</td>
+            </tr>
+            <tr className="pct-row"><td className="sticky" style={{paddingLeft:8}}>% sobre ventas</td>{MESES.map((_,m)=><td key={m} className="num">{pct(ebitM(m),ingM(m))}%</td>)}<td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{pct(TEB,TI)}%</td></tr>
+
+            <tr className="section-row"><td className="sticky" colSpan={14}>Impuestos</td></tr>
+            {imptos.map(i=>{const tot=MESES.reduce((_,__,m)=>_+(i.imp[m]||0),0);return(<tr key={i.id}><td className="sticky" style={{paddingLeft:16}}>{i.concepto}</td>{MESES.map((_,m)=><td key={m} className="num" style={{color:i.imp[m]<0?'#b83232':'#888'}}>{fmt(i.imp[m]||0)}</td>)}<td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#b83232',background:'#fdf8f0'}}>{fmt(tot)}</td></tr>);})}
+
+            <tr className="result-row">
+              <td className="sticky">RESULTADO NETO</td>
+              {MESES.map((_,m)=><td key={m} className="num">{fmt(resM(m))}</td>)}
+              <td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.3)',fontSize:13}}>{fmt(TR)}</td>
+            </tr>
+            <tr className="pct-row"><td className="sticky" style={{paddingLeft:8}}>% sobre ventas</td>{MESES.map((_,m)=><td key={m} className="num">{pct(resM(m),ingM(m))}%</td>)}<td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{pct(TR,TI)}%</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── TESORERÍA ────────────────────────────────────────────────────
+function TabTes({gastos,imptos,locked,saldo0,ingIVAM,pagoCM,flujoM,saldoM,setS}){
+  const TC=MESES.reduce((_,__,m)=>_+ingIVAM(m),0);
+  const TP=MESES.reduce((_,__,m)=>_+pagoCM(m),0);
+  const SF=saldoM(11);
+  const saldos=MESES.map((_,m)=>saldoM(m));
+  const minS=Math.min(...saldos);
+  const mesBajo=saldos.findIndex(s=>s===minS);
+  return(
+    <div>
+      <div className="alert alert-info"><i className="ti ti-info-circle"></i><span>Cobros = facturación + IVA. Pagos = gastos × (1 + IVA − IRPF) + impuestos.</span></div>
+      <div className="card" style={{marginBottom:14}}>
+        <div className="card-header"><h2>Saldo bancario inicial · 1 enero 2026</h2></div>
+        <div className="card-body" style={{display:'flex',alignItems:'center',gap:20,flexWrap:'wrap'}}>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <span style={{fontSize:12,color:'#555'}}>Saldo apertura:</span>
+            <input type="number" style={{width:150,padding:'6px 10px',border:'1px solid #dde0e6',borderRadius:5,fontSize:15,fontWeight:700,fontFamily:'monospace',color:'#1a2b4a'}} value={saldo0} disabled={locked} onChange={e=>setS(e.target.value)}/>
+          </div>
+          <div style={{fontSize:11,color:'#555'}}>Saldo fin de año: <strong style={{color:SF>=0?'#1a7a45':'#b83232',fontSize:14}}>{fmt(SF)}</strong></div>
+          {minS<20000&&<div style={{fontSize:11,background:'#fff8e0',color:'#7a5000',padding:'5px 10px',borderRadius:5,border:'1px solid #f0d070',display:'flex',alignItems:'center',gap:5}}><i className="ti ti-alert-triangle"></i>Mes más ajustado: <strong>{MESES[mesBajo]}</strong> ({fmt(minS)})</div>}
+        </div>
+      </div>
+      <div className="card">
+        <div className="card-header"><h2>Plan de caja mensual · 2026</h2></div>
+        <div className="overflow-x">
+        <table style={{minWidth:1120}}>
+          <thead><tr>
+            <th className="sticky" style={{minWidth:220}}>Concepto</th>
+            {MESES.map(m=><th key={m} className="mh" style={{minWidth:72}}>{m}</th>)}
+            <th className="mh mh-total" style={{minWidth:82}}>Total año</th>
+          </tr></thead>
+          <tbody>
+            <tr className="section-row"><td className="sticky" colSpan={14}>Cobros (facturación + IVA)</td></tr>
+            <tr style={{background:'#f4fbf6'}}><td className="sticky" style={{fontWeight:700,paddingLeft:16,color:'#1a7a45'}}>Total cobros</td>{MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a7a45',fontWeight:600}}>{fmt(ingIVAM(m))}</td>)}<td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a7a45'}}>{fmt(TC)}</td></tr>
+
+            <tr className="section-row"><td className="sticky" colSpan={14}>Pagos (gastos neto caja)</td></tr>
+            {gastos.map(g=>{const cM=m=>(g.imp[m]||0)*(1+(g.iva||0)-(g.irpf||0));const tot=MESES.reduce((_,__,m)=>_+cM(m),0);return(<tr key={g.id}><td className="sticky" style={{paddingLeft:16,fontSize:12}}>{g.concepto}{g.iva>0&&<span className="tag tag-iva">+IVA</span>}{g.irpf>0&&<span className="tag" style={{background:'#fff4e0',color:'#7a4000'}}>-IRPF</span>}</td>{MESES.map((_,m)=><td key={m} className="num" style={{fontSize:11,color:cM(m)<0?'#b83232':'#888'}}>{fmt(cM(m))}</td>)}<td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#fdf8f0',color:'#b83232'}}>{fmt(tot)}</td></tr>);})}
+
+            <tr className="section-row"><td className="sticky" colSpan={14}>Pagos fiscales</td></tr>
+            {imptos.map(i=>{const tot=MESES.reduce((_,__,m)=>_+(i.imp[m]||0),0);return(<tr key={i.id}><td className="sticky" style={{paddingLeft:16,fontSize:12}}>{i.concepto}</td>{MESES.map((_,m)=><td key={m} className="num" style={{fontSize:11,color:(i.imp[m]||0)<0?'#b83232':'#888'}}>{fmt(i.imp[m]||0)}</td>)}<td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#fdf8f0',color:'#b83232'}}>{fmt(tot)}</td></tr>);})}
+
+            <tr className="total-row"><td className="sticky">TOTAL PAGOS</td>{MESES.map((_,m)=><td key={m} className="num red">{fmt(pagoCM(m))}</td>)}<td className="num red" style={{borderLeft:'2px solid #1a2b4a'}}>{fmt(TP)}</td></tr>
+            <tr style={{background:'#e4ecf4'}}><td className="sticky" style={{fontWeight:700}}>FLUJO NETO</td>{MESES.map((_,m)=><td key={m} className={`num ${flujoM(m)>=0?'green':'red'}`} style={{fontWeight:700}}>{fmt(flujoM(m))}</td>)}<td className={`num ${(TC+TP)>=0?'green':'red'}`} style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(TC+TP)}</td></tr>
+            <tr className="result-row"><td className="sticky">SALDO ACUMULADO</td>{MESES.map((_,m)=>{const s=saldoM(m);return<td key={m} className="num" style={{fontWeight:700,background:s<20000?'#8b2020':undefined}}>{fmt(s)}</td>;})} <td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.3)'}}>{fmt(SF)}</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <div style={{padding:'7px 14px',fontSize:10,color:'#888',borderTop:'1px solid #f0f0f0',background:'#fafafa'}}><i className="ti ti-info-circle" style={{marginRight:4}}></i>Celdas en rojo oscuro = saldo por debajo de 20.000 €</div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

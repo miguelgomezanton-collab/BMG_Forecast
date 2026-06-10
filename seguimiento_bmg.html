@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seguimiento Real 2026 · BMG Law Services</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>window.XLSX=XLSX;</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#1a1a1a}
+.app{max-width:1600px;margin:0 auto;padding:16px}
+.header{background:#1a2b4a;color:#fff;padding:14px 20px;border-radius:8px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.header h1{font-size:15px;font-weight:700}
+.header-sub{font-size:11px;color:#a0b4d0;margin-top:2px}
+.main-nav{display:flex;gap:2px;background:#fff;border-radius:8px;padding:4px;margin-bottom:14px;border:1px solid #e0e0e0;flex-wrap:wrap}
+.main-nav button{padding:7px 16px;border:none;background:transparent;border-radius:5px;cursor:pointer;font-size:12px;color:#555;font-weight:500;display:flex;align-items:center;gap:5px;transition:.12s;white-space:nowrap}
+.main-nav button.active{background:#1a2b4a;color:#fff}
+.main-nav button:hover:not(.active){background:#f0f2f5}
+.sub-nav{display:flex;gap:0;border-bottom:2px solid #e4e8ee;margin-bottom:16px;flex-wrap:wrap}
+.sub-nav button{padding:8px 20px;border:none;background:transparent;cursor:pointer;font-size:12px;font-weight:600;color:#888;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.12s;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.sub-nav button.active{color:#1a2b4a;border-bottom-color:#1a2b4a}
+.sub-nav button:hover:not(.active){color:#333}
+.card{background:#fff;border-radius:8px;border:1px solid #e0e0e0;margin-bottom:14px;overflow:hidden}
+.card-header{padding:11px 16px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:#fafafa}
+.card-header h2{font-size:12px;font-weight:700;color:#1a2b4a;text-transform:uppercase;letter-spacing:.04em}
+.card-body{padding:14px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:14px}
+.metric{background:#fff;border-radius:7px;padding:12px 14px;border:1px solid #e0e0e0}
+.metric-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.metric-val{font-size:19px;font-weight:700;line-height:1.1}
+.metric-sub{font-size:10px;color:#888;margin-top:3px}
+.green{color:#1a7a45}.red{color:#b83232}.blue{color:#1a2b4a}.orange{color:#b06000}.gray{color:#888}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#f4f6f9;padding:6px 8px;text-align:left;font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid #e4e8ee;white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid #f2f2f2;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafbfc}
+.num{text-align:right;font-variant-numeric:tabular-nums;font-family:monospace;font-size:11px}
+.sticky{position:sticky;left:0;background:#fff;z-index:2}
+th.sticky{background:#f4f6f9;z-index:3}
+.section-row td{background:#eef2f7;font-weight:700;font-size:10px;color:#1a2b4a;text-transform:uppercase;letter-spacing:.04em}
+.total-row td{background:#e4ecf4;font-weight:700;font-size:11px;border-top:2px solid #1a2b4a}
+.result-row td{background:#1a2b4a;color:#fff;font-weight:700;font-size:12px}
+.result-row td.sticky{background:#1a2b4a;color:#fff}
+.cell-edit{background:transparent;border:none;border-bottom:1px dashed #ccc;width:72px;text-align:right;font-size:11px;padding:1px 2px;font-family:monospace;color:#1a1a1a}
+.cell-edit:focus{outline:none;border-bottom-color:#1a2b4a;background:#f0f4ff;border-radius:2px 2px 0 0}
+.btn{padding:5px 12px;border-radius:5px;border:1px solid #dde0e6;background:#fff;cursor:pointer;font-size:11px;font-weight:600;color:#333;transition:.1s;display:inline-flex;align-items:center;gap:5px}
+.btn:hover{background:#f4f6f9}
+.btn-primary{background:#1a2b4a;color:#fff;border-color:#1a2b4a}
+.btn-primary:hover{background:#243d6a}
+.btn-sm{padding:3px 8px;font-size:10px}
+.btn-danger{color:#b83232;border-color:#e4c0c0}.btn-danger:hover{background:#fdecea}
+.btn-ghost{border-color:transparent;background:transparent;color:#888}.btn-ghost:hover{background:#f0f0f0;color:#333}
+.overflow-x{overflow-x:auto}
+.mh{font-size:9px;text-align:center;padding:4px 2px;white-space:nowrap;border-left:1px solid #e8e8e8}
+.mh-total{background:#e4ecf4;color:#1a2b4a;font-weight:700;border-left:2px solid #1a2b4a}
+.pct-row td{font-size:10px;color:#888;font-style:italic;background:#fafafa}
+.alert{padding:8px 12px;border-radius:6px;font-size:11px;margin-bottom:12px;display:flex;align-items:flex-start;gap:6px}
+.alert-info{background:#e8f0fb;color:#1a2b4a;border:1px solid #c0d0e8}
+.alert-warn{background:#fff8e6;color:#b06000;border:1px solid #f0d070}
+.alert-ok{background:#e4f4ec;color:#1a7a45;border:1px solid #a0d8b8}
+.pill{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600;white-space:nowrap}
+.pill-ok{background:#e4f4ec;color:#1a7a45}
+.pill-warn{background:#fff4e0;color:#b06000}
+.pill-err{background:#fdecea;color:#b83232}
+.pill-neu{background:#f0f0f0;color:#555}
+.pill-jud{background:#fde8f0;color:#9b2060}
+.pill-nv{background:#e8f0fb;color:#1a2b4a}
+.upload-area{border:2px dashed #ccd0d8;border-radius:7px;padding:16px;text-align:center;color:#888;cursor:pointer;font-size:11px;transition:.15s;display:block}
+.upload-area:hover{border-color:#1a2b4a;color:#1a2b4a;background:#f4f7fb}
+.form-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.form-group{display:flex;flex-direction:column;gap:3px}
+.form-group label{font-size:10px;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+input,select{font-size:12px;padding:5px 8px;border:1px solid #dde0e6;border-radius:5px;background:#fff;color:#1a1a1a;font-family:Arial,sans-serif}
+input:focus,select:focus{outline:none;border-color:#1a2b4a;box-shadow:0 0 0 2px rgba(26,43,74,.08)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+input[type=number]{-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useCallback,useMemo}=React;
+const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MESES_FULL=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MES_ACTUAL=5; // Junio (0-indexed)
+const SK='bmg_seguimiento_2026_v1';
+
+// ─── Clientes BMG ───────────────────────────────────────────────
+const CLIENTES=[
+  {id:'bsabadell',nombre:'Banco Sabadell',iva:0.21},
+  {id:'link',nombre:'Link Finanzas',iva:0.21},
+  {id:'aiqon',nombre:'Aiqon',iva:0},
+  {id:'claimup',nombre:'Claim Up',iva:0.21},
+  {id:'reclamio',nombre:'Reclamio',iva:0.21},
+  {id:'cajamar',nombre:'Cajamar',iva:0.21},
+  {id:'caixabank',nombre:'CaixaBank',iva:0.21},
+  {id:'hispania',nombre:'Hispania / EOS / Sareb',iva:0.21},
+  {id:'otros',nombre:'Otros clientes',iva:0.21},
+  {id:'madrid',nombre:'Madrid',iva:0.21},
+  {id:'gestoria',nombre:'Gestoría',iva:0.21},
+  {id:'fiscal',nombre:'Fiscal',iva:0.21},
+  {id:'procesal',nombre:'Procesal',iva:0.21},
+  {id:'consultoria',nombre:'Consultoría',iva:0.21},
+];
+
+// Categorías de gastos para mapear extracto
+const CATS_GASTO=[
+  'Nóminas personal fijo (neto)',
+  'Seguridad Social empresa',
+  'Rosalía / LexConnect / Alejandro / Laura',
+  'Legal Pigeon',
+  '623 Mario','623 Miguel','623 Marc','623 Apoint','623 Ignacio','623 Jorge','623 Luis Miralbell',
+  'Alquiler oficina Barcelona',
+  'Informática',
+  'Otros gastos operativos',
+  'Liquidación IVA (mod. 303)',
+  'Retenciones IRPF (mod. 111/115)',
+  'Pago fraccionado IS (mod. 202)',
+  'Traspaso entre cuentas',
+  'Nueva deuda / financiación',
+  'Sin categorizar',
+];
+
+const ESTADOS_FACTURA=['Pendiente','No vencida','Cobrada','En disputa','Controlado',
+  'PDT Resolución Jud.','Nuevo Vencimiento','Sin Respuesta','Incobrable','Cancelada'];
+
+// ─── Helpers ────────────────────────────────────────────────────
+const fmt=(n,dec=0)=>{
+  if(n===null||n===undefined||isNaN(n))return'—';
+  const s=Math.abs(n).toLocaleString('es-ES',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+  return(n<0?'-':'')+'€\u202f'+s;
+};
+const pn=v=>{const s=String(v||0).replace(/[€\s]/g,'').replace(',','.');const n=parseFloat(s);return isNaN(n)?0:n;};
+const pct=(a,b)=>b?Math.round(a/b*100):0;
+const load=()=>{try{const r=localStorage.getItem(SK);return r?JSON.parse(r):null;}catch{return null;}};
+const persist=d=>{try{localStorage.setItem(SK,JSON.stringify({...d,_saved:new Date().toISOString()}));}catch{}};
+
+const excelDateToISO=v=>{
+  if(!v)return'';
+  if(v instanceof Date)return v.toISOString().split('T')[0];
+  if(typeof v==='number'&&v>40000){const d=new Date((v-25569)*86400000);return d.toISOString().split('T')[0];}
+  const s=String(v).trim();
+  const p=s.split(/[\/\-\.]/);
+  if(p.length===3)return p[0].length===4?`${p[0]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`:`${p[2].length===2?'20'+p[2]:p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+  return s;
+};
+
+const pilEstado=e=>{
+  if(e==='Cobrada')return'pill pill-ok';
+  if(e==='Pendiente')return'pill pill-warn';
+  if(e==='No vencida')return'pill pill-nv';
+  if(e==='Incobrable'||e==='Cancelada')return'pill pill-err';
+  if(e==='En disputa'||e==='PDT Resolución Jud.')return'pill pill-jud';
+  return'pill pill-neu';
+};
+
+// ══════════════════════════════════════════════════════════════════
+// APP
+// ══════════════════════════════════════════════════════════════════
+function App(){
+  const sv=load();
+  const [factReal,setFactReal]=useState(()=>sv?.factReal||Object.fromEntries(CLIENTES.map(c=>[c.id,Array(12).fill(0)])));
+  const [factFcst,setFactFcst]=useState(()=>sv?.factFcst||Object.fromEntries(CLIENTES.map(c=>[c.id,Array(12).fill(0)])));
+  const [facturas,setFacturas]=useState(()=>sv?.facturas||[]);
+  const [movs,setMovs]=useState(()=>sv?.movs||[]);
+  const [sub,setSub]=useState('facturacion');
+
+  const save=useCallback((patch)=>{
+    persist({factReal,factFcst,gastosReal,gastosFcst,imptosReal,imptosFcst,facturas,movs,...patch});
+  },[factReal,factFcst,gastosReal,gastosFcst,imptosReal,imptosFcst,facturas,movs]);
+
+  // Gastos reales (meses cerrados) y forecast (meses futuros)
+  const [gastosReal,setGastosReal]=useState(()=>sv?.gastosReal||JSON.parse(JSON.stringify(GASTOS0)));
+  const [gastosFcst,setGastosFcst]=useState(()=>sv?.gastosFcst||JSON.parse(JSON.stringify(GASTOS0)));
+  const [imptosReal,setImptosReal]=useState(()=>sv?.imptosReal||JSON.parse(JSON.stringify(IMPTOS0)));
+  const [imptosFcst,setImptosFcst]=useState(()=>sv?.imptosFcst||JSON.parse(JSON.stringify(IMPTOS0)));
+
+  const ingRealM=m=>CLIENTES.reduce((s,c)=>(factReal[c.id]?.[m]||0)+s,0);
+  const ingFcstM=m=>CLIENTES.reduce((s,c)=>(factFcst[c.id]?.[m]||0)+s,0);
+  const ingM=m=>m<=MES_ACTUAL?ingRealM(m):ingFcstM(m);
+  const ingIVARealM=m=>CLIENTES.reduce((s,c)=>{const b=factReal[c.id]?.[m]||0;return s+b*(1+(c.iva??0.21));},0);
+
+  // Para un gasto: usa real si mes cerrado, forecast si futuro
+  const gastoM=(gid,m)=>{
+    const src=m<=MES_ACTUAL?gastosReal:gastosFcst;
+    const g=src.find(x=>x.id===gid);
+    return g?g.imp[m]||0:0;
+  };
+  const imptM2=(iid,m)=>{
+    const src=m<=MES_ACTUAL?imptosReal:imptosFcst;
+    const i=src.find(x=>x.id===iid);
+    return i?i.imp[m]||0:0;
+  };
+  // Totales combinados por mes (real+fcst)
+  const gfijCombM=m=>[...gastosReal,...(m>MES_ACTUAL?gastosFcst:[])].filter((_,i,a)=>m<=MES_ACTUAL?i<gastosReal.length:i>=gastosReal.length).reduce((s,g)=>s+(g.imp[m]||0),0);
+  const gCombM=m=>(m<=MES_ACTUAL?gastosReal:gastosFcst).reduce((s,g)=>s+(g.imp[m]||0),0);
+  const iCombM=m=>(m<=MES_ACTUAL?imptosReal:imptosFcst).reduce((s,i)=>s+(i.imp[m]||0),0);
+
+  // ── Cálculos cobros desde facturas ──
+  // Cobros reales = facturas cobradas con fecha real ese mes
+  const cobrosRealesM=m=>facturas
+    .filter(f=>{
+      if(f.estado!=='Cobrada'||!f.fechaCobro)return false;
+      const d=new Date(f.fechaCobro);
+      return !isNaN(d)&&d.getMonth()===m&&d.getFullYear()===2026;
+    }).reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
+
+  // Cobros pendientes asignados a este mes
+  const cobrosPendM=m=>facturas
+    .filter(f=>f.mesCobro===m&&!['Cobrada','Cancelada','Incobrable'].includes(f.estado))
+    .reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
+
+  // Cobros previstos mes = reales cobrados + pendientes asignados
+  const cobrosPrevistoM=m=>cobrosRealesM(m)+cobrosPendM(m);
+
+  // ── Cálculos extracto ──
+  // Pagos reales del extracto (solo negativos, excluye sin categorizar)
+  const pagosExtractoM=m=>movs
+    .filter(mv=>mv.mes===m&&mv.importe<0&&mv.categoria!=='Sin categorizar')
+    .reduce((s,mv)=>s+mv.importe,0);
+
+  // Todos los gastos del extracto agrupados por categoría
+  const gastosPorCatM=(cat,m)=>movs
+    .filter(mv=>mv.mes===m&&mv.categoria===cat)
+    .reduce((s,mv)=>s+mv.importe,0);
+
+  // ── Cálculos caja real ──
+  // Cobros caja = cobros reales de facturas cobradas este mes
+  const cobrosCajaM=m=>cobrosRealesM(m);
+  // Pagos caja = extracto bancario negativos
+  const pagosCajaM=m=>pagosExtractoM(m);
+  const flujoCajaM=m=>cobrosCajaM(m)+pagosCajaM(m);
+
+  // Totales generales
+  const TI=MESES.reduce((_,__,m)=>_+ingRealM(m),0);
+  const TC=MESES.slice(0,MES_ACTUAL+1).reduce((_,__,m)=>_+cobrosRealesM(m),0);
+  const TP=MESES.slice(0,MES_ACTUAL+1).reduce((_,__,m)=>_+pagosExtractoM(m),0);
+  const totPend=facturas.filter(f=>!['Cobrada','Cancelada','Incobrable'].includes(f.estado)).reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
+  const totVenc=facturas.filter(f=>f.estado==='Pendiente').reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
+
+  return(
+    <div className="app">
+      <div className="header">
+        <div>
+          <h1><i className="ti ti-building-skyscraper" style={{marginRight:7}}></i>BMG Law Services · Seguimiento Real 2026</h1>
+          <div className="header-sub">Datos reales acumulados hasta {MESES_FULL[MES_ACTUAL]}</div>
+        </div>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <span style={{fontSize:10,color:'#90c4a0'}}><i className="ti ti-device-floppy" style={{marginRight:4}}></i>Guardado automático</span>
+        </div>
+      </div>
+
+      <div className="main-nav">
+        <button style={{color:'#bbb',cursor:'default'}}><i className="ti ti-target"></i>Presupuesto</button>
+        <button className="active"><i className="ti ti-chart-arrows-vertical"></i>Seguimiento</button>
+        <button style={{color:'#bbb',cursor:'default'}}><i className="ti ti-dashboard"></i>Dashboard</button>
+      </div>
+
+      {/* KPIs globales */}
+      <div className="metrics">
+        <div className="metric"><div className="metric-label">Facturación real YTD</div><div className="metric-val green">{fmt(TI)}</div><div className="metric-sub">Ene–{MESES[MES_ACTUAL]}</div></div>
+        <div className="metric"><div className="metric-label">Cobros reales YTD</div><div className="metric-val green">{fmt(TC)}</div><div className="metric-sub">De facturas cobradas</div></div>
+        <div className="metric"><div className="metric-label">Facturas pendientes</div><div className="metric-val orange">{fmt(totPend)}</div><div className="metric-sub">{facturas.filter(f=>!['Cobrada','Cancelada','Incobrable'].includes(f.estado)).length} facturas</div></div>
+        <div className="metric"><div className="metric-label">Vencidas (cobro urgente)</div><div className="metric-val red">{fmt(totVenc)}</div><div className="metric-sub">{facturas.filter(f=>f.estado==='Pendiente').length} facturas</div></div>
+        <div className="metric"><div className="metric-label">Pagos reales YTD</div><div className="metric-val red">{fmt(TP)}</div><div className="metric-sub">Del extracto bancario</div></div>
+      </div>
+
+      {/* Sub-tabs */}
+      <div className="sub-nav">
+        <button className={sub==='facturacion'?'active':''} onClick={()=>setSub('facturacion')}><i className="ti ti-chart-bar"></i>Facturación real</button>
+        <button className={sub==='gastos'?'active':''} onClick={()=>setSub('gastos')}><i className="ti ti-receipt"></i>Gastos real</button>
+        <button className={sub==='facturas'?'active':''} onClick={()=>setSub('facturas')}><i className="ti ti-file-invoice"></i>Clientes pendientes cobro</button>
+        <button className={sub==='pyg'?'active':''} onClick={()=>setSub('pyg')}><i className="ti ti-report-money"></i>PyG real</button>
+        <button className={sub==='caja'?'active':''} onClick={()=>setSub('caja')}><i className="ti ti-building-bank"></i>Caja real</button>
+        <button className={sub==='extracto'?'active':''} onClick={()=>setSub('extracto')}><i className="ti ti-credit-card"></i>Extracto bancario</button>
+      </div>
+
+      {sub==='facturacion'&&<TabFacturacionReal factReal={factReal} setFactReal={setFactReal} factFcst={factFcst} setFactFcst={setFactFcst} ingRealM={ingRealM} ingFcstM={ingFcstM} ingM={ingM} ingIVARealM={ingIVARealM} save={save}/>}
+      {sub==='gastos'&&<TabGastosReal gastosReal={gastosReal} setGastosReal={setGastosReal} gastosFcst={gastosFcst} setGastosFcst={setGastosFcst} imptosReal={imptosReal} setImptosReal={setImptosReal} imptosFcst={imptosFcst} setImptosFcst={setImptosFcst} gCombM={gCombM} iCombM={iCombM} save={save}/>}
+      {sub==='facturas'&&<TabFacturasPendientes facturas={facturas} setFacturas={setFacturas} save={save} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM}/>}
+      {sub==='pyg'&&<TabPyGReal ingM={ingM} gCombM={gCombM} iCombM={iCombM} gastosReal={gastosReal} gastosFcst={gastosFcst} imptosReal={imptosReal} imptosFcst={imptosFcst}/>}
+      {sub==='caja'&&<TabCajaReal facturas={facturas} movs={movs} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} pagosExtractoM={pagosExtractoM} flujoCajaM={flujoCajaM}/>}
+      {sub==='extracto'&&<TabExtracto movs={movs} setMovs={setMovs} save={save}/>}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SUB-TAB: FACTURACIÓN REAL + FORECAST
+// ══════════════════════════════════════════════════════════════════
+function TabFacturacionReal({factReal,setFactReal,factFcst,setFactFcst,ingRealM,ingFcstM,ingM,ingIVARealM,save}){
+  const setR=(cid,m,v)=>{const val=pn(v);const n={...factReal,[cid]:factReal[cid].map((x,i)=>i===m?val:x)};setFactReal(n);save({factReal:n});};
+  const setF=(cid,m,v)=>{const val=pn(v);const n={...factFcst,[cid]:factFcst[cid].map((x,i)=>i===m?val:x)};setFactFcst(n);save({factFcst:n});};
+
+  const totRealYTD=MESES.slice(0,MES_ACTUAL+1).reduce((_,__,m)=>_+ingRealM(m),0);
+  const totFcstResto=MESES.slice(MES_ACTUAL+1).reduce((_,__,i)=>_+ingFcstM(MES_ACTUAL+1+i),0);
+  const totCierreAnio=totRealYTD+totFcstResto;
+  const totIVAYTD=MESES.slice(0,MES_ACTUAL+1).reduce((_,__,m)=>_+ingIVARealM(m),0);
+
+  return(
+    <div>
+      {/* Leyenda visual */}
+      <div style={{display:'flex',gap:16,alignItems:'center',padding:'8px 0',marginBottom:10,fontSize:11,flexWrap:'wrap'}}>
+        <span style={{display:'flex',alignItems:'center',gap:5}}>
+          <span style={{width:14,height:14,background:'#e4f4ec',border:'1px solid #a0d4b0',borderRadius:2,display:'inline-block'}}></span>
+          <strong style={{color:'#1a7a45'}}>Real cerrado</strong> — bloqueado, no editable
+        </span>
+        <span style={{display:'flex',alignItems:'center',gap:5}}>
+          <span style={{width:14,height:14,background:'#e8f0fb',border:'1px solid #90b0d8',borderRadius:2,display:'inline-block'}}></span>
+          <strong style={{color:'#1a2b4a'}}>Forecast</strong> — edita libremente para proyectar el cierre
+        </span>
+      </div>
+
+      {/* KPIs forecast */}
+      <div className="metrics">
+        <div className="metric">
+          <div className="metric-label">Real YTD (Ene–{MESES[MES_ACTUAL]})</div>
+          <div className="metric-val green">{fmt(totRealYTD)}</div>
+          <div className="metric-sub">Facturación real cerrada</div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">Forecast resto año</div>
+          <div className="metric-val blue">{fmt(totFcstResto)}</div>
+          <div className="metric-sub">{MESES[MES_ACTUAL+1]}–Dic (previsión)</div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">Proyección cierre año</div>
+          <div className="metric-val blue">{fmt(totCierreAnio)}</div>
+          <div className="metric-sub">Real + Forecast</div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">Cobros caja YTD (+ IVA)</div>
+          <div className="metric-val green">{fmt(totIVAYTD)}</div>
+          <div className="metric-sub">Facturación real con IVA</div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h2>Facturación real + forecast por cliente · 2026</h2>
+          <span style={{fontSize:10,color:'#888'}}>€ base imponible · verde = real cerrado · azul = forecast ajustable</span>
+        </div>
+        <div className="overflow-x">
+        <table style={{minWidth:1100}}>
+          <thead>
+            <tr>
+              <th className="sticky" style={{minWidth:190}}>Cliente</th>
+              {MESES.map((mes,i)=>{
+                const esReal=i<=MES_ACTUAL;
+                return(
+                  <th key={i} className="mh" style={{
+                    minWidth:68,
+                    background:esReal?'#e4f4ec':'#e8f0fb',
+                    color:esReal?'#1a7a45':'#1a2b4a',
+                    borderTop:esReal?'2px solid #a0d4b0':'2px solid #90b0d8',
+                  }}>
+                    {mes}
+                    <div style={{fontSize:8,fontWeight:400,marginTop:1}}>{esReal?'real':'fcst'}</div>
+                  </th>
+                );
+              })}
+              <th className="mh" style={{minWidth:82,background:'#f0f4f8',color:'#1a2b4a',fontWeight:700,borderLeft:'2px solid #1a2b4a',fontSize:9}}>Real YTD</th>
+              <th className="mh mh-total" style={{minWidth:82}}>Cierre año</th>
+            </tr>
+          </thead>
+          <tbody>
+          {CLIENTES.map(c=>{
+            const totReal=MESES.slice(0,MES_ACTUAL+1).reduce((_,__,m)=>_+(factReal[c.id]?.[m]||0),0);
+            const totCierre=totReal+MESES.slice(MES_ACTUAL+1).reduce((_,__,i)=>_+(factFcst[c.id]?.[MES_ACTUAL+1+i]||0),0);
+            return(
+              <tr key={c.id}>
+                <td className="sticky" style={{fontWeight:500}}>{c.nombre}</td>
+                {MESES.map((_,m)=>{
+                  const esReal=m<=MES_ACTUAL;
+                  const val=esReal?(factReal[c.id]?.[m]||0):(factFcst[c.id]?.[m]||0);
+                  return(
+                    <td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0',background:esReal?'#f4fbf6':'#f4f7fd'}}>
+                      <input
+                        type="number"
+                        className="cell-edit"
+                        value={val}
+                        disabled={esReal}
+                        onChange={e=>esReal?null:setF(c.id,m,e.target.value)}
+                        min={0}
+                        style={{
+                          color:esReal?'#1a7a45':'#1a2b4a',
+                          borderBottomColor:esReal?'transparent':'#90b0d8',
+                          cursor:esReal?'default':'text',
+                          fontWeight:esReal?600:400,
+                        }}
+                      />
+                    </td>
+                  );
+                })}
+                <td className="num" style={{fontWeight:600,borderLeft:'2px solid #c0d0e0',background:'#f0f4f8',color:'#1a7a45'}}>{fmt(totReal)}</td>
+                <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#e8f0fb',color:'#1a2b4a'}}>{fmt(totCierre)}</td>
+              </tr>
+            );
+          })}
+
+          {/* Fila total real YTD */}
+          <tr style={{background:'#e4f4ec',borderTop:'2px solid #a0d4b0'}}>
+            <td className="sticky" style={{fontWeight:700,color:'#1a7a45',fontSize:11}}>TOTAL REAL (Ene–{MESES[MES_ACTUAL]})</td>
+            {MESES.map((_,m)=>(
+              <td key={m} className="num" style={{color:'#1a7a45',fontWeight:700,background:m<=MES_ACTUAL?'#dcf0e4':'#f4f6f9'}}>
+                {m<=MES_ACTUAL?fmt(ingRealM(m)):'—'}
+              </td>
+            ))}
+            <td className="num" style={{fontWeight:700,borderLeft:'2px solid #c0d0e0',background:'#d0ecd8',color:'#1a7a45'}}>{fmt(totRealYTD)}</td>
+            <td className="num" style={{borderLeft:'2px solid #1a2b4a',background:'#d0ecd8',color:'#1a7a45',fontWeight:700}}>—</td>
+          </tr>
+
+          {/* Fila forecast resto */}
+          <tr style={{background:'#e8f0fb',borderTop:'2px solid #90b0d8'}}>
+            <td className="sticky" style={{fontWeight:700,color:'#1a2b4a',fontSize:11}}>FORECAST ({MESES[MES_ACTUAL+1]}–Dic)</td>
+            {MESES.map((_,m)=>(
+              <td key={m} className="num" style={{color:'#1a2b4a',fontWeight:700,background:m>MES_ACTUAL?'#dce8f8':'#f4f6f9'}}>
+                {m>MES_ACTUAL?fmt(ingFcstM(m)):'—'}
+              </td>
+            ))}
+            <td className="num" style={{borderLeft:'2px solid #c0d0e0',background:'#dce8f8',color:'#888'}}>—</td>
+            <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',background:'#dce8f8',color:'#1a2b4a'}}>{fmt(totFcstResto)}</td>
+          </tr>
+
+          {/* Fila proyección cierre */}
+          <tr className="result-row">
+            <td className="sticky">PROYECCIÓN CIERRE AÑO</td>
+            {MESES.map((_,m)=>(
+              <td key={m} className="num" style={{fontWeight:700}}>
+                {fmt(ingM(m))}
+              </td>
+            ))}
+            <td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.2)',color:'rgba(255,255,255,.6)',fontSize:10}}>YTD: {fmt(totRealYTD)}</td>
+            <td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.3)',fontSize:13,fontWeight:700}}>{fmt(totCierreAnio)}</td>
+          </tr>
+
+          {/* Cobros caja con IVA */}
+          <tr style={{background:'#f0fbf6'}}>
+            <td className="sticky" style={{color:'#1a7a45',fontWeight:600,paddingLeft:8,fontSize:11}}>↳ Cobros caja reales YTD (+ IVA)</td>
+            {MESES.map((_,m)=>(
+              <td key={m} className="num" style={{color:'#1a7a45',fontWeight:600}}>
+                {m<=MES_ACTUAL?fmt(ingIVARealM(m)):'—'}
+              </td>
+            ))}
+            <td className="num" style={{borderLeft:'2px solid #c0d0e0',color:'#1a7a45',fontWeight:700}}>{fmt(totIVAYTD)}</td>
+            <td className="num" style={{borderLeft:'2px solid #1a2b4a',color:'#888',fontStyle:'italic',fontSize:10}}>—</td>
+          </tr>
+          </tbody>
+        </table>
+        </div>
+        <div style={{padding:'7px 14px',fontSize:10,color:'#888',borderTop:'1px solid #f0f0f0',background:'#fafafa'}}>
+          <i className="ti ti-lock" style={{marginRight:4,color:'#1a7a45'}}></i>Meses en verde = real cerrado, no editable ·
+          <i className="ti ti-pencil" style={{marginLeft:8,marginRight:4,color:'#1a2b4a'}}></i>Meses en azul = forecast, editable para ajustar proyección de cierre
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+// DATOS GASTOS (misma estructura que presupuesto)
+// ══════════════════════════════════════════════════════════════════
+const GASTOS0=[
+  {id:'nominas',    concepto:'Nóminas personal fijo (neto)',            grupo:'Personal',      iva:0,    irpf:0,    imp:Array(12).fill(-37734)},
+  {id:'ss',         concepto:'Seguridad Social empresa',                grupo:'Personal',      iva:0,    irpf:0,    imp:Array(12).fill(-12167)},
+  {id:'rosalia',    concepto:'Rosalía / LexConnect / Alejandro / Laura',grupo:'Colaboradores', iva:0.21, irpf:0.15, imp:Array(12).fill(-10031)},
+  {id:'legalpigeon',concepto:'Legal Pigeon',                            grupo:'Colaboradores', iva:0.21, irpf:0.15, imp:[0,0,0,0,0,-5487,-5487,-5487,-5487,-5487,-5487,-5487]},
+  {id:'mario',      concepto:'623 Mario',                               grupo:'Colaboradores', iva:0.21, irpf:0.15, imp:Array(12).fill(-8554)},
+  {id:'miguel_fee', concepto:'623 Miguel',                              grupo:'Colaboradores', iva:0.21, irpf:0.15, imp:Array(12).fill(-2550)},
+  {id:'marc',       concepto:'623 Marc',                                grupo:'Colaboradores', iva:0.21, irpf:0.15, imp:Array(12).fill(-2550)},
+  {id:'apoint',     concepto:'623 Apoint',                              grupo:'Colaboradores', iva:0.21, irpf:0.15, imp:Array(12).fill(-4250)},
+  {id:'ignacio',    concepto:'623 Ignacio',                             grupo:'Colaboradores', iva:0.21, irpf:0.15, imp:Array(12).fill(-5000)},
+  {id:'jorge',      concepto:'623 Jorge',                               grupo:'Colaboradores', iva:0.21, irpf:0.15, imp:Array(12).fill(-1000)},
+  {id:'luis',       concepto:'623 Luis Miralbell (fee -50%)',           grupo:'Colaboradores', iva:0.21, irpf:0.15, imp:Array(12).fill(-2500)},
+  {id:'alquiler',   concepto:'Alquiler oficina Barcelona',              grupo:'Estructura',    iva:0.21, irpf:0.19, imp:Array(12).fill(-9892)},
+  {id:'it',         concepto:'Informática',                             grupo:'Estructura',    iva:0.21, irpf:0,    imp:Array(12).fill(-8500)},
+  {id:'otros_g',    concepto:'Otros gastos operativos',                 grupo:'Estructura',    iva:0.21, irpf:0,    imp:Array(12).fill(-2000)},
+];
+const IMPTOS0=[
+  {id:'iva',  concepto:'Liquidación IVA (mod. 303)',      imp:[0,0,0,0,0,0,-25000,0,0,-25000,0,0]},
+  {id:'irpf', concepto:'Retenciones IRPF (mod. 111/115)', imp:[0,0,0,0,0,0,-30000,0,0,-30000,0,0]},
+  {id:'is',   concepto:'Pago fraccionado IS (mod. 202)',  imp:Array(12).fill(0)},
+];
+const CV_IDS=['nominas','ss','rosalia','legalpigeon'];
+
+// ══════════════════════════════════════════════════════════════════
+// SUB-TAB: GASTOS REAL + FORECAST
+// ══════════════════════════════════════════════════════════════════
+function TabGastosReal({gastosReal,setGastosReal,gastosFcst,setGastosFcst,imptosReal,setImptosReal,imptosFcst,setImptosFcst,gCombM,iCombM,save}){
+  const grupos=[...new Set(GASTOS0.map(g=>g.grupo))];
+
+  const setG=(gid,m,v,esReal)=>{
+    let val=parseFloat(String(v||0).replace(',','.'))||0;
+    if(val>0)val=-val;
+    if(esReal){
+      const n=gastosReal.map(g=>g.id!==gid?g:{...g,imp:g.imp.map((x,i)=>i===m?val:x)});
+      setGastosReal(n);save({gastosReal:n});
+    }else{
+      const n=gastosFcst.map(g=>g.id!==gid?g:{...g,imp:g.imp.map((x,i)=>i===m?val:x)});
+      setGastosFcst(n);save({gastosFcst:n});
+    }
+  };
+  const setI=(iid,m,v,esReal)=>{
+    let val=parseFloat(String(v||0).replace(',','.'))||0;
+    if(val>0)val=-val;
+    if(esReal){
+      const n=imptosReal.map(i=>i.id!==iid?i:{...i,imp:i.imp.map((x,j)=>j===m?val:x)});
+      setImptosReal(n);save({imptosReal:n});
+    }else{
+      const n=imptosFcst.map(i=>i.id!==iid?i:{...i,imp:i.imp.map((x,j)=>j===m?val:x)});
+      setImptosFcst(n);save({imptosFcst:n});
+    }
+  };
+
+  const getVal=(gid,m,esReal)=>{
+    const src=esReal?gastosReal:gastosFcst;
+    const g=src.find(x=>x.id===gid);
+    return g?Math.abs(g.imp[m]||0):0;
+  };
+  const getIVal=(iid,m,esReal)=>{
+    const src=esReal?imptosReal:imptosFcst;
+    const i=src.find(x=>x.id===iid);
+    return i?Math.abs(i.imp[m]||0):0;
+  };
+
+  const totRealYTD=MESES.slice(0,MES_ACTUAL+1).reduce((_,__,m)=>_+gCombM(m)+iCombM(m),0);
+  const totFcstResto=MESES.slice(MES_ACTUAL+1).reduce((_,__,i)=>_+gCombM(MES_ACTUAL+1+i)+iCombM(MES_ACTUAL+1+i),0);
+  const totCierre=totRealYTD+totFcstResto;
+
+  const GRow=({g})=>(
+    <tr>
+      <td className="sticky" style={{paddingLeft:16}}>
+        {g.concepto}
+        {g.iva>0&&<span style={{display:'inline-block',fontSize:9,padding:'1px 5px',borderRadius:3,fontWeight:600,marginLeft:4,background:'#e8f0fb',color:'#1a2b4a'}}>+{g.iva*100}%IVA</span>}
+        {g.irpf>0&&<span style={{display:'inline-block',fontSize:9,padding:'1px 5px',borderRadius:3,fontWeight:600,marginLeft:3,background:'#fff4e0',color:'#7a4000'}}>-{g.irpf*100}%IRPF</span>}
+      </td>
+      {MESES.map((_,m)=>{
+        const esReal=m<=MES_ACTUAL;
+        return(
+          <td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0',background:esReal?'#f4fbf6':'#f4f7fd'}}>
+            <input
+              type="number"
+              style={{background:'transparent',border:'none',borderBottom:`1px dashed ${esReal?'transparent':'#90b0d8'}`,width:72,textAlign:'right',fontSize:11,padding:'1px 2px',fontFamily:'monospace',
+                color:esReal?'#1a7a45':'#1a2b4a',fontWeight:esReal?600:400,cursor:esReal?'default':'text'}}
+              value={getVal(g.id,m,esReal)}
+              disabled={esReal}
+              onChange={e=>setG(g.id,m,e.target.value,esReal)}
+              min={0}
+            />
+          </td>
+        );
+      })}
+      <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#fdf8f0',color:'#b83232',fontSize:11}}>
+        {fmt(MESES.reduce((_,__,m)=>_+(m<=MES_ACTUAL?gastosReal:gastosFcst).find(x=>x.id===g.id)?.imp[m]||0,0))}
+      </td>
+    </tr>
+  );
+
+  const IRow=({i})=>(
+    <tr>
+      <td className="sticky" style={{paddingLeft:16}}>{i.concepto}</td>
+      {MESES.map((_,m)=>{
+        const esReal=m<=MES_ACTUAL;
+        return(
+          <td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0',background:esReal?'#f4fbf6':'#f4f7fd'}}>
+            <input
+              type="number"
+              style={{background:'transparent',border:'none',borderBottom:`1px dashed ${esReal?'transparent':'#90b0d8'}`,width:72,textAlign:'right',fontSize:11,padding:'1px 2px',fontFamily:'monospace',
+                color:esReal?'#1a7a45':'#1a2b4a',fontWeight:esReal?600:400,cursor:esReal?'default':'text'}}
+              value={getIVal(i.id,m,esReal)}
+              disabled={esReal}
+              onChange={e=>setI(i.id,m,e.target.value,esReal)}
+              min={0}
+            />
+          </td>
+        );
+      })}
+      <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#fdf8f0',color:'#b83232',fontSize:11}}>
+        {fmt(MESES.reduce((_,__,m)=>_+(m<=MES_ACTUAL?imptosReal:imptosFcst).find(x=>x.id===i.id)?.imp[m]||0,0))}
+      </td>
+    </tr>
+  );
+
+  return(
+    <div>
+      {/* Leyenda */}
+      <div style={{display:'flex',gap:16,alignItems:'center',padding:'8px 0',marginBottom:10,fontSize:11,flexWrap:'wrap'}}>
+        <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:14,background:'#e4f4ec',border:'1px solid #a0d4b0',borderRadius:2,display:'inline-block'}}></span><strong style={{color:'#1a7a45'}}>Real cerrado</strong> — bloqueado</span>
+        <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:14,background:'#e8f0fb',border:'1px solid #90b0d8',borderRadius:2,display:'inline-block'}}></span><strong style={{color:'#1a2b4a'}}>Forecast</strong> — editable para proyectar cierre</span>
+      </div>
+
+      <div className="metrics">
+        <div className="metric"><div className="metric-label">Gasto real YTD (Ene–{MESES[MES_ACTUAL]})</div><div className="metric-val red">{fmt(totRealYTD)}</div><div className="metric-sub">Real cerrado</div></div>
+        <div className="metric"><div className="metric-label">Forecast resto año</div><div className="metric-val blue">{fmt(totFcstResto)}</div><div className="metric-sub">{MESES[MES_ACTUAL+1]}–Dic (previsión)</div></div>
+        <div className="metric"><div className="metric-label">Proyección cierre año</div><div className="metric-val blue">{fmt(totCierre)}</div><div className="metric-sub">Real + Forecast</div></div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h2>Gastos real + forecast por partida · 2026</h2>
+          <span style={{fontSize:10,color:'#888'}}>€ valor absoluto · verde = real cerrado · azul = forecast ajustable</span>
+        </div>
+        <div className="overflow-x">
+        <table style={{minWidth:1120}}>
+          <thead>
+            <tr>
+              <th className="sticky" style={{minWidth:240}}>Partida</th>
+              {MESES.map((mes,i)=>{
+                const esReal=i<=MES_ACTUAL;
+                return(
+                  <th key={i} style={{minWidth:72,fontSize:9,textAlign:'center',padding:'4px 2px',whiteSpace:'nowrap',borderLeft:'1px solid #e8e8e8',
+                    background:esReal?'#e4f4ec':'#e8f0fb',
+                    color:esReal?'#1a7a45':'#1a2b4a',
+                    borderTop:esReal?'2px solid #a0d4b0':'2px solid #90b0d8'}}>
+                    {mes}<div style={{fontSize:8,fontWeight:400,marginTop:1}}>{esReal?'real':'fcst'}</div>
+                  </th>
+                );
+              })}
+              <th className="mh mh-total" style={{minWidth:82}}>Cierre año</th>
+            </tr>
+          </thead>
+          <tbody>
+          {grupos.map(gr=>{
+            const gg=GASTOS0.filter(g=>g.grupo===gr);
+            const tgCombM=m=>(m<=MES_ACTUAL?gastosReal:gastosFcst).filter(g=>g.grupo===gr).reduce((s,g)=>s+(g.imp[m]||0),0);
+            const tgAnio=MESES.reduce((_,__,m)=>_+tgCombM(m),0);
+            return[
+              <tr key={`sg${gr}`} className="section-row"><td className="sticky" colSpan={14}>{gr}</td></tr>,
+              ...gg.map(g=><GRow key={g.id} g={g}/>),
+              <tr key={`tot${gr}`} style={{background:'#f4f6f9'}}>
+                <td className="sticky" style={{fontWeight:700,paddingLeft:8,fontSize:11,color:'#1a2b4a'}}>Subtotal {gr}</td>
+                {MESES.map((_,m)=><td key={m} className="num" style={{fontWeight:600,color:'#b83232',background:m<=MES_ACTUAL?'#dcf0e4':'#dce8f8'}}>{fmt(tgCombM(m))}</td>)}
+                <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#b83232'}}>{fmt(tgAnio)}</td>
+              </tr>
+            ];
+          })}
+
+          {/* Total operativos */}
+          <tr style={{background:'#e4ecf4',borderTop:'2px solid #1a2b4a'}}>
+            <td className="sticky" style={{fontWeight:700}}>TOTAL GASTOS OPERATIVOS</td>
+            {MESES.map((_,m)=><td key={m} className="num red" style={{fontWeight:700,background:m<=MES_ACTUAL?'#dcf0e4':'#dce8f8'}}>{fmt(gCombM(m))}</td>)}
+            <td className="num red" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(MESES.reduce((_,__,m)=>_+gCombM(m),0))}</td>
+          </tr>
+
+          <tr className="section-row"><td className="sticky" colSpan={14}>Impuestos y retenciones</td></tr>
+          {IMPTOS0.map(i=><IRow key={i.id} i={i}/>)}
+          <tr className="result-row">
+            <td className="sticky">TOTAL GASTOS + IMPUESTOS</td>
+            {MESES.map((_,m)=><td key={m} className="num" style={{fontWeight:700}}>{fmt(gCombM(m)+iCombM(m))}</td>)}
+            <td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.3)',fontSize:13}}>{fmt(totCierre)}</td>
+          </tr>
+          </tbody>
+        </table>
+        </div>
+        <div style={{padding:'7px 14px',fontSize:10,color:'#888',borderTop:'1px solid #f0f0f0',background:'#fafafa'}}>
+          <i className="ti ti-lock" style={{marginRight:4,color:'#1a7a45'}}></i>Verde = real cerrado, no editable ·
+          <i className="ti ti-pencil" style={{marginLeft:8,marginRight:4,color:'#1a2b4a'}}></i>Azul = forecast, editable para ajustar proyección
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SUB-TAB: CLIENTES PENDIENTES DE COBRO
+// ══════════════════════════════════════════════════════════════════
+function TabFacturasPendientes({facturas,setFacturas,save,cobrosRealesM,cobrosPendM}){
+  const blank={id:'',cliente:'',clienteNm:'',fecha:'',importe:'',diasRetraso:0,mesCobro:MES_ACTUAL+1<=11?MES_ACTUAL+1:11,estado:'Pendiente',fechaCobro:'',respuestaCliente:''};
+  const [form,setForm]=useState(blank);
+  const [editId,setEditId]=useState(null);
+  const [filtroMes,setFiltroMes]=useState('todos');
+  const [filtroEstado,setFiltroEstado]=useState('todos');
+  const [filtroCliente,setFiltroCliente]=useState('todos');
+  const [importLog,setImportLog]=useState(null);
+
+  const upd=f=>{
+    const n=[...f];setFacturas(n);save({facturas:n});
+  };
+
+  const guardar=()=>{
+    if(!form.id||!form.cliente||!form.importe){alert('Completa Nº Factura, Cliente e Importe.');return;}
+    const f={...form,importe:parseFloat(form.importe)||0,mesCobro:parseInt(form.mesCobro)};
+    if(editId){upd(facturas.map(x=>x.id===editId?f:x));setEditId(null);}
+    else upd([...facturas,f]);
+    setForm(blank);
+  };
+
+  const cambiarEstado=(id,estado,fechaCobro='')=>{
+    upd(facturas.map(f=>{
+      if(f.id!==id)return f;
+      const fc=(estado==='Cobrada'&&!f.fechaCobro)?fechaCobro||new Date().toISOString().split('T')[0]:f.fechaCobro;
+      return{...f,estado,fechaCobro:fc};
+    }));
+  };
+
+  // Importador Excel BMG — lee hoja "FACTURAS PENDIENTES" y "FACTURAS EMITIDAS NO VENCIDAS"
+  const importarXLSX=e=>{
+    const file=e.target.files[0];if(!file)return;
+    if(!window.XLSX){alert('Librería no cargada, espera un momento.');return;}
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{
+        const wb=window.XLSX.read(ev.target.result,{type:'array',cellDates:true});
+        let pendRows=[],nvRows=[];
+        wb.SheetNames.forEach(n=>{
+          const u=n.toUpperCase();
+          const rows=window.XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:''});
+          if(u.includes('PENDIENTE'))pendRows=rows;
+          else if(u.includes('NO VENCIDA')||u.includes('EMITIDA'))nvRows=rows;
+        });
+        if(!pendRows.length&&!nvRows.length){
+          // Si no hay pestañas nombradas, intentar la primera como pendientes
+          const rows=window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+          pendRows=rows;
+        }
+
+        const parsarHoja=(rows,defEstado)=>{
+          if(!rows||rows.length<2)return[];
+          const hdrs=rows[0].map(h=>String(h||'').trim().toUpperCase());
+          const ci={};
+          [['factura',['FACTURA','Nº FACTURA','NUM FACTURA']],
+           ['cliente',['CLIENTE']],
+           ['clienteNm',['CLIENTE NM','NOMBRE','DEUDOR']],
+           ['fecha',['FECHA FACTURA','FECHA FRA','FECHA']],
+           ['importe',['IMPORTE FACTURA','IMPORTE','TOTAL']],
+           ['diasRetraso',['DÍAS RETRASO','DIAS RETRASO','DIAS']],
+           ['estado',['ESTADO']],
+           ['respuesta',['RESPUESTA CLIENTE','RESPUESTA','OBSERVACIONES']],
+          ].forEach(([k,als])=>{const i=hdrs.findIndex(h=>als.some(a=>h.includes(a)));if(i>=0)ci[k]=i;});
+
+          if(ci.factura===undefined||ci.importe===undefined)return[];
+          return rows.slice(1).map(row=>{
+            const g=i=>i!==undefined?String(row[i]??'').trim():'';
+            const factura=g(ci.factura);
+            const importe=parseFloat(String(g(ci.importe)).replace(',','.'))||0;
+            if(!factura||!importe)return null;
+            const fechaISO=excelDateToISO(ci.fecha!==undefined?row[ci.fecha]:'');
+            const diasRetraso=parseInt(g(ci.diasRetraso))||0;
+            const estadoRaw=g(ci.estado)||defEstado;
+            const mesCobro=defEstado==='No vencida'
+              ?Math.min((new Date(fechaISO).getMonth()||MES_ACTUAL)+1,11)
+              :diasRetraso>200?Math.min(MES_ACTUAL+3,11):diasRetraso>60?Math.min(MES_ACTUAL+2,11):Math.min(MES_ACTUAL+1,11);
+            return{id:factura,cliente:g(ci.cliente),clienteNm:g(ci.clienteNm),
+              fecha:fechaISO,importe,diasRetraso,mesCobro,
+              estado:defEstado==='No vencida'?'No vencida':estadoRaw||'Pendiente',
+              fechaCobro:'',respuestaCliente:g(ci.respuesta)};
+          }).filter(Boolean);
+        };
+
+        const delExcel=[...parsarHoja(pendRows,'Pendiente'),...parsarHoja(nvRows,'No vencida')];
+        const cobradas=facturas.filter(f=>f.estado==='Cobrada');
+        const cobradosIds=new Set(cobradas.map(f=>f.id));
+        const idsExcel=new Set(delExcel.map(f=>f.id));
+        const aInsertar=delExcel.filter(f=>!cobradosIds.has(f.id));
+        const conservar=facturas.filter(f=>!idsExcel.has(f.id)&&!['Cobrada'].includes(f.estado)&&['En disputa','PDT Resolución Jud.','Controlado','Incobrable'].includes(f.estado));
+        const merged=[...cobradas,...aInsertar,...conservar];
+        upd(merged);
+        setImportLog({fecha:new Date().toLocaleDateString('es-ES'),total:delExcel.length,cobradas:cobradas.length});
+      }catch(err){alert('Error al leer el archivo: '+err.message);console.error(err);}
+    };
+    r.readAsArrayBuffer(file);e.target.value='';
+  };
+
+  const filtradas=facturas
+    .filter(f=>filtroMes==='todos'||f.mesCobro===parseInt(filtroMes))
+    .filter(f=>filtroEstado==='todos'||f.estado===filtroEstado)
+    .filter(f=>filtroCliente==='todos'||f.cliente===filtroCliente)
+    .sort((a,b)=>parseInt(b.diasRetraso||0)-parseInt(a.diasRetraso||0));
+
+  const clientesUnicos=[...new Set(facturas.map(f=>f.cliente).filter(Boolean))].sort();
+  const totFiltradas=filtradas.reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
+  const pendTotal=facturas.filter(f=>!['Cobrada','Cancelada','Incobrable'].includes(f.estado)).reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
+  const cobTotal=facturas.filter(f=>f.estado==='Cobrada').reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
+
+  return(
+    <div>
+      {/* KPIs */}
+      <div className="metrics">
+        <div className="metric"><div className="metric-label">Total pendiente cobro</div><div className="metric-val orange">{fmt(pendTotal)}</div><div className="metric-sub">{facturas.filter(f=>!['Cobrada','Cancelada','Incobrable'].includes(f.estado)).length} facturas</div></div>
+        <div className="metric"><div className="metric-label">Cobrado YTD</div><div className="metric-val green">{fmt(cobTotal)}</div><div className="metric-sub">{facturas.filter(f=>f.estado==='Cobrada').length} facturas</div></div>
+        {MESES.slice(MES_ACTUAL,MES_ACTUAL+3).map((_,i)=>{
+          const m=MES_ACTUAL+i;
+          return m<=11?(
+            <div key={m} className="metric">
+              <div className="metric-label">Previsto cobro {MESES[m]}</div>
+              <div className="metric-val blue">{fmt(cobrosPendM(m))}</div>
+              <div className="metric-sub">{m===MES_ACTUAL?'Mes actual':m===MES_ACTUAL+1?'Mes siguiente':'En 2 meses'}</div>
+            </div>
+          ):null;
+        })}
+      </div>
+
+      {/* Importador */}
+      <div className="card">
+        <div className="card-header"><h2>Importar desde Excel BMG</h2></div>
+        <div className="card-body">
+          <div style={{display:'flex',gap:16,alignItems:'flex-start',flexWrap:'wrap'}}>
+            <label className="upload-area" style={{width:260}}>
+              <i className="ti ti-file-spreadsheet" style={{fontSize:24,display:'block',marginBottom:6,color:'#1a7a45'}}></i>
+              <strong>Subir Seguimiento_Factura_*.xlsx</strong>
+              <span style={{fontSize:10,color:'#aaa',display:'block',marginTop:4}}>
+                Lee automáticamente:<br/>✓ Pestaña "FACTURAS PENDIENTES"<br/>✓ Pestaña "FACTURAS EMITIDAS NO VENCIDAS"
+              </span>
+              <input type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={importarXLSX}/>
+            </label>
+            <div style={{fontSize:11,color:'#555',lineHeight:1.9}}>
+              <strong>Reglas de fusión:</strong><br/>
+              🔒 Facturas <strong>Cobradas</strong> — nunca se modifican<br/>
+              🔄 En el Excel — se actualizan o añaden<br/>
+              ⚠️ En disputa / Judicial — se conservan aunque no estén<br/>
+              🗑 Pendientes que desaparecen del Excel — se eliminan
+            </div>
+          </div>
+          {importLog&&<div className="alert alert-ok" style={{marginTop:10}}><i className="ti ti-circle-check"></i><span>Importado el <strong>{importLog.fecha}</strong> · {importLog.total} facturas del Excel · {importLog.cobradas} cobradas preservadas</span></div>}
+        </div>
+      </div>
+
+      {/* Formulario manual */}
+      <div className="card">
+        <div className="card-header">
+          <h2>{editId?'Editar factura':'Añadir factura manualmente'}</h2>
+          {editId&&<button className="btn btn-sm" onClick={()=>{setEditId(null);setForm(blank);}}>Cancelar</button>}
+        </div>
+        <div className="card-body">
+          <div className="form-row" style={{gap:8}}>
+            <div className="form-group"><label>Nº Factura</label><input value={form.id} onChange={e=>setForm(p=>({...p,id:e.target.value}))} style={{width:110}} placeholder="M00001/26"/></div>
+            <div className="form-group"><label>Cliente</label><input value={form.cliente} onChange={e=>setForm(p=>({...p,cliente:e.target.value}))} style={{width:140}} placeholder="BANCO SABADELL"/></div>
+            <div className="form-group"><label>Nombre deudor</label><input value={form.clienteNm} onChange={e=>setForm(p=>({...p,clienteNm:e.target.value}))} style={{width:150}}/></div>
+            <div className="form-group"><label>Fecha factura</label><input type="date" value={form.fecha} onChange={e=>setForm(p=>({...p,fecha:e.target.value}))} style={{width:130}}/></div>
+            <div className="form-group"><label>Importe (€)</label><input type="number" value={form.importe} onChange={e=>setForm(p=>({...p,importe:e.target.value}))} style={{width:110}} min={0}/></div>
+            <div className="form-group"><label>Días retraso</label><input type="number" value={form.diasRetraso} onChange={e=>setForm(p=>({...p,diasRetraso:e.target.value}))} style={{width:80}} min={0}/></div>
+            <div className="form-group"><label>Mes cobro estimado</label>
+              <select value={form.mesCobro} onChange={e=>setForm(p=>({...p,mesCobro:parseInt(e.target.value)}))} style={{width:120}}>
+                {MESES_FULL.map((m,i)=><option key={i} value={i}>{m}</option>)}
+              </select>
+            </div>
+            <div className="form-group"><label>Estado</label>
+              <select value={form.estado} onChange={e=>setForm(p=>({...p,estado:e.target.value}))} style={{width:150}}>
+                {ESTADOS_FACTURA.map(e=><option key={e} value={e}>{e}</option>)}
+              </select>
+            </div>
+            {form.estado==='Cobrada'&&<div className="form-group"><label>Fecha cobro</label><input type="date" value={form.fechaCobro} onChange={e=>setForm(p=>({...p,fechaCobro:e.target.value}))} style={{width:130}}/></div>}
+            <div className="form-group"><label>&nbsp;</label><button className="btn btn-primary" onClick={guardar}>{editId?'Actualizar':'Añadir'}</button></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabla */}
+      <div className="card">
+        <div className="card-header">
+          <h2>Listado ({filtradas.length}) · {fmt(totFiltradas)}</h2>
+          <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+            <select value={filtroMes} onChange={e=>setFiltroMes(e.target.value)} style={{fontSize:11}}>
+              <option value="todos">Todos los meses</option>
+              {MESES_FULL.map((m,i)=><option key={i} value={i}>{m}</option>)}
+            </select>
+            <select value={filtroEstado} onChange={e=>setFiltroEstado(e.target.value)} style={{fontSize:11}}>
+              <option value="todos">Todos los estados</option>
+              {ESTADOS_FACTURA.map(e=><option key={e} value={e}>{e}</option>)}
+            </select>
+            <select value={filtroCliente} onChange={e=>setFiltroCliente(e.target.value)} style={{fontSize:11}}>
+              <option value="todos">Todos los clientes</option>
+              {clientesUnicos.map(c=><option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="overflow-x">
+        <table>
+          <thead><tr>
+            <th>Nº Factura</th><th>Cliente</th><th>Deudor / Nombre</th><th>Fecha</th>
+            <th className="num">Importe</th><th className="num">Días</th>
+            <th>Cobro estimado</th><th>Estado</th><th>Observaciones</th><th>Fecha cobro</th><th></th>
+          </tr></thead>
+          <tbody>
+          {filtradas.map(f=>{
+            const imp=parseFloat(f.importe)||0;
+            const dias=parseInt(f.diasRetraso)||0;
+            return(
+              <tr key={f.id} style={{background:f.estado==='Cobrada'?'#f4fbf6':undefined}}>
+                <td style={{fontFamily:'monospace',fontSize:11,whiteSpace:'nowrap'}}>{f.id}</td>
+                <td style={{fontWeight:600,fontSize:11,whiteSpace:'nowrap'}}>{f.cliente}</td>
+                <td style={{fontSize:11,color:'#555',maxWidth:150,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={f.clienteNm}>{f.clienteNm||'—'}</td>
+                <td style={{fontSize:11,whiteSpace:'nowrap'}}>{f.fecha||'—'}</td>
+                <td className="num" style={{fontWeight:700,color:imp>10000?'#b83232':'#1a1a1a'}}>{fmt(imp)}</td>
+                <td className="num" style={{fontSize:11,color:dias>365?'#b83232':dias>180?'#b06000':dias>60?'#777':'#555'}}>{dias>0?dias:'—'}</td>
+                <td>
+                  <select value={f.mesCobro}
+                    onChange={ev=>upd(facturas.map(x=>x.id===f.id?{...x,mesCobro:parseInt(ev.target.value)}:x))}
+                    style={{fontSize:10,padding:'2px 4px',border:'1px solid #ddd',borderRadius:4,width:90}}>
+                    {MESES_FULL.map((m,i)=><option key={i} value={i}>{m}</option>)}
+                  </select>
+                </td>
+                <td>
+                  <select value={f.estado}
+                    onChange={e=>{
+                      const nuevo=e.target.value;
+                      if(nuevo==='Cobrada'&&f.estado!=='Cobrada'){
+                        const fecha=prompt('Fecha de cobro (YYYY-MM-DD):',new Date().toISOString().split('T')[0]);
+                        cambiarEstado(f.id,nuevo,fecha||'');
+                      }else cambiarEstado(f.id,nuevo);
+                    }}
+                    style={{fontSize:10,padding:'2px 4px',border:'1px solid #ddd',borderRadius:4,width:145}}>
+                    {ESTADOS_FACTURA.map(e=><option key={e} value={e}>{e}</option>)}
+                  </select>
+                </td>
+                <td style={{fontSize:10,color:'#666',maxWidth:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={f.respuestaCliente}>{f.respuestaCliente||'—'}</td>
+                <td style={{fontSize:11,color:'#1a7a45',whiteSpace:'nowrap'}}>{f.fechaCobro||'—'}</td>
+                <td style={{whiteSpace:'nowrap'}}>
+                  <button className="btn btn-sm btn-ghost" onClick={()=>{setForm({...f,importe:f.importe||0});setEditId(f.id);}}><i className="ti ti-edit"></i></button>
+                  <button className="btn btn-sm btn-danger" onClick={()=>{if(confirm('¿Eliminar?'))upd(facturas.filter(x=>x.id!==f.id));}}><i className="ti ti-trash"></i></button>
+                </td>
+              </tr>
+            );
+          })}
+          {filtradas.length===0&&<tr><td colSpan={11} style={{textAlign:'center',padding:20,color:'#aaa'}}>Sin resultados</td></tr>}
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SUB-TAB: PyG REAL + FORECAST
+// ══════════════════════════════════════════════════════════════════
+function TabPyGReal({ingM,gCombM,iCombM,gastosReal,gastosFcst,imptosReal,imptosFcst}){
+  const CV=['nominas','ss','rosalia','legalpigeon'];
+  const cvCombM=m=>(m<=MES_ACTUAL?gastosReal:gastosFcst).filter(g=>CV.includes(g.id)).reduce((s,g)=>s+(g.imp[m]||0),0);
+  const mbCombM=m=>ingM(m)+cvCombM(m);
+  const ebitCombM=m=>ingM(m)+gCombM(m);
+  const resCombM=m=>ebitCombM(m)+iCombM(m);
+
+  const TI=MESES.reduce((_,__,m)=>_+ingM(m),0);
+  const TMB=MESES.reduce((_,__,m)=>_+mbCombM(m),0);
+  const TEB=MESES.reduce((_,__,m)=>_+ebitCombM(m),0);
+  const TR=MESES.reduce((_,__,m)=>_+resCombM(m),0);
+  const pct=(a,b)=>b?Math.round(a/b*100):0;
+  const fmt2=n=>{if(n===null||isNaN(n))return'—';const s=Math.abs(n).toLocaleString('es-ES',{minimumFractionDigits:0,maximumFractionDigits:0});return(n<0?'-':'')+'€ '+s;};
+
+  const colStyle=m=>({
+    background:m<=MES_ACTUAL?'#f4fbf6':'#f4f7fd',
+    borderTop:m<=MES_ACTUAL?'2px solid #a0d4b0':'2px solid #90b0d8',
+  });
+
+  return(
+    <div>
+      <div style={{display:'flex',gap:16,alignItems:'center',padding:'8px 0',marginBottom:10,fontSize:11,flexWrap:'wrap'}}>
+        <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:14,background:'#e4f4ec',border:'1px solid #a0d4b0',borderRadius:2,display:'inline-block'}}></span><strong style={{color:'#1a7a45'}}>Real cerrado</strong></span>
+        <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:14,background:'#e8f0fb',border:'1px solid #90b0d8',borderRadius:2,display:'inline-block'}}></span><strong style={{color:'#1a2b4a'}}>Forecast proyectado</strong></span>
+      </div>
+      <div className="metrics">
+        <div className="metric"><div className="metric-label">Ingresos proyección año</div><div className="metric-val green">{fmt2(TI)}</div></div>
+        <div className="metric"><div className="metric-label">Margen bruto proyección</div><div className={`metric-val ${TMB>=0?'green':'red'}`}>{fmt2(TMB)}</div><div className="metric-sub">{pct(TMB,TI)}% sobre ventas</div></div>
+        <div className="metric"><div className="metric-label">EBITDA proyección</div><div className={`metric-val ${TEB>=0?'green':'red'}`}>{fmt2(TEB)}</div><div className="metric-sub">{pct(TEB,TI)}%</div></div>
+        <div className="metric"><div className="metric-label">Resultado proyección</div><div className={`metric-val ${TR>=0?'green':'red'}`}>{fmt2(TR)}</div><div className="metric-sub">{pct(TR,TI)}%</div></div>
+      </div>
+      <div className="card">
+        <div className="card-header"><h2>Cuenta de explotación real + forecast · 2026</h2><span style={{fontSize:10,color:'#888'}}>Verde = real cerrado · Azul = forecast proyectado</span></div>
+        <div className="overflow-x">
+        <table style={{minWidth:1120}}>
+          <thead><tr>
+            <th className="sticky" style={{minWidth:230}}>Partida</th>
+            {MESES.map((mes,i)=>{
+              const esReal=i<=MES_ACTUAL;
+              return(<th key={i} style={{minWidth:72,fontSize:9,textAlign:'center',padding:'4px 2px',whiteSpace:'nowrap',borderLeft:'1px solid #e8e8e8',background:esReal?'#e4f4ec':'#e8f0fb',color:esReal?'#1a7a45':'#1a2b4a',borderTop:esReal?'2px solid #a0d4b0':'2px solid #90b0d8'}}>{mes}<div style={{fontSize:8,fontWeight:400,marginTop:1}}>{esReal?'real':'fcst'}</div></th>);
+            })}
+            <th className="mh mh-total" style={{minWidth:82}}>Año</th>
+          </tr></thead>
+          <tbody>
+            <tr className="section-row"><td className="sticky" colSpan={14}>Ingresos</td></tr>
+            <tr style={{background:'#f4fbf6'}}>
+              <td className="sticky" style={{fontWeight:700,paddingLeft:16,color:'#1a7a45'}}>Ingresos netos</td>
+              {MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a7a45',fontWeight:600,...colStyle(m)}}>{fmt2(ingM(m))}</td>)}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a7a45'}}>{fmt2(TI)}</td>
+            </tr>
+
+            <tr className="section-row"><td className="sticky" colSpan={14}>Costes variables</td></tr>
+            {GASTOS0.filter(g=>CV.includes(g.id)).map(g=>{
+              const tot=MESES.reduce((_,__,m)=>_+(m<=MES_ACTUAL?gastosReal:gastosFcst).find(x=>x.id===g.id)?.imp[m]||0,0);
+              return(<tr key={g.id}><td className="sticky" style={{paddingLeft:16}}>{g.concepto}</td>{MESES.map((_,m)=>{const v=(m<=MES_ACTUAL?gastosReal:gastosFcst).find(x=>x.id===g.id)?.imp[m]||0;return<td key={m} className="num" style={{color:v<0?'#b83232':'#888',...colStyle(m)}}>{fmt2(v)}</td>;})} <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#b83232',background:'#fdf8f0'}}>{fmt2(tot)}</td></tr>);
+            })}
+            <tr className="total-row"><td className="sticky" style={{paddingLeft:8}}>MARGEN BRUTO</td>{MESES.map((_,m)=><td key={m} className={`num ${mbCombM(m)>=0?'green':'red'}`} style={colStyle(m)}>{fmt2(mbCombM(m))}</td>)}<td className={`num ${TMB>=0?'green':'red'}`} style={{borderLeft:'2px solid #1a2b4a'}}>{fmt2(TMB)}</td></tr>
+            <tr className="pct-row"><td className="sticky" style={{paddingLeft:8}}>% sobre ventas</td>{MESES.map((_,m)=><td key={m} className="num">{pct(mbCombM(m),ingM(m))}%</td>)}<td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{pct(TMB,TI)}%</td></tr>
+
+            <tr className="section-row"><td className="sticky" colSpan={14}>Gastos estructura y colaboradores</td></tr>
+            {GASTOS0.filter(g=>!CV.includes(g.id)).map(g=>{
+              const tot=MESES.reduce((_,__,m)=>_+(m<=MES_ACTUAL?gastosReal:gastosFcst).find(x=>x.id===g.id)?.imp[m]||0,0);
+              return(<tr key={g.id}><td className="sticky" style={{paddingLeft:16}}>{g.concepto}</td>{MESES.map((_,m)=>{const v=(m<=MES_ACTUAL?gastosReal:gastosFcst).find(x=>x.id===g.id)?.imp[m]||0;return<td key={m} className="num" style={{color:v<0?'#b83232':'#888',...colStyle(m)}}>{fmt2(v)}</td>;})} <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#b83232',background:'#fdf8f0'}}>{fmt2(tot)}</td></tr>);
+            })}
+            <tr className="total-row"><td className="sticky" style={{paddingLeft:8}}>EBITDA</td>{MESES.map((_,m)=><td key={m} className={`num ${ebitCombM(m)>=0?'green':'red'}`} style={colStyle(m)}>{fmt2(ebitCombM(m))}</td>)}<td className={`num ${TEB>=0?'green':'red'}`} style={{borderLeft:'2px solid #1a2b4a'}}>{fmt2(TEB)}</td></tr>
+            <tr className="pct-row"><td className="sticky" style={{paddingLeft:8}}>% sobre ventas</td>{MESES.map((_,m)=><td key={m} className="num">{pct(ebitCombM(m),ingM(m))}%</td>)}<td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{pct(TEB,TI)}%</td></tr>
+
+            <tr className="section-row"><td className="sticky" colSpan={14}>Impuestos</td></tr>
+            {IMPTOS0.map(i=>{
+              const tot=MESES.reduce((_,__,m)=>_+(m<=MES_ACTUAL?imptosReal:imptosFcst).find(x=>x.id===i.id)?.imp[m]||0,0);
+              return(<tr key={i.id}><td className="sticky" style={{paddingLeft:16}}>{i.concepto}</td>{MESES.map((_,m)=>{const v=(m<=MES_ACTUAL?imptosReal:imptosFcst).find(x=>x.id===i.id)?.imp[m]||0;return<td key={m} className="num" style={{color:v<0?'#b83232':'#888',...colStyle(m)}}>{fmt2(v)}</td>;})} <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#b83232',background:'#fdf8f0'}}>{fmt2(tot)}</td></tr>);
+            })}
+
+            <tr className="result-row">
+              <td className="sticky">RESULTADO NETO</td>
+              {MESES.map((_,m)=><td key={m} className="num" style={{fontWeight:700}}>{fmt2(resCombM(m))}</td>)}
+              <td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.3)',fontSize:13}}>{fmt2(TR)}</td>
+            </tr>
+            <tr className="pct-row"><td className="sticky" style={{paddingLeft:8}}>% sobre ventas</td>{MESES.map((_,m)=><td key={m} className="num">{pct(resCombM(m),ingM(m))}%</td>)}<td className="num" style={{borderLeft:'2px solid #1a2b4a'}}>{pct(TR,TI)}%</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SUB-TAB: CAJA REAL
+// ══════════════════════════════════════════════════════════════════
+function TabCajaReal({facturas,movs,cobrosRealesM,cobrosPendM,pagosExtractoM,flujoCajaM}){
+  const [saldo0,setSaldo0]=useState(()=>{try{const d=JSON.parse(localStorage.getItem(SK));return d?.saldo0??45000;}catch{return 45000;}});
+  const setSaldoGuardado=v=>{setSaldo0(v);try{const d=JSON.parse(localStorage.getItem(SK)||'{}');localStorage.setItem(SK,JSON.stringify({...d,saldo0:v}));}catch{}};
+
+  const saldoM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=flujoCajaM(i);return s;};
+  const TC=MESES.slice(0,MES_ACTUAL+1).reduce((_,__,m)=>_+cobrosRealesM(m),0);
+  const TP=MESES.slice(0,MES_ACTUAL+1).reduce((_,__,m)=>_+pagosExtractoM(m),0);
+  const SF=saldoM(MES_ACTUAL);
+
+  return(
+    <div>
+      <div className="alert alert-info"><i className="ti ti-info-circle"></i>
+        <span><strong>Cobros</strong> = facturas marcadas como Cobradas (fecha real de cobro). <strong>Pagos</strong> = movimientos negativos del extracto bancario. Los cobros pendientes se muestran como previsión futura.</span>
+      </div>
+
+      <div className="card" style={{marginBottom:14}}>
+        <div className="card-header"><h2>Saldo bancario inicial (1 enero 2026)</h2></div>
+        <div className="card-body" style={{display:'flex',alignItems:'center',gap:20,flexWrap:'wrap'}}>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <span style={{fontSize:12,color:'#555'}}>Saldo apertura:</span>
+            <input type="number" style={{width:150,padding:'6px 10px',border:'1px solid #dde0e6',borderRadius:5,fontSize:15,fontWeight:700,fontFamily:'monospace',color:'#1a2b4a'}}
+              value={saldo0} onChange={e=>setSaldoGuardado(pn(e.target.value))}/>
+          </div>
+          <div style={{fontSize:11,color:'#555'}}>Saldo actual ({MESES[MES_ACTUAL]}): <strong style={{color:SF>=0?'#1a7a45':'#b83232',fontSize:14}}>{fmt(SF)}</strong></div>
+        </div>
+      </div>
+
+      <div className="metrics">
+        <div className="metric"><div className="metric-label">Cobros reales YTD</div><div className="metric-val green">{fmt(TC)}</div><div className="metric-sub">Facturas cobradas</div></div>
+        <div className="metric"><div className="metric-label">Pagos reales YTD</div><div className="metric-val red">{fmt(TP)}</div><div className="metric-sub">Del extracto</div></div>
+        <div className="metric"><div className="metric-label">Flujo neto YTD</div><div className={`metric-val ${TC+TP>=0?'green':'red'}`}>{fmt(TC+TP)}</div></div>
+        <div className="metric"><div className="metric-label">Saldo actual</div><div className={`metric-val ${SF>=20000?'green':SF>=0?'orange':'red'}`}>{fmt(SF)}</div><div className="metric-sub">{MESES_FULL[MES_ACTUAL]} 2026</div></div>
+        <div className="metric"><div className="metric-label">Cobros previstos próx. mes</div><div className="metric-val blue">{fmt(cobrosPendM(Math.min(MES_ACTUAL+1,11)))}</div><div className="metric-sub">De facturas pendientes</div></div>
+      </div>
+
+      <div className="card">
+        <div className="card-header"><h2>Plan de caja real · 2026</h2></div>
+        <div className="overflow-x">
+        <table style={{minWidth:1100}}>
+          <thead>
+            <tr>
+              <th className="sticky" style={{minWidth:220}}>Concepto</th>
+              {MESES.map((m,i)=>(
+                <th key={i} className="mh" style={{minWidth:72,
+                  background:i<MES_ACTUAL?'#e8f7ee':i===MES_ACTUAL?'#fff4e0':'#f4f6f9',
+                  color:i<MES_ACTUAL?'#1a7a45':i===MES_ACTUAL?'#b06000':'#999'}}>
+                  {m}{i<MES_ACTUAL?' ✓':i===MES_ACTUAL?' →':''}
+                </th>
+              ))}
+              <th className="mh mh-total" style={{minWidth:82}}>Total YTD</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="section-row"><td className="sticky" colSpan={14}>Cobros</td></tr>
+            <tr style={{background:'#f4fbf6'}}>
+              <td className="sticky" style={{fontWeight:700,paddingLeft:16,color:'#1a7a45'}}>Cobros reales (facturas cobradas)</td>
+              {MESES.map((_,m)=>(
+                <td key={m} className="num" style={{color:'#1a7a45',fontWeight:600,background:m>MES_ACTUAL?'#fafafa':undefined}}>
+                  {m<=MES_ACTUAL?fmt(cobrosRealesM(m)):'—'}
+                </td>
+              ))}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a7a45'}}>{fmt(TC)}</td>
+            </tr>
+            <tr style={{background:'#f4f8ff'}}>
+              <td className="sticky" style={{paddingLeft:16,color:'#888',fontStyle:'italic'}}>↳ Cobros pendientes previstos</td>
+              {MESES.map((_,m)=>(
+                <td key={m} className="num" style={{fontSize:11,color:'#1a2b4a',fontStyle:'italic',background:m<=MES_ACTUAL?'#fafafa':undefined}}>
+                  {m>MES_ACTUAL?fmt(cobrosPendM(m)):'—'}
+                </td>
+              ))}
+              <td className="num" style={{borderLeft:'2px solid #1a2b4a',color:'#888',fontStyle:'italic'}}>{fmt(MESES.slice(MES_ACTUAL+1).reduce((_,__,i)=>_+cobrosPendM(MES_ACTUAL+1+i),0))}</td>
+            </tr>
+
+            <tr className="section-row"><td className="sticky" colSpan={14}>Pagos (del extracto bancario)</td></tr>
+            <tr>
+              <td className="sticky" style={{fontWeight:700,paddingLeft:16,color:'#b83232'}}>Total pagos reales</td>
+              {MESES.map((_,m)=>(
+                <td key={m} className="num" style={{color:'#b83232',fontWeight:600,background:m>MES_ACTUAL?'#fafafa':undefined}}>
+                  {m<=MES_ACTUAL?fmt(pagosExtractoM(m)):'—'}
+                </td>
+              ))}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#b83232'}}>{fmt(TP)}</td>
+            </tr>
+
+            <tr style={{background:'#e4ecf4'}}>
+              <td className="sticky" style={{fontWeight:700}}>FLUJO NETO REAL</td>
+              {MESES.map((_,m)=>(
+                <td key={m} className={`num ${flujoCajaM(m)>=0?'green':'red'}`} style={{fontWeight:700,background:m>MES_ACTUAL?'#f4f6f9':undefined}}>
+                  {m<=MES_ACTUAL?fmt(flujoCajaM(m)):'—'}
+                </td>
+              ))}
+              <td className={`num ${TC+TP>=0?'green':'red'}`} style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(TC+TP)}</td>
+            </tr>
+            <tr className="result-row">
+              <td className="sticky">SALDO ACUMULADO</td>
+              {MESES.map((_,m)=>{
+                const s=saldoM(m);
+                const alerta=m<=MES_ACTUAL&&s<20000;
+                return(
+                  <td key={m} className="num" style={{fontWeight:700,background:alerta?'#8b2020':m>MES_ACTUAL?'rgba(0,0,0,.2)':undefined,color:m>MES_ACTUAL?'rgba(255,255,255,.3)':undefined}}>
+                    {m<=MES_ACTUAL?fmt(s):'—'}
+                  </td>
+                );
+              })}
+              <td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.3)'}}>{MESES[MES_ACTUAL]}: {fmt(SF)}</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+        <div style={{padding:'7px 14px',fontSize:10,color:'#888',borderTop:'1px solid #f0f0f0',background:'#fafafa'}}>
+          <i className="ti ti-info-circle" style={{marginRight:4}}></i>Saldo en rojo oscuro = por debajo de 20.000 € · Cobros pendientes previstos = facturas no cobradas asignadas a meses futuros
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SUB-TAB: EXTRACTO BANCARIO
+// ══════════════════════════════════════════════════════════════════
+function TabExtracto({movs,setMovs,save}){
+  const [filtroMes,setFiltroMes]=useState('todos');
+  const [filtroBanco,setFiltroBanco]=useState('todos');
+  const [bancoSel,setBancoSel]=useState('CAIXABANK');
+  const [bancos,setBancos]=useState(['CAIXABANK','SABADELL','CAJAMAR','BSCH','BANKINTER']);
+  const [nuevoBanco,setNuevoBanco]=useState('');
+
+  const autocat=(concepto,importe)=>{
+    const c=concepto.toLowerCase();
+    if(importe>0){
+      if(c.includes('traspas')||c.includes('transfer'))return'Traspaso entre cuentas';
+      if(c.includes('prestam')||c.includes('crédito')||c.includes('financ')||c.includes('poliza'))return'Nueva deuda / financiación';
+      return'Sin categorizar';
+    }
+    if(c.includes('nomin')||c.includes('salari'))return'Nóminas personal fijo (neto)';
+    if(c.includes('seguridad social')||c.includes('ss '))return'Seguridad Social empresa';
+    if(c.includes('alquiler')||c.includes('arrendamiento'))return'Alquiler oficina Barcelona';
+    if(c.includes('hacienda')||c.includes('aeat')||c.includes('irpf'))return'Retenciones IRPF (mod. 111/115)';
+    if(c.includes('iva')||c.includes('mod. 303'))return'Liquidación IVA (mod. 303)';
+    if(c.includes('mario'))return'623 Mario';
+    if(c.includes('miguel'))return'623 Miguel';
+    if(c.includes('marc'))return'623 Marc';
+    if(c.includes('apoint'))return'623 Apoint';
+    if(c.includes('ignacio'))return'623 Ignacio';
+    if(c.includes('legalpigeon')||c.includes('legal pigeon'))return'Legal Pigeon';
+    return'Otros gastos operativos';
+  };
+
+  const clave=(f,c,i,b)=>`${f}|${String(c).replace(/\s+/g,' ').trim()}|${i}|${b}`;
+
+  const importarXLSX=e=>{
+    const file=e.target.files[0];if(!file)return;
+    if(!window.XLSX){alert('Librería no cargada.');return;}
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{
+        const wb=window.XLSX.read(ev.target.result,{type:'array',cellDates:true});
+        const sheet=wb.Sheets[wb.SheetNames[0]];
+        const rows=window.XLSX.utils.sheet_to_json(sheet,{header:1,defval:''});
+        if(rows.length<2){alert('Archivo vacío.');return;}
+
+        // Detectar cabecera
+        let hRow=0;
+        for(let i=0;i<Math.min(5,rows.length);i++){
+          const r0=rows[i].map(c=>String(c).toLowerCase());
+          if(r0.some(c=>c.includes('fecha'))||r0.some(c=>c.includes('importe'))){hRow=i;break;}
+        }
+        const hdrs=rows[hRow].map(c=>String(c).toLowerCase().trim());
+        const ci={
+          fecha:hdrs.findIndex(h=>h.includes('fecha')),
+          concepto:hdrs.findIndex(h=>h.includes('concepto')||h.includes('descripci')||h.includes('movimiento')),
+          importe:hdrs.findIndex(h=>h.includes('importe')||h.includes('amount')||h.includes('cargo')),
+        };
+        if(ci.fecha<0)ci.fecha=0;
+        if(ci.concepto<0)ci.concepto=1;
+        if(ci.importe<0)ci.importe=2;
+
+        const existentes=new Set(movs.map(m=>clave(m.fecha,m.concepto,m.importe,m.banco)));
+        const nuevos=[];let añadidos=0,dups=0,salt=0;
+
+        rows.slice(hRow+1).forEach((row,idx)=>{
+          if(!row[ci.fecha]&&!row[ci.importe])return;
+          let fechaISO='',fechaStr='';
+          const fRaw=row[ci.fecha];
+          if(fRaw instanceof Date){
+            fechaISO=fRaw.toISOString().split('T')[0];
+            fechaStr=`${String(fRaw.getDate()).padStart(2,'0')}/${String(fRaw.getMonth()+1).padStart(2,'0')}/${fRaw.getFullYear()}`;
+          }else if(typeof fRaw==='number'&&fRaw>40000){
+            const d=new Date((fRaw-25569)*86400000);
+            fechaISO=d.toISOString().split('T')[0];
+            fechaStr=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+          }else{
+            fechaStr=String(fRaw||'').trim();
+            const p=fechaStr.split(/[\/\-\.]/);
+            if(p.length===3)fechaISO=p[0].length===4?`${p[0]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`:`${p[2].length===2?'20'+p[2]:p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+          }
+          if(!fechaISO){salt++;return;}
+          const concepto=String(row[ci.concepto]||'').replace(/[\n\r]/g,' ').replace(/\s+/g,' ').trim();
+          if(!concepto){salt++;return;}
+          const importeRaw=String(row[ci.importe]||'').replace(',','.').replace(/[^0-9.-]/g,'');
+          const importe=parseFloat(importeRaw);
+          if(isNaN(importe)){salt++;return;}
+          const mes=new Date(fechaISO).getMonth();
+          const k=clave(fechaStr,concepto,importe,bancoSel);
+          if(existentes.has(k)){dups++;return;}
+          existentes.add(k);
+          nuevos.push({id:'ext_'+Date.now()+'_'+idx,fecha:fechaStr,fechaISO,concepto,importe,mes,banco:bancoSel,categoria:autocat(concepto,importe)});
+          añadidos++;
+        });
+
+        const n=[...movs,...nuevos];setMovs(n);save({movs:n});
+        alert(`✓ ${añadidos} movimientos añadidos (${bancoSel})${dups>0?` · ${dups} duplicados ignorados`:''}${salt>0?` · ${salt} filas saltadas`:''}`);
+      }catch(err){alert('Error: '+err.message);console.error(err);}
+    };
+    r.readAsArrayBuffer(file);e.target.value='';
+  };
+
+  const updCat=(id,cat)=>{const n=movs.map(m=>m.id===id?{...m,categoria:cat}:m);setMovs(n);save({movs:n});};
+  const del=id=>{const n=movs.filter(m=>m.id!==id);setMovs(n);save({movs:n});};
+  const addBanco=()=>{const b=nuevoBanco.trim().toUpperCase();if(b&&!bancos.includes(b))setBancos(p=>[...p,b]);setNuevoBanco('');};
+
+  const filtrados=movs
+    .filter(m=>filtroMes==='todos'||m.mes===parseInt(filtroMes))
+    .filter(m=>filtroBanco==='todos'||m.banco===filtroBanco)
+    .sort((a,b)=>(b.fechaISO||'').localeCompare(a.fechaISO||''));
+
+  const sinCat=filtrados.filter(m=>m.categoria==='Sin categorizar'&&m.importe>0);
+  const totSalidas=movs.filter(m=>m.importe<0).reduce((s,m)=>s+m.importe,0);
+  const totEntradas=movs.filter(m=>m.importe>0&&m.categoria!=='Sin categorizar').reduce((s,m)=>s+m.importe,0);
+  const porCat={};
+  filtrados.filter(m=>m.categoria!=='Sin categorizar').forEach(m=>{
+    if(!porCat[m.categoria])porCat[m.categoria]=0;porCat[m.categoria]+=m.importe;
+  });
+
+  return(
+    <div>
+      <div className="alert alert-info"><i className="ti ti-info-circle"></i>
+        <span>Los <strong>cobros de facturas NO se categorizan aquí</strong> — el sistema los toma de la pestaña "Clientes pendientes cobro". Aquí registra solo <strong>gastos, traspasos y deuda</strong>. Los ingresos sin categorizar aparecen en amarillo para clasificar a mano.</span>
+      </div>
+
+      {/* Importador */}
+      <div className="card">
+        <div className="card-header"><h2>Importar extracto bancario</h2></div>
+        <div className="card-body">
+          <div style={{display:'flex',gap:12,alignItems:'center',flexWrap:'wrap',marginBottom:12}}>
+            <div className="form-group"><label>Banco</label>
+              <select value={bancoSel} onChange={e=>setBancoSel(e.target.value)}>
+                {bancos.map(b=><option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
+            <div className="form-group"><label>Añadir banco</label>
+              <div style={{display:'flex',gap:4}}>
+                <input value={nuevoBanco} onChange={e=>setNuevoBanco(e.target.value.toUpperCase())} style={{width:120}} placeholder="NOMBRE BANCO"/>
+                <button className="btn btn-sm" onClick={addBanco}><i className="ti ti-plus"></i></button>
+              </div>
+            </div>
+          </div>
+          <div style={{display:'flex',gap:16,alignItems:'flex-start',flexWrap:'wrap'}}>
+            <label className="upload-area" style={{width:260}}>
+              <i className="ti ti-file-spreadsheet" style={{fontSize:24,display:'block',marginBottom:6,color:'#1a2b4a'}}></i>
+              <strong>Subir extracto bancario (.xlsx / .xls)</strong>
+              <span style={{fontSize:10,color:'#aaa',display:'block',marginTop:4}}>
+                Formato: Fecha | Concepto | Importe<br/>
+                Cabeceras detectadas automáticamente.<br/>
+                Duplicados ignorados.
+              </span>
+              <input type="file" accept=".xlsx,.xls,.csv" style={{display:'none'}} onChange={importarXLSX}/>
+            </label>
+            <div style={{fontSize:11,color:'#555',lineHeight:1.9}}>
+              <strong>¿Qué registrar aquí?</strong><br/>
+              ✅ Pagos a proveedores<br/>
+              ✅ Nóminas y SS<br/>
+              ✅ Impuestos (IVA, IRPF, IS)<br/>
+              ✅ Traspasos entre cuentas<br/>
+              ✅ Nueva deuda / financiación<br/>
+              ❌ Cobros de facturas (se gestionan en "Clientes pendientes cobro")
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {movs.length>0&&(
+        <>
+          {sinCat.length>0&&<div className="alert alert-warn"><i className="ti ti-alert-triangle"></i><span><strong>{sinCat.length} ingreso{sinCat.length>1?'s':''} sin categorizar</strong> ({fmt(sinCat.reduce((s,m)=>s+m.importe,0))}). Clasifícalos o son cobros de facturas — en ese caso ignóralos.</span></div>}
+
+          <div className="metrics">
+            <div className="metric"><div className="metric-label">Entradas clasificadas</div><div className="metric-val green">{fmt(totEntradas)}</div></div>
+            <div className="metric"><div className="metric-label">Salidas (pagos)</div><div className="metric-val red">{fmt(totSalidas)}</div></div>
+            <div className="metric"><div className="metric-label">Sin categorizar</div><div className={`metric-val ${sinCat.length>0?'orange':'gray'}`}>{sinCat.length}</div></div>
+            <div className="metric"><div className="metric-label">Total movimientos</div><div className="metric-val blue">{movs.length}</div></div>
+          </div>
+
+          <div className="grid2">
+            <div className="card">
+              <div className="card-header"><h2>Por categoría</h2>
+                <div style={{display:'flex',gap:6}}>
+                  <select value={filtroMes} onChange={e=>setFiltroMes(e.target.value)} style={{fontSize:11}}>
+                    <option value="todos">Todos los meses</option>
+                    {MESES_FULL.map((m,i)=><option key={i} value={i}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+              <table>
+                <thead><tr><th>Categoría</th><th className="num">Total</th><th className="num">Movs.</th></tr></thead>
+                <tbody>
+                {Object.entries(porCat).sort((a,b)=>a[1]-b[1]).map(([cat,tot])=>(
+                  <tr key={cat}>
+                    <td style={{fontSize:12}}>{cat}</td>
+                    <td className={`num ${tot>=0?'green':'red'}`} style={{fontWeight:600}}>{fmt(tot)}</td>
+                    <td className="num gray">{filtrados.filter(m=>m.categoria===cat).length}</td>
+                  </tr>
+                ))}
+                {sinCat.length>0&&<tr style={{background:'#fff8e6'}}><td style={{color:'#b06000',fontWeight:600,fontSize:12}}>⚠ Sin categorizar (ingresos)</td><td className="num orange" style={{fontWeight:600}}>{fmt(sinCat.reduce((s,m)=>s+m.importe,0))}</td><td className="num">{sinCat.length}</td></tr>}
+                </tbody>
+              </table>
+            </div>
+            <div className="card">
+              <div className="card-header"><h2>Por banco</h2></div>
+              <table>
+                <thead><tr><th>Banco</th><th className="num">Entradas</th><th className="num">Salidas</th><th className="num">Movs.</th></tr></thead>
+                <tbody>
+                {bancos.filter(b=>movs.some(m=>m.banco===b)).map(b=>{
+                  const bm=movs.filter(m=>m.banco===b);
+                  return(
+                    <tr key={b}>
+                      <td style={{fontWeight:600}}>{b}</td>
+                      <td className="num green">{fmt(bm.filter(m=>m.importe>0&&m.categoria!=='Sin categorizar').reduce((s,m)=>s+m.importe,0))}</td>
+                      <td className="num red">{fmt(bm.filter(m=>m.importe<0).reduce((s,m)=>s+m.importe,0))}</td>
+                      <td className="num gray">{bm.length}</td>
+                    </tr>
+                  );
+                })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-header">
+              <h2>Movimientos ({filtrados.length})</h2>
+              <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                <select value={filtroMes} onChange={e=>setFiltroMes(e.target.value)} style={{fontSize:11}}>
+                  <option value="todos">Todos los meses</option>
+                  {MESES_FULL.map((m,i)=><option key={i} value={i}>{m}</option>)}
+                </select>
+                <select value={filtroBanco} onChange={e=>setFiltroBanco(e.target.value)} style={{fontSize:11}}>
+                  <option value="todos">Todos los bancos</option>
+                  {bancos.map(b=><option key={b} value={b}>{b}</option>)}
+                </select>
+                {movs.length>0&&<button className="btn btn-sm btn-danger" onClick={()=>{if(confirm('¿Borrar todos los movimientos?')){setMovs([]);save({movs:[]});}}}>Limpiar todo</button>}
+              </div>
+            </div>
+            <div className="overflow-x">
+            <table>
+              <thead><tr>
+                <th style={{minWidth:90}}>Fecha</th>
+                <th style={{minWidth:220}}>Concepto</th>
+                <th style={{minWidth:85}}>Banco</th>
+                <th className="num" style={{minWidth:90}}>Importe</th>
+                <th style={{minWidth:55}}>Mes</th>
+                <th style={{minWidth:195}}>Categoría</th>
+                <th></th>
+              </tr></thead>
+              <tbody>
+              {filtrados.map(mv=>{
+                const sc=mv.categoria==='Sin categorizar';
+                return(
+                  <tr key={mv.id} style={{background:sc&&mv.importe>0?'#fffbe6':undefined}}>
+                    <td style={{fontSize:11,whiteSpace:'nowrap'}}>{mv.fecha}</td>
+                    <td style={{fontSize:11,maxWidth:280,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={mv.concepto}>{mv.concepto}</td>
+                    <td><select value={mv.banco} onChange={e=>{const n=movs.map(m=>m.id===mv.id?{...m,banco:e.target.value}:m);setMovs(n);save({movs:n});}} style={{fontSize:10,padding:'1px 3px',width:82}}>{bancos.map(b=><option key={b} value={b}>{b}</option>)}</select></td>
+                    <td className={`num ${mv.importe>=0?'green':'red'}`} style={{fontWeight:600}}>{fmt(mv.importe)}</td>
+                    <td style={{fontSize:11}}>{MESES[mv.mes]}</td>
+                    <td>
+                      <select value={CATS_GASTO.includes(mv.categoria)?mv.categoria:'Sin categorizar'}
+                        onChange={e=>updCat(mv.id,e.target.value)}
+                        style={{fontSize:10,padding:'2px 4px',border:`1px solid ${sc&&mv.importe>0?'#e0a000':'#ddd'}`,borderRadius:4,width:192,background:sc&&mv.importe>0?'#fffbe6':'#fff'}}>
+                        {CATS_GASTO.map(c=><option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </td>
+                    <td><button className="btn btn-sm btn-danger" onClick={()=>del(mv.id)}><i className="ti ti-x"></i></button></td>
+                  </tr>
+                );
+              })}
+              {filtrados.length===0&&<tr><td colSpan={7} style={{textAlign:'center',padding:20,color:'#aaa'}}>Sin movimientos</td></tr>}
+              </tbody>
+            </table>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

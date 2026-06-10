@@ -252,19 +252,18 @@ function App(){
     const data={
       facturacion,clientes,gastos,impuestos,facturas,
       saldoInicial,movimientosReal,presupuestoFrozen,frozenAt,mesesCerrados,
+      pptFact,pptClientes,pptGastos,pptImpuestos,pptSaldoInicial,pptFechaFijacion,
       savedAt:new Date().toISOString(),
     };
     try{
       localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
       setSavedAt(data.savedAt);
-    }catch(e){
-      console.warn('localStorage lleno o no disponible',e);
-    }
-  },[facturacion,clientes,gastos,impuestos,facturas,saldoInicial,movimientosReal,presupuestoFrozen,frozenAt,mesesCerrados]);
+    }catch(e){console.warn('localStorage lleno o no disponible',e);}
+  },[facturacion,clientes,gastos,impuestos,facturas,saldoInicial,movimientosReal,presupuestoFrozen,frozenAt,mesesCerrados,pptFact,pptClientes,pptGastos,pptImpuestos,pptSaldoInicial,pptFechaFijacion]);
 
   // ── EXPORTAR JSON (backup) ──
   const exportarDatos=()=>{
-    const data={facturacion,clientes,gastos,impuestos,facturas,saldoInicial,movimientosReal,presupuestoFrozen,frozenAt,mesesCerrados};
+    const data={facturacion,clientes,gastos,impuestos,facturas,saldoInicial,movimientosReal,presupuestoFrozen,frozenAt,mesesCerrados,pptFact,pptClientes,pptGastos,pptImpuestos,pptSaldoInicial,pptFechaFijacion};
     const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
     const a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
@@ -272,7 +271,6 @@ function App(){
     a.click();
   };
 
-  // ── IMPORTAR JSON (restaurar backup) ──
   const importarDatos=e=>{
     const file=e.target.files[0];if(!file)return;
     const r=new FileReader();
@@ -289,13 +287,16 @@ function App(){
         if(data.presupuestoFrozen)setPresupuestoFrozen(data.presupuestoFrozen);
         if(data.frozenAt)setFrozenAt(data.frozenAt);
         if(data.mesesCerrados)setMesesCerrados(data.mesesCerrados);
+        if(data.pptFact)setPptFact(data.pptFact);
+        if(data.pptClientes)setPptClientes(data.pptClientes);
+        if(data.pptGastos)setPptGastos(data.pptGastos);
+        if(data.pptImpuestos)setPptImpuestos(data.pptImpuestos);
+        if(data.pptSaldoInicial!=null)setPptSaldoInicial(data.pptSaldoInicial);
+        if(data.pptFechaFijacion)setPptFechaFijacion(data.pptFechaFijacion);
         alert('✓ Datos restaurados correctamente');
-      }catch(err){
-        alert('Error al importar: '+err.message);
-      }
+      }catch(err){alert('Error al importar: '+err.message);}
     };
-    r.readAsText(file);
-    e.target.value='';
+    r.readAsText(file);e.target.value='';
   };
 
   // ── RESETEAR A VALORES INICIALES ──
@@ -307,14 +308,104 @@ function App(){
     setGastos(JSON.parse(JSON.stringify(GASTOS_INIT)));
     setImpuestos(JSON.parse(JSON.stringify(IMPTOS_INIT)));
     setFacturas(JSON.parse(JSON.stringify(FACTURAS_INIT)));
-    setSaldoInicial(45000);
-    setMovimientosReal([]);
-    setPresupuestoFrozen(null);
-    setFrozenAt(null);
-    setMesesCerrados({});
+    setSaldoInicial(45000);setMovimientosReal([]);
+    setPresupuestoFrozen(null);setFrozenAt(null);setMesesCerrados({});
+    setPptFact(JSON.parse(JSON.stringify(FACT_INIT)));
+    setPptClientes(JSON.parse(JSON.stringify(CLIENTES_INIT)));
+    setPptGastos(JSON.parse(JSON.stringify(GASTOS_INIT)));
+    setPptImpuestos(JSON.parse(JSON.stringify(IMPTOS_INIT)));
+    setPptSaldoInicial(45000);setPptFechaFijacion(null);
   };
 
-  // ── HELPERS DE CÁLCULO ──
+  const tabs=[
+    {id:'control',     label:'Panel de control',        icon:'ti-dashboard'},
+    {id:'comparativa', label:'Comparativa',              icon:'ti-chart-arrows-vertical'},
+    {id:'presupuesto', label:'Presupuesto',              icon:'ti-target'},
+    {id:'facturacion', label:'Forecast facturación',     icon:'ti-chart-bar'},
+    {id:'pyg',         label:'Cuenta PyG',               icon:'ti-report-money'},
+    {id:'caja',        label:'Plan de caja',             icon:'ti-building-bank'},
+    {id:'facturas',    label:'Facturas pendientes',      icon:'ti-file-invoice'},
+    {id:'extracto',    label:'Extracto real',            icon:'ti-credit-card'},
+    {id:'gastos_tab',  label:'Gastos fijos (forecast)',  icon:'ti-adjustments'},
+  ];
+
+  const sharedProps={
+    // Forecast
+    facturacion,setFacturacion,clientes,setClientes,addCliente,
+    gastos,setGastos,addGasto,impuestos,setImpuestos,
+    facturas,setFacturas,saldoInicial,setSaldoInicial,
+    movimientosReal,setMovimientosReal,mesesCerrados,setMesesCerrados,
+    // Presupuesto
+    pptFact,setPptFact,pptClientes,setPptClientes,addPptCliente,
+    pptGastos,setPptGastos,addPptGasto,pptImpuestos,setPptImpuestos,
+    pptSaldoInicial,setPptSaldoInicial,pptFechaFijacion,
+    copiarForecastAPresupuesto,
+    // Cálculos presupuesto
+    pptIngMes,pptMbMes,pptGastosFijosMes,pptImptosMes,pptResultadoMes,
+    pptGastoCajaMes,pptPagosCajaMes,pptIngConIVAMes,pptFlujoCajaMes,pptSaldoAcum,
+    // Cálculos forecast
+    MES_ACTUAL,ingPresupMes,ingConIVAMes,mbMes,gastosFijosMes,gastoCajaMes,
+    imptosMes,resultadoMes,
+    // Cálculos real
+    cobrosRealesMes,cobrosExtractoMes,pagosExtractoMes,realIngMes,realPagosMes,
+    realFlujoCajaMes,realSaldoAcum,
+    cobrosFacturasMes,previsionSinFacturasMes,cobrosEsperadosMes,entradasExtractoMes,
+    pagosRealesMes,cobrosPresupCajaMes,pagosPresupCajaMes:pagosPresupCajaMes2,
+    flujoPresupMes,flujoRealMes,saldoPresupAcum,saldoRealAcum,
+    // Legacy frozen (para panel control)
+    presupuestoFrozen,frozenAt,frozenIngMes,frozenGastosMes,frozenFlujoCajaMes,frozenSaldoAcum,
+    hayFacturasMes,hayFacturasPendientesMes,mesCerrado,hayExtractoMes,fuenteMes,
+  };
+
+  return(
+    <div className="app">
+      <div className="header">
+        <div>
+          <h1><i className="ti ti-building-skyscraper" style={{marginRight:7}}></i>BMG Law Services · Plan de Caja 2026</h1>
+          <p>Presupuesto · Forecast · Real</p>
+        </div>
+        <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+          <span style={{fontSize:10,color:'#a0c4a0'}}>
+            <i className="ti ti-device-floppy" style={{marginRight:3}}></i>
+            {savedAt?`Guardado ${new Date(savedAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`: 'Guardando...'}
+          </span>
+          {pptFechaFijacion
+            ?<span style={{fontSize:10,color:'#a0c4a0'}}><i className="ti ti-target" style={{marginRight:3}}></i>Presupuesto: {pptFechaFijacion}</span>
+            :<span style={{fontSize:10,color:'#f0c060'}}><i className="ti ti-alert-triangle" style={{marginRight:3}}></i>Sin presupuesto base</span>
+          }
+          <button className="btn btn-sm" style={{background:'rgba(255,255,255,.1)',color:'#fff',borderColor:'rgba(255,255,255,.2)',fontSize:10}} onClick={exportarDatos}>
+            <i className="ti ti-download"></i> Backup
+          </button>
+          <label className="btn btn-sm" style={{background:'rgba(255,255,255,.1)',color:'#fff',borderColor:'rgba(255,255,255,.2)',fontSize:10,cursor:'pointer'}}>
+            <i className="ti ti-upload"></i> Restaurar
+            <input type="file" accept=".json" style={{display:'none'}} onChange={importarDatos}/>
+          </label>
+          <button className="btn btn-sm" style={{background:'rgba(255,0,0,.15)',color:'#ffaaaa',borderColor:'rgba(255,100,100,.3)',fontSize:10}} onClick={resetearDatos} title="Resetear todo">
+            <i className="ti ti-trash"></i>
+          </button>
+        </div>
+      </div>
+
+      <div className="nav">
+        {tabs.map(t=>(
+          <button key={t.id} className={tab===t.id?'active':''} onClick={()=>setTab(t.id)}>
+            <i className={`ti ${t.icon}`}></i>{t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab==='control'    &&<TabControl {...sharedProps}/>}
+      {tab==='comparativa'&&<TabComparativa {...sharedProps}/>}
+      {tab==='presupuesto'&&<TabPresupuesto {...sharedProps}/>}
+      {tab==='facturacion'&&<TabFacturacion {...sharedProps}/>}
+      {tab==='pyg'        &&<TabPyG {...sharedProps}/>}
+      {tab==='caja'       &&<TabCaja {...sharedProps}/>}
+      {tab==='facturas'   &&<TabFacturas {...sharedProps}/>}
+      {tab==='extracto'   &&<TabExtracto {...sharedProps}/>}
+      {tab==='gastos_tab' &&<TabGastos {...sharedProps}/>}
+    </div>
+  );
+}
   const ingPresupMes=m=>clientes.reduce((s,c)=>(facturacion[c.id]?.[m]||0)+s,0);
   // Ingresos con IVA por cliente (para proyección de caja)
   const ingConIVAMes=m=>clientes.reduce((s,c)=>{
@@ -452,7 +543,66 @@ function App(){
   const frozenFlujoCajaMes=m=>{if(!presupuestoFrozen)return null;return (frozenIngMes(m)||0)+(frozenGastosMes(m)||0);};
   const frozenSaldoAcum=m=>{if(!presupuestoFrozen)return null;let s=presupuestoFrozen.saldoInicial;for(let i=0;i<=m;i++)s+=frozenFlujoCajaMes(i);return s;};
 
-  const addCliente=(nombre)=>{
+  // ── PRESUPUESTO BASE (independiente del forecast) ──
+  const [pptFact,setPptFact]=useState(()=>saved?.pptFact||JSON.parse(JSON.stringify(FACT_INIT)));
+  const [pptClientes,setPptClientes]=useState(()=>saved?.pptClientes||JSON.parse(JSON.stringify(CLIENTES_INIT)));
+  const [pptGastos,setPptGastos]=useState(()=>saved?.pptGastos||JSON.parse(JSON.stringify(GASTOS_INIT)));
+  const [pptImpuestos,setPptImpuestos]=useState(()=>saved?.pptImpuestos||JSON.parse(JSON.stringify(IMPTOS_INIT)));
+  const [pptSaldoInicial,setPptSaldoInicial]=useState(()=>saved?.pptSaldoInicial??45000);
+  const [pptFechaFijacion,setPptFechaFijacion]=useState(()=>saved?.pptFechaFijacion||null);
+
+  // Copiar forecast → presupuesto
+  const copiarForecastAPresupuesto=()=>{
+    if(!confirm('¿Copiar los datos actuales del Forecast como Presupuesto base? Esto reemplazará el presupuesto existente.'))return;
+    setPptFact(JSON.parse(JSON.stringify(facturacion)));
+    setPptClientes(JSON.parse(JSON.stringify(clientes)));
+    setPptGastos(JSON.parse(JSON.stringify(gastos)));
+    setPptImpuestos(JSON.parse(JSON.stringify(impuestos)));
+    setPptSaldoInicial(saldoInicial);
+    setPptFechaFijacion(new Date().toLocaleDateString('es-ES'));
+    alert('✓ Presupuesto base fijado desde el Forecast actual.');
+  };
+
+  // Cálculos del presupuesto
+  const pptIngMes=m=>pptClientes.reduce((s,c)=>(pptFact[c.id]?.[m]||0)+s,0);
+  const pptCvGastos=['nominas','ss','rosalia','legalpigeon'];
+  const pptMbMes=m=>pptIngMes(m)+pptCvGastos.reduce((s,id)=>{const g=pptGastos.find(x=>x.id===id);return s+(g?g.importes[m]||0:0);},0);
+  const pptGastosFijosMes=m=>pptGastos.reduce((s,g)=>s+(g.importes[m]||0),0);
+  const pptImptosMes=m=>pptImpuestos.reduce((s,i)=>s+(i.importes[m]||0),0);
+  const pptResultadoMes=m=>pptIngMes(m)+pptGastosFijosMes(m)+pptImptosMes(m);
+  const pptGastoCajaMes=m=>pptGastos.reduce((s,g)=>{
+    const base=g.importes[m]||0;const iva=g.iva||0;const irpf=g.irpf||0;
+    return s+base*(1+iva-irpf);
+  },0);
+  const pptPagosCajaMes=m=>pptGastoCajaMes(m)+pptImptosMes(m);
+  const pptIngConIVAMes=m=>pptClientes.reduce((s,c)=>{
+    const base=pptFact[c.id]?.[m]||0;const iva=c.iva!=null?c.iva:0.21;
+    return s+base*(1+iva);
+  },0);
+  const pptFlujoCajaMes=m=>pptIngConIVAMes(m)+pptPagosCajaMes(m);
+  const pptSaldoAcum=m=>{let s=pptSaldoInicial;for(let i=0;i<=m;i++)s+=pptFlujoCajaMes(i);return s;};
+
+  // Cálculos del real (extracto)
+  const realIngMes=m=>cobrosExtractoMes(m);
+  const realPagosMes=m=>pagosExtractoMes(m);
+  const realFlujoCajaMes=m=>hayExtractoMes(m)?realIngMes(m)+realPagosMes(m):null;
+  const realSaldoAcum=m=>{
+    let s=saldoInicial;
+    for(let i=0;i<=m;i++){const r=realFlujoCajaMes(i);s+=r!==null?r:flujoPresupMes(i);}
+    return s;
+  };
+
+  const addPptCliente=(nombre)=>{
+    if(!nombre||!nombre.trim())return;
+    const id='c_'+Date.now();
+    setPptClientes(p=>[...p,{id,nombre:nombre.trim(),grupo:'varios',iva:0.21}]);
+    setPptFact(p=>({...p,[id]:Array(12).fill(0)}));
+  };
+  const addPptGasto=(concepto,grupo,importe,iva=0.21,irpf=0)=>{
+    if(!concepto||!concepto.trim())return;
+    const imp=parseFloat(importe)||0;
+    setPptGastos(p=>[...p,{id:'g_'+Date.now(),concepto:concepto.trim(),grupo,iva,irpf,importes:Array(12).fill(imp<=0?imp:-imp),dia:1}]);
+  };
     if(!nombre||!nombre.trim())return;
     const id='c_'+Date.now();
     setClientes(p=>[...p,{id,nombre:nombre.trim(),grupo:'varios',iva:0.21}]);
@@ -464,76 +614,6 @@ function App(){
     const imp=parseFloat(importe)||0;
     setGastos(p=>[...p,{id:'g_'+Date.now(),concepto:concepto.trim(),grupo,iva,irpf,importes:Array(12).fill(imp<=0?imp:-imp),dia:1}]);
   };
-
-  const tabs=[
-    {id:'control',label:'Panel de control',icon:'ti-dashboard'},
-    {id:'facturacion',label:'Previsión facturación',icon:'ti-chart-bar'},
-    {id:'pyg',label:'Cuenta PyG',icon:'ti-report-money'},
-    {id:'caja',label:'Plan de caja',icon:'ti-building-bank'},
-    {id:'facturas',label:'Facturas pendientes',icon:'ti-file-invoice'},
-    {id:'extracto',label:'Extracto real',icon:'ti-credit-card'},
-    {id:'gastos_tab',label:'Gastos fijos',icon:'ti-adjustments'},
-  ];
-
-  const sharedProps={facturacion,setFacturacion,clientes,setClientes,addCliente,gastos,setGastos,addGasto,impuestos,setImpuestos,facturas,setFacturas,saldoInicial,setSaldoInicial,movimientosReal,setMovimientosReal,mesesCerrados,setMesesCerrados,MES_ACTUAL,ingPresupMes,ingConIVAMes,mbMes,gastosFijosMes,gastoCajaMes,imptosMes,resultadoMes,cobrosRealesMes,cobrosExtractoMes,pagosExtractoMes,cobrosFacturasMes,previsionSinFacturasMes,cobrosEsperadosMes,entradasExtractoMes,pagosRealesMes,cobrosPresupCajaMes,pagosPresupCajaMes:pagosPresupCajaMes2,flujoPresupMes,flujoRealMes,saldoPresupAcum,saldoRealAcum,presupuestoFrozen,frozenAt,frozenIngMes,frozenGastosMes,frozenFlujoCajaMes,frozenSaldoAcum,hayFacturasMes,hayFacturasPendientesMes,mesCerrado,hayExtractoMes,fuenteMes};
-
-  return(
-    <div className="app">
-      <div className="header">
-        <div>
-          <h1><i className="ti ti-building-skyscraper" style={{marginRight:7}}></i>BMG Law Services · Plan de Caja 2026</h1>
-          <p>PyG presupuestada · Proyección de caja · Seguimiento real</p>
-        </div>
-        <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
-          {/* Estado del guardado */}
-          <span style={{fontSize:10,color:'#a0c4a0'}}>
-            <i className="ti ti-device-floppy" style={{marginRight:3}}></i>
-            {savedAt
-              ? `Guardado ${new Date(savedAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`
-              : 'Guardando...'}
-          </span>
-          {/* Foto base */}
-          {presupuestoFrozen
-            ?<span style={{fontSize:10,color:'#a0c4a0'}}><i className="ti ti-snowflake" style={{marginRight:3}}></i>Foto base: {frozenAt}</span>
-            :<span style={{fontSize:10,color:'#f0c060'}}><i className="ti ti-alert-triangle" style={{marginRight:3}}></i>Sin foto base</span>
-          }
-          <button className="btn btn-sm" style={{background:'rgba(255,255,255,.15)',color:'#fff',borderColor:'rgba(255,255,255,.25)',fontSize:10}} onClick={congelarPresupuesto}>
-            <i className="ti ti-snowflake"></i>{presupuestoFrozen?'Recongelar':'Congelar base'}
-          </button>
-          {/* Exportar */}
-          <button className="btn btn-sm" style={{background:'rgba(255,255,255,.1)',color:'#fff',borderColor:'rgba(255,255,255,.2)',fontSize:10}} onClick={exportarDatos}>
-            <i className="ti ti-download"></i> Backup
-          </button>
-          {/* Importar */}
-          <label className="btn btn-sm" style={{background:'rgba(255,255,255,.1)',color:'#fff',borderColor:'rgba(255,255,255,.2)',fontSize:10,cursor:'pointer'}}>
-            <i className="ti ti-upload"></i> Restaurar
-            <input type="file" accept=".json" style={{display:'none'}} onChange={importarDatos}/>
-          </label>
-          {/* Reset */}
-          <button className="btn btn-sm" style={{background:'rgba(255,0,0,.15)',color:'#ffaaaa',borderColor:'rgba(255,100,100,.3)',fontSize:10}} onClick={resetearDatos}>
-            <i className="ti ti-trash"></i>
-          </button>
-        </div>
-      </div>
-
-      <div className="nav">
-        {tabs.map(t=>(
-          <button key={t.id} className={tab===t.id?'active':''} onClick={()=>setTab(t.id)}>
-            <i className={`ti ${t.icon}`}></i>{t.label}
-          </button>
-        ))}
-      </div>
-
-      {tab==='control'    &&<TabControl {...sharedProps}/>}
-      {tab==='facturacion'&&<TabFacturacion {...sharedProps}/>}
-      {tab==='pyg'        &&<TabPyG {...sharedProps}/>}
-      {tab==='caja'       &&<TabCaja {...sharedProps}/>}
-      {tab==='facturas'   &&<TabFacturas {...sharedProps}/>}
-      {tab==='extracto'   &&<TabExtracto {...sharedProps}/>}
-      {tab==='gastos_tab' &&<TabGastos {...sharedProps}/>}
-    </div>
-  );
-}
 
 // ══════════════════════════════════════════════
 // PANEL DE CONTROL
@@ -2334,6 +2414,404 @@ function TabGastos({gastos,setGastos,addGasto,impuestos,setImpuestos,mesesCerrad
     </div>
   );
 }
+
+// ══════════════════════════════════════════════
+// TAB PRESUPUESTO
+// ══════════════════════════════════════════════
+function TabPresupuesto({
+  pptFact,setPptFact,pptClientes,setPptClientes,addPptCliente,
+  pptGastos,setPptGastos,addPptGasto,pptImpuestos,setPptImpuestos,
+  pptSaldoInicial,setPptSaldoInicial,pptFechaFijacion,
+  pptIngMes,pptMbMes,pptResultadoMes,pptFlujoCajaMes,pptSaldoAcum,
+  copiarForecastAPresupuesto
+}){
+  const [section,setSection]=useState('ingresos'); // ingresos | gastos
+  const [nuevoCliente,setNuevoCliente]=useState('');
+  const [nuevoGasto,setNuevoGasto]=useState({concepto:'',grupo:'estructura',importe:'',iva:0.21,irpf:0});
+
+  const updFact=(cid,m,v)=>setPptFact(p=>{const n={...p,[cid]:[...(p[cid]||Array(12).fill(0))]};n[cid][m]=parseFloat(v)||0;return n;});
+  const updGasto=(id,m,v)=>setPptGastos(p=>p.map(g=>g.id===id?{...g,importes:g.importes.map((x,i)=>i===m?parseFloat(v)||0:x)}:g));
+  const updGastoField=(id,field,v)=>setPptGastos(p=>p.map(g=>g.id===id?{...g,[field]:parseFloat(v)||0}:g));
+  const updImpto=(id,m,v)=>setPptImpuestos(p=>p.map(i=>i.id===id?{...i,importes:i.importes.map((x,j)=>j===m?parseFloat(v)||0:x)}:i));
+  const delCliente=id=>{if(!confirm('¿Eliminar?'))return;setPptClientes(p=>p.filter(c=>c.id!==id));setPptFact(p=>{const n={...p};delete n[id];return n;});};
+  const delGasto=id=>{if(confirm('¿Eliminar?'))setPptGastos(p=>p.filter(g=>g.id!==id));};
+  const handleAddCliente=()=>{if(!nuevoCliente.trim())return;addPptCliente(nuevoCliente);setNuevoCliente('');};
+  const handleAddGasto=()=>{if(!nuevoGasto.concepto.trim())return;addPptGasto(nuevoGasto.concepto,nuevoGasto.grupo,nuevoGasto.importe,parseFloat(nuevoGasto.iva)||0,parseFloat(nuevoGasto.irpf)||0);setNuevoGasto({concepto:'',grupo:'estructura',importe:'',iva:0.21,irpf:0});};
+
+  const totIngAnual=MESES.reduce((_,__,m)=>_+pptIngMes(m),0);
+  const totResAnual=MESES.reduce((_,__,m)=>_+pptResultadoMes(m),0);
+  const saldoFin=pptSaldoAcum(11);
+
+  return(
+    <div>
+      <div style={{display:'flex',gap:10,marginBottom:14,flexWrap:'wrap',alignItems:'center'}}>
+        <div className="alert alert-info" style={{flex:1,marginBottom:0}}>
+          <i className="ti ti-target"></i>
+          <span>El <strong>Presupuesto</strong> es el plan anual fijo de referencia. Introdúcelo una vez y no lo toques. El Forecast y el Real se comparan contra él en la pestaña <strong>Comparativa</strong>.</span>
+        </div>
+        <button className="btn btn-sm" style={{whiteSpace:'nowrap'}} onClick={copiarForecastAPresupuesto}>
+          <i className="ti ti-copy"></i> Copiar Forecast como base
+        </button>
+      </div>
+
+      <div className="metrics">
+        <div className="metric"><div className="metric-label">Saldo inicial ppto.</div>
+          <div className="metric-val blue">{fmt(pptSaldoInicial)}</div></div>
+        <div className="metric"><div className="metric-label">Ingresos anuales</div>
+          <div className="metric-val green">{fmt(totIngAnual)}</div></div>
+        <div className="metric"><div className="metric-label">Resultado ppto.</div>
+          <div className={`metric-val ${totResAnual>=0?'green':'red'}`}>{fmt(totResAnual)}</div></div>
+        <div className="metric"><div className="metric-label">Saldo fin de año</div>
+          <div className={`metric-val ${saldoFin>=20000?'green':saldoFin>=0?'orange':'red'}`}>{fmt(saldoFin)}</div></div>
+        {pptFechaFijacion&&<div className="metric"><div className="metric-label">Fijado el</div>
+          <div className="metric-val blue" style={{fontSize:14}}>{pptFechaFijacion}</div></div>}
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <div style={{display:'flex',gap:6}}>
+            <button className={`btn btn-sm ${section==='ingresos'?'btn-primary':''}`} onClick={()=>setSection('ingresos')}>Ingresos por cliente</button>
+            <button className={`btn btn-sm ${section==='gastos'?'btn-primary':''}`} onClick={()=>setSection('gastos')}>Gastos fijos</button>
+          </div>
+          <div style={{display:'flex',gap:6,alignItems:'center'}}>
+            <span style={{fontSize:11,color:'#666'}}>Saldo inicial:</span>
+            <input type="number" value={pptSaldoInicial} onChange={e=>setPptSaldoInicial(parseFloat(e.target.value)||0)} style={{width:100}}/>
+          </div>
+        </div>
+
+        {section==='ingresos'&&(
+          <div>
+            <div className="card-body" style={{paddingBottom:8}}>
+              <div className="form-row" style={{margin:0}}>
+                <input value={nuevoCliente} onChange={e=>setNuevoCliente(e.target.value)}
+                  onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();handleAddCliente();}}}
+                  placeholder="Nuevo cliente..." style={{width:160}}/>
+                <button className="btn btn-primary btn-sm" type="button" onClick={handleAddCliente}><i className="ti ti-plus"></i> Añadir</button>
+              </div>
+            </div>
+            <div style={{overflowX:'auto'}}>
+            <table style={{minWidth:1100}}>
+              <thead><tr>
+                <th className="sticky-col" style={{minWidth:160}}>Cliente</th>
+                <th style={{width:55,fontSize:9,textAlign:'center'}}>IVA</th>
+                {MESES.map((m,i)=><th key={i} className="num" style={{minWidth:68,fontSize:9}}>{m}</th>)}
+                <th className="num">Total</th><th></th>
+              </tr></thead>
+              <tbody>
+              {pptClientes.map(c=>{
+                const fila=pptFact[c.id]||Array(12).fill(0);
+                const iva=c.iva!=null?c.iva:0.21;
+                return(
+                  <tr key={c.id}>
+                    <td className="sticky-col">
+                      <input style={{background:'transparent',border:'none',borderBottom:'1px dashed transparent',fontWeight:500,fontSize:12,width:'100%',minWidth:130,padding:'1px 2px'}}
+                        value={c.nombre} onChange={e=>setPptClientes(p=>p.map(x=>x.id===c.id?{...x,nombre:e.target.value}:x))}
+                        onFocus={e=>e.target.style.borderBottomColor='#1a2b4a'}
+                        onBlur={e=>e.target.style.borderBottomColor='transparent'}/>
+                    </td>
+                    <td style={{textAlign:'center'}}>
+                      <select value={iva} onChange={e=>setPptClientes(p=>p.map(x=>x.id===c.id?{...x,iva:parseFloat(e.target.value)}:x))}
+                        style={{fontSize:10,padding:'1px 2px',border:'1px solid #ddd',borderRadius:3,width:50,background:iva===0?'#fff8e6':'#fff',color:iva===0?'#b06000':'#333',fontWeight:iva===0?700:400}}>
+                        <option value={0.21}>21%</option><option value={0.1}>10%</option><option value={0}>0%</option>
+                      </select>
+                    </td>
+                    {fila.map((v,m)=>(
+                      <td key={m} className="num">
+                        <input className="inline-edit" type="number" value={v||''} placeholder="—" onChange={e=>updFact(c.id,m,e.target.value)}/>
+                      </td>
+                    ))}
+                    <td className="num green" style={{fontWeight:600}}>{fmt(fila.reduce((s,v)=>s+v,0))}</td>
+                    <td><button className="btn btn-sm btn-danger" onClick={()=>delCliente(c.id)}><i className="ti ti-trash"></i></button></td>
+                  </tr>
+                );
+              })}
+              <tr className="total-row">
+                <td className="sticky-col">TOTAL</td><td></td>
+                {MESES.map((_,m)=><td key={m} className="num">{fmt(pptIngMes(m))}</td>)}
+                <td className="num">{fmt(totIngAnual)}</td><td></td>
+              </tr>
+              </tbody>
+            </table>
+            </div>
+          </div>
+        )}
+
+        {section==='gastos'&&(
+          <div>
+            <div className="card-body" style={{paddingBottom:8}}>
+              <div className="form-row" style={{margin:0}}>
+                <input value={nuevoGasto.concepto} onChange={e=>setNuevoGasto(p=>({...p,concepto:e.target.value}))}
+                  onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();handleAddGasto();}}}
+                  placeholder="Nueva partida..." style={{width:180}}/>
+                <select value={nuevoGasto.grupo} onChange={e=>setNuevoGasto(p=>({...p,grupo:e.target.value}))} style={{width:110}}>
+                  {['personal','colaboradores','estructura'].map(g=><option key={g} value={g}>{g}</option>)}
+                </select>
+                <input type="number" value={nuevoGasto.importe} onChange={e=>setNuevoGasto(p=>({...p,importe:e.target.value}))} style={{width:90}} placeholder="Importe"/>
+                <select value={nuevoGasto.iva} onChange={e=>setNuevoGasto(p=>({...p,iva:parseFloat(e.target.value)}))} style={{width:60}}>
+                  <option value={0.21}>21%</option><option value={0.1}>10%</option><option value={0}>0%</option>
+                </select>
+                <select value={nuevoGasto.irpf} onChange={e=>setNuevoGasto(p=>({...p,irpf:parseFloat(e.target.value)}))} style={{width:65}}>
+                  <option value={0}>0%</option><option value={0.15}>15%</option><option value={0.19}>19%</option><option value={0.07}>7%</option>
+                </select>
+                <button className="btn btn-primary btn-sm" type="button" onClick={handleAddGasto}><i className="ti ti-plus"></i> Añadir</button>
+              </div>
+            </div>
+            <div style={{overflowX:'auto'}}>
+            <table style={{minWidth:1200}}>
+              <thead><tr>
+                <th className="sticky-col" style={{minWidth:200}}>Concepto</th>
+                <th style={{width:50,fontSize:9,textAlign:'center'}}>IVA</th>
+                <th style={{width:50,fontSize:9,textAlign:'center'}}>IRPF</th>
+                {MESES.map((m,i)=><th key={i} className="num" style={{minWidth:65,fontSize:9}}>{m}</th>)}
+                <th className="num">Base</th><th className="num" style={{color:'#1a2b4a'}}>Caja</th><th></th>
+              </tr></thead>
+              <tbody>
+              {['personal','colaboradores','estructura'].map(gr=>{
+                const filas=pptGastos.filter(g=>g.grupo===gr);
+                if(!filas.length)return null;
+                return[
+                  <tr key={'gr_'+gr} className="section-row"><td colSpan={18}>{gr.toUpperCase()}</td></tr>,
+                  ...filas.map(g=>{
+                    const iva=g.iva||0;const irpf=g.irpf||0;
+                    const baseAnual=g.importes.reduce((s,v)=>s+v,0);
+                    const cajaAnual=g.importes.reduce((s,v)=>s+v*(1+iva-irpf),0);
+                    return(
+                      <tr key={g.id}>
+                        <td className="sticky-col">
+                          <input style={{background:'transparent',border:'none',borderBottom:'1px dashed transparent',fontWeight:500,fontSize:12,width:'100%',minWidth:170,padding:'1px 2px'}}
+                            value={g.concepto} onChange={e=>setPptGastos(p=>p.map(x=>x.id===g.id?{...x,concepto:e.target.value}:x))}
+                            onFocus={e=>e.target.style.borderBottomColor='#b83232'}
+                            onBlur={e=>e.target.style.borderBottomColor='transparent'}/>
+                        </td>
+                        <td style={{textAlign:'center'}}>
+                          <select value={iva} onChange={e=>updGastoField(g.id,'iva',e.target.value)}
+                            style={{fontSize:10,padding:'1px 2px',border:'1px solid #ddd',borderRadius:3,width:48}}>
+                            <option value={0}>0%</option><option value={0.1}>10%</option><option value={0.21}>21%</option>
+                          </select>
+                        </td>
+                        <td style={{textAlign:'center'}}>
+                          <select value={irpf} onChange={e=>updGastoField(g.id,'irpf',e.target.value)}
+                            style={{fontSize:10,padding:'1px 2px',border:'1px solid #ddd',borderRadius:3,width:48}}>
+                            <option value={0}>0%</option><option value={0.07}>7%</option><option value={0.15}>15%</option><option value={0.19}>19%</option>
+                          </select>
+                        </td>
+                        {g.importes.map((v,m)=>(
+                          <td key={m} className="num">
+                            <input className="inline-edit" type="number" value={v||''} placeholder="0"
+                              onChange={e=>updGasto(g.id,m,e.target.value)}
+                              style={{color:v<0?'#b83232':'#1a7a45'}}/>
+                          </td>
+                        ))}
+                        <td className="num red" style={{fontWeight:600,fontSize:11}}>{fmt(baseAnual)}</td>
+                        <td className="num" style={{fontWeight:700,fontSize:11,color:'#1a2b4a'}}>{fmt(cajaAnual)}</td>
+                        <td><button className="btn btn-sm btn-danger" onClick={()=>delGasto(g.id)}><i className="ti ti-trash"></i></button></td>
+                      </tr>
+                    );
+                  })
+                ];
+              })}
+              <tr className="section-row"><td colSpan={18}>IMPUESTOS Y PAGOS VARIABLES</td></tr>
+              {pptImpuestos.map(imp=>(
+                <tr key={imp.id}>
+                  <td className="sticky-col" style={{paddingLeft:20,fontSize:12}}>{imp.concepto}</td><td></td><td></td>
+                  {imp.importes.map((v,m)=>(
+                    <td key={m} className="num">
+                      <input className="inline-edit" type="number" value={v||''} placeholder="0"
+                        onChange={e=>updImpto(imp.id,m,e.target.value)} style={{color:v<0?'#b83232':'#1a7a45'}}/>
+                    </td>
+                  ))}
+                  <td className="num red" style={{fontWeight:600}}>{fmt(imp.importes.reduce((s,v)=>s+v,0))}</td>
+                  <td></td><td></td>
+                </tr>
+              ))}
+              </tbody>
+            </table>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+// TAB COMPARATIVA — Presupuesto vs Forecast vs Real
+// ══════════════════════════════════════════════
+function TabComparativa({
+  // Presupuesto
+  pptIngMes,pptMbMes,pptResultadoMes,pptFlujoCajaMes,pptSaldoAcum,pptPagosCajaMes,pptIngConIVAMes,pptFechaFijacion,
+  // Forecast
+  ingPresupMes,mbMes,resultadoMes,flujoPresupMes,saldoPresupAcum,pagosPresupCajaMes,cobrosPresupCajaMes,
+  // Real
+  realIngMes,realPagosMes,realFlujoCajaMes,realSaldoAcum,hayExtractoMes,
+  // Contexto
+  MES_ACTUAL,mesesCerrados,facturas
+}){
+  const [vista,setVista]=useState('pyg'); // pyg | caja
+
+  const fmt3=(p,f,r,m)=>{
+    const desv_fp=f-p; // forecast vs presupuesto
+    const desv_rp=r!==null?r-p:null; // real vs presupuesto
+    return{p,f,r,desv_fp,desv_rp};
+  };
+
+  const mesCerrado=m=>!!(mesesCerrados[m]);
+
+  // PyG — tres columnas por mes
+  const pyg_rows=[
+    {label:'Ingresos',      pFn:pptIngMes,       fFn:ingPresupMes,  rFn:realIngMes,    bold:true,  green:true},
+    {label:'Margen bruto',  pFn:pptMbMes,        fFn:mbMes,         rFn:m=>null,       bold:false, green:true},
+    {label:'Resultado',     pFn:pptResultadoMes, fFn:resultadoMes,  rFn:m=>null,       bold:true,  green:true},
+  ];
+
+  // Caja — tres columnas por mes
+  const caja_rows=[
+    {label:'Cobros',        pFn:pptIngConIVAMes,  fFn:cobrosPresupCajaMes, rFn:realIngMes,   bold:true, green:true},
+    {label:'Pagos',         pFn:pptPagosCajaMes,  fFn:pagosPresupCajaMes,  rFn:realPagosMes, bold:true, green:false},
+    {label:'Flujo neto',    pFn:pptFlujoCajaMes,  fFn:flujoPresupMes,      rFn:realFlujoCajaMes, bold:true, green:true},
+    {label:'Saldo acum.',   pFn:pptSaldoAcum,     fFn:saldoPresupAcum,     rFn:realSaldoAcum, bold:true, green:true},
+  ];
+
+  const rows=vista==='pyg'?pyg_rows:caja_rows;
+
+  const totPend=facturas.filter(f=>!['Cobrada','Cancelada','Incobrable'].includes(f.estado)).reduce((s,f)=>s+(f.importe||f.totalFra||0),0);
+
+  // Totales anuales para métricas
+  const totPIng=MESES.reduce((_,__,m)=>_+pptIngMes(m),0);
+  const totFIng=MESES.reduce((_,__,m)=>_+ingPresupMes(m),0);
+  const totRIng=MESES.filter((_,m)=>hayExtractoMes(m)).reduce((_,__,m)=>_+realIngMes(m),0);
+  const totPRes=MESES.reduce((_,__,m)=>_+pptResultadoMes(m),0);
+  const totFRes=MESES.reduce((_,__,m)=>_+resultadoMes(m),0);
+
+  return(
+    <div>
+      {!pptFechaFijacion&&(
+        <div className="alert alert-warn">
+          <i className="ti ti-alert-triangle"></i>
+          <span>No hay presupuesto base fijado. Ve a la pestaña <strong>Presupuesto</strong> para introducirlo.</span>
+        </div>
+      )}
+
+      <div className="metrics">
+        <div className="metric">
+          <div className="metric-label">Ingresos ppto. año</div>
+          <div className="metric-val blue">{fmt(totPIng)}</div>
+          <div className="metric-sub">Presupuesto base</div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">Ingresos forecast año</div>
+          <div className={`metric-val ${totFIng>=totPIng?'green':'red'}`}>{fmt(totFIng)}</div>
+          <div className="metric-sub">{totFIng-totPIng>=0?'+':''}{fmt(totFIng-totPIng)} vs ppto.</div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">Ingresos reales ({MESES[MES_ACTUAL]})</div>
+          <div className="metric-val green">{fmt(totRIng)}</div>
+          <div className="metric-sub">Extracto Ene–{MESES[MES_ACTUAL]}</div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">Resultado ppto. vs fcst</div>
+          <div className={`metric-val ${totFRes-totPRes>=0?'green':'red'}`}>{totFRes-totPRes>=0?'+':''}{fmt(totFRes-totPRes)}</div>
+          <div className="metric-sub">Forecast {fmt(totFRes)} · Ppto {fmt(totPRes)}</div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">Facturas pdte. cobro</div>
+          <div className="metric-val orange">{fmt(totPend)}</div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h2>Presupuesto vs Forecast vs Real · 2026</h2>
+          <div style={{display:'flex',gap:6}}>
+            <button className={`btn btn-sm ${vista==='pyg'?'btn-primary':''}`} onClick={()=>setVista('pyg')}>PyG</button>
+            <button className={`btn btn-sm ${vista==='caja'?'btn-primary':''}`} onClick={()=>setVista('caja')}>Caja</button>
+          </div>
+        </div>
+
+        {/* Leyenda columnas */}
+        <div style={{padding:'8px 14px',borderBottom:'1px solid #f0f0f0',display:'flex',gap:16,fontSize:10,flexWrap:'wrap'}}>
+          <span style={{display:'flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,background:'#e8f0fb',border:'1px solid #90b0d8',borderRadius:2,display:'inline-block'}}></span><strong>P</strong> Presupuesto</span>
+          <span style={{display:'flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,background:'#f0f8ff',border:'1px solid #1a2b4a',borderRadius:2,display:'inline-block'}}></span><strong>F</strong> Forecast</span>
+          <span style={{display:'flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,background:'#e8f7ee',border:'1px solid #7dc89a',borderRadius:2,display:'inline-block'}}></span><strong>R</strong> Real (extracto)</span>
+          <span style={{display:'flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,background:'#fff4e0',border:'1px solid #e0c060',borderRadius:2,display:'inline-block'}}></span><strong>Δ</strong> Desviación F vs P</span>
+        </div>
+
+        <div style={{overflowX:'auto'}}>
+        <table style={{minWidth:1200}}>
+          <thead>
+            <tr>
+              <th className="sticky-col" style={{minWidth:120}}>Concepto</th>
+              {MESES.map((_,m)=>{
+                const cerrado=mesCerrado(m);const hasReal=hayExtractoMes(m);
+                return(
+                  <th key={m} colSpan={hasReal?4:2} style={{textAlign:'center',fontSize:9,
+                    background:hasReal?'#e8f7ee':cerrado?'#fff4e0':'#f4f6f9',
+                    borderLeft:'1px solid #e0e0e0',
+                    color:hasReal?'#1a7a45':cerrado?'#b06000':'#555'}}>
+                    {MESES[m]}{hasReal?' ✓':cerrado?' ⏳':''}
+                  </th>
+                );
+              })}
+              <th colSpan={2} className="num" style={{borderLeft:'2px solid #1a2b4a',background:'#f0f4f8',fontSize:9}}>Total año</th>
+            </tr>
+            <tr>
+              <th className="sticky-col"></th>
+              {MESES.map((_,m)=>{
+                const hasReal=hayExtractoMes(m);
+                return hasReal?[
+                  <th key={`p${m}`} className="num" style={{fontSize:8,background:'#e8f0fb',borderLeft:'1px solid #ddd',color:'#1a2b4a',minWidth:52}}>P</th>,
+                  <th key={`f${m}`} className="num" style={{fontSize:8,background:'#f0f8ff',color:'#1a2b4a',minWidth:52}}>F</th>,
+                  <th key={`r${m}`} className="num" style={{fontSize:8,background:'#e8f7ee',color:'#1a7a45',minWidth:52}}>R</th>,
+                  <th key={`d${m}`} className="num" style={{fontSize:8,background:'#fff4e0',color:'#b06000',minWidth:48}}>ΔF-P</th>,
+                ]:[
+                  <th key={`p${m}`} className="num" style={{fontSize:8,background:'#e8f0fb',borderLeft:'1px solid #ddd',color:'#1a2b4a',minWidth:52}}>P</th>,
+                  <th key={`f${m}`} className="num" style={{fontSize:8,background:'#f0f8ff',color:'#1a2b4a',minWidth:52}}>F</th>,
+                ];
+              })}
+              <th className="num" style={{fontSize:8,background:'#e8f0fb',borderLeft:'2px solid #1a2b4a',color:'#1a2b4a',minWidth:60}}>P</th>
+              <th className="num" style={{fontSize:8,background:'#f0f8ff',color:'#1a2b4a',minWidth:60}}>F</th>
+            </tr>
+          </thead>
+          <tbody>
+          {rows.map(({label,pFn,fFn,rFn,bold,green})=>{
+            const totP=MESES.reduce((_,__,m)=>_+pFn(m),0);
+            const totF=MESES.reduce((_,__,m)=>_+fFn(m),0);
+            const totDesv=totF-totP;
+            return(
+              <tr key={label} style={bold?{background:'#f0f4f8'}:{}}>
+                <td className="sticky-col" style={{fontWeight:bold?700:400,fontSize:12}}>{label}</td>
+                {MESES.map((_,m)=>{
+                  const p=pFn(m);const f=fFn(m);
+                  const r=hayExtractoMes(m)&&rFn?rFn(m):null;
+                  const desv_fp=f-p;
+                  const hasReal=hayExtractoMes(m)&&rFn;
+                  const colorVal=v=>v===0?'':v>0&&green?'green':v<0&&green?'red':v<0&&!green?'green':v>0&&!green?'red':'';
+                  return hasReal?[
+                    <td key={`p${m}`} className={`num ${colorVal(p)}`} style={{background:'#f4f8ff',fontSize:10,borderLeft:'1px solid #e8e8e8'}}>{bold?<strong>{fmt(p)}</strong>:fmt(p)}</td>,
+                    <td key={`f${m}`} className={`num ${colorVal(f)}`} style={{background:'#f8fbff',fontSize:10}}>{bold?<strong>{fmt(f)}</strong>:fmt(f)}</td>,
+                    <td key={`r${m}`} className={`num ${colorVal(r)}`} style={{background:'#f0fbf4',fontSize:10,fontWeight:bold?700:500}}>{r!==null?fmt(r):'—'}</td>,
+                    <td key={`d${m}`} className={`num ${desv_fp>=0?'green':'red'}`} style={{background:'#fffbe6',fontSize:10,fontWeight:500}}>{desv_fp>=0?'+':''}{fmt(desv_fp)}</td>,
+                  ]:[
+                    <td key={`p${m}`} className={`num ${colorVal(p)}`} style={{background:'#f4f8ff',fontSize:10,borderLeft:'1px solid #e8e8e8'}}>{bold?<strong>{fmt(p)}</strong>:fmt(p)}</td>,
+                    <td key={`f${m}`} className={`num ${colorVal(f)}`} style={{background:'#f8fbff',fontSize:10}}>{bold?<strong>{fmt(f)}</strong>:fmt(f)}</td>,
+                  ];
+                })}
+                <td className={`num ${colorVal2(totP,green)}`} style={{background:'#e8f0fb',fontWeight:700,borderLeft:'2px solid #1a2b4a',fontSize:11}}>{fmt(totP)}</td>
+                <td className={`num ${totDesv>=0?'green':'red'}`} style={{background:'#f0f8ff',fontWeight:700,fontSize:11}}>
+                  {fmt(totF)}<div style={{fontSize:8,fontWeight:400}}>{totDesv>=0?'+':''}{fmt(totDesv)}</div>
+                </td>
+              </tr>
+            );
+          })}
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function colorVal2(v,green){if(v===0)return'';if(v>0&&green)return'green';if(v<0&&green)return'red';if(v<0&&!green)return'green';return'red';}
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>

@@ -148,11 +148,13 @@ const IMPTOS0=[
 // CAJA: solo cobros y pagos fiscales/propios.
 // Los pagos de explotación se toman directamente de gastos (automático).
 const CAJA0=[
-  {id:'cob_fact',  concepto:'Cobros de facturación',           tipo:'cobro', subtipo:'cobro',     imp:Array(12).fill(0)},
-  {id:'cob_otros', concepto:'Otros cobros',                    tipo:'cobro', subtipo:'cobro',     imp:Array(12).fill(0)},
-  {id:'pag_iva',   concepto:'Liquidación IVA (mod. 303)',      tipo:'pago',  subtipo:'impuestos', imp:Array(12).fill(0)},
-  {id:'pag_irpf',  concepto:'Retenciones IRPF (mod. 111/115)',tipo:'pago',  subtipo:'impuestos', imp:Array(12).fill(0)},
-  {id:'pag_is',    concepto:'Pago fraccionado IS (mod. 202)', tipo:'pago',  subtipo:'impuestos', imp:Array(12).fill(0)},
+  {id:'cob_fact',  concepto:'Cobros de facturación',           tipo:'cobro', subtipo:'cobro',        imp:Array(12).fill(0)},
+  {id:'cob_otros', concepto:'Otros cobros',                    tipo:'cobro', subtipo:'cobro',        imp:Array(12).fill(0)},
+  {id:'pag_iva',   concepto:'Liquidación IVA (mod. 303)',      tipo:'pago',  subtipo:'impuestos',    imp:Array(12).fill(0)},
+  {id:'pag_irpf',  concepto:'Retenciones IRPF (mod. 111/115)',tipo:'pago',  subtipo:'impuestos',    imp:Array(12).fill(0)},
+  {id:'pag_is',    concepto:'Pago fraccionado IS (mod. 202)', tipo:'pago',  subtipo:'impuestos',    imp:Array(12).fill(0)},
+  {id:'fin_ent1',  concepto:'Entrada financiación',            tipo:'cobro', subtipo:'financiacion', imp:Array(12).fill(0)},
+  {id:'fin_sal1',  concepto:'Devolución / amortización deuda', tipo:'pago',  subtipo:'financiacion', imp:Array(12).fill(0)},
 ];
 
 const fmt=(n,dec=0)=>{if(n===null||n===undefined||isNaN(n))return'—';const s=Math.abs(n).toLocaleString('es-ES',{minimumFractionDigits:dec,maximumFractionDigits:dec});return(n<0?'-':'')+'€\u202f'+s;};
@@ -869,7 +871,7 @@ function TabTes({caja,cajaPagos,gastos,locked,saldo0,setS,setCajaRow,addCajaRow,
               {!locked&&<td></td>}
             </tr>
 
-            {/* TOTALES */}
+            {/* TOTALES EXPLOTACIÓN */}
             <tr style={{background:'#fdecea'}}>
               <td className="sticky" style={{fontWeight:700,color:'#b83232',paddingLeft:8}}>TOTAL PAGOS</td>
               {MESES.map((_,m)=><td key={m} className="num red" style={{fontWeight:700}}>{fmt(pagosM(m))}</td>)}
@@ -877,17 +879,73 @@ function TabTes({caja,cajaPagos,gastos,locked,saldo0,setS,setCajaRow,addCajaRow,
               {!locked&&<td></td>}
             </tr>
             <tr style={{background:'#e4ecf4'}}>
-              <td className="sticky" style={{fontWeight:700}}>FLUJO NETO MENSUAL</td>
+              <td className="sticky" style={{fontWeight:700}}>FLUJO NETO EXPLOTACIÓN</td>
               {MESES.map((_,m)=><td key={m} className={`num ${flujoM(m)>=0?'green':'red'}`} style={{fontWeight:700}}>{fmt(flujoM(m))}</td>)}
               <td className={`num ${(TC-TP)>=0?'green':'red'}`} style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(TC-TP)}</td>
               {!locked&&<td></td>}
             </tr>
             <tr className="result-row">
-              <td className="sticky">SALDO ACUMULADO</td>
+              <td className="sticky">SALDO ACUMULADO EXPLOTACIÓN</td>
               {MESES.map((_,m)=>{const s=saldoM(m);return<td key={m} className="num" style={{fontWeight:700,background:s<20000?'#8b2020':undefined}}>{fmt(s)}</td>;})}
               <td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.3)',fontWeight:700}}>{fmt(SF)}</td>
               {!locked&&<td></td>}
             </tr>
+
+            {/* ── FINANCIACIÓN ── */}
+            <tr style={{background:'#1a2b4a',color:'#fff'}}>
+              <td className="sticky" colSpan={locked?14:15} style={{background:'#1a2b4a',color:'#a0b4d0',fontWeight:700,fontSize:10,textTransform:'uppercase',letterSpacing:'.04em',padding:'8px 16px'}}>
+                Plan de caja — Financiación
+              </td>
+            </tr>
+
+            {/* Entradas financiación */}
+            <tr className="section-row"><td className="sticky" colSpan={locked?14:15}>Entradas de financiación</td></tr>
+            {caja.filter(r=>r.subtipo==='financiacion'&&r.tipo==='cobro').map(r=>(
+              <CajaRow key={r.id} r={r} locked={locked} setCajaRow={setCajaRow} delCajaRow={delCajaRow}/>
+            ))}
+            {!locked&&<tr><td colSpan={15} style={{padding:'4px 8px',background:'#fafafa'}}>
+              <button className="btn-add" style={{borderColor:'#a0c4a0',color:'#1a6a3a'}} onClick={()=>addCajaRow('cobro','financiacion')}>
+                <i className="ti ti-plus"></i>Añadir entrada de financiación
+              </button>
+            </td></tr>}
+            <tr style={{background:'#e4f0e4'}}>
+              <td className="sticky" style={{fontWeight:700,color:'#1a6a3a',paddingLeft:8,fontSize:11}}>Total entradas financiación</td>
+              {MESES.map((_,m)=>{const t=caja.filter(r=>r.subtipo==='financiacion'&&r.tipo==='cobro').reduce((s,r)=>s+(r.imp[m]||0),0);return<td key={m} className="num" style={{fontWeight:600,color:'#1a6a3a'}}>{fmt(t)}</td>;})}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a6a3a'}}>{fmt(MESES.reduce((_,__,m)=>_+caja.filter(r=>r.subtipo==='financiacion'&&r.tipo==='cobro').reduce((s,r)=>s+(r.imp[m]||0),0),0))}</td>
+              {!locked&&<td></td>}
+            </tr>
+
+            {/* Salidas financiación */}
+            <tr className="section-row"><td className="sticky" colSpan={locked?14:15}>Salidas de financiación (amortización, devolución)</td></tr>
+            {caja.filter(r=>r.subtipo==='financiacion'&&r.tipo==='pago').map(r=>(
+              <CajaRow key={r.id} r={r} locked={locked} setCajaRow={setCajaRow} delCajaRow={delCajaRow}/>
+            ))}
+            {!locked&&<tr><td colSpan={15} style={{padding:'4px 8px',background:'#fafafa'}}>
+              <button className="btn-add" style={{borderColor:'#c4a0a0',color:'#6a1a1a'}} onClick={()=>addCajaRow('pago','financiacion')}>
+                <i className="ti ti-plus"></i>Añadir salida de financiación
+              </button>
+            </td></tr>}
+            <tr style={{background:'#f4e4e4'}}>
+              <td className="sticky" style={{fontWeight:700,color:'#6a1a1a',paddingLeft:8,fontSize:11}}>Total salidas financiación</td>
+              {MESES.map((_,m)=>{const t=caja.filter(r=>r.subtipo==='financiacion'&&r.tipo==='pago').reduce((s,r)=>s+(r.imp[m]||0),0);return<td key={m} className="num" style={{fontWeight:600,color:'#6a1a1a'}}>{fmt(t)}</td>;})}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#6a1a1a'}}>{fmt(MESES.reduce((_,__,m)=>_+caja.filter(r=>r.subtipo==='financiacion'&&r.tipo==='pago').reduce((s,r)=>s+(r.imp[m]||0),0),0))}</td>
+              {!locked&&<td></td>}
+            </tr>
+
+            {/* SALDO FINAL TOTAL */}
+            {(()=>{
+              const finFlujM=m=>caja.filter(r=>r.subtipo==='financiacion').reduce((s,r)=>s+(r.tipo==='cobro'?1:-1)*(r.imp[m]||0),0);
+              const saldoFinM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=flujoM(i)+finFlujM(i);return s;};
+              const SFtot=saldoFinM(11);
+              return(
+                <tr style={{background:'#243d6a'}}>
+                  <td className="sticky" style={{background:'#243d6a',color:'#fff',fontWeight:700,fontSize:12}}>SALDO FINAL (Explotación + Financiación)</td>
+                  {MESES.map((_,m)=>{const s=saldoFinM(m);return<td key={m} className="num" style={{fontWeight:700,color:'#fff',background:s<20000?'#8b2020':undefined}}>{fmt(s)}</td>;})}
+                  <td className="num" style={{fontWeight:700,color:'#fff',borderLeft:'2px solid rgba(255,255,255,.3)'}}>{fmt(SFtot)}</td>
+                  {!locked&&<td></td>}
+                </tr>
+              );
+            })()}
 
           </tbody>
         </table>

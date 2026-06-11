@@ -183,6 +183,7 @@ function App(){
   const [gastosFcst,setGastosFcst]=useState(()=>sv?.gastosFcst||JSON.parse(JSON.stringify(GASTOS0)));
   const [facturas,setFacturas]=useState(()=>sv?.facturas||[]);
   const [movs,setMovs]=useState(()=>sv?.movs||[]);
+  const [saldo0,setSaldo0]=useState(()=>sv?.saldo0??45000);
   // Mes de cierre independiente para facturación y gastos (0=Ene, 11=Dic, -1=ninguno cerrado)
   const [cierreFact, setCierreFact]=useState(()=>sv?.cierreFact??-1);
   const [cierreGastos,setCierreGastos]=useState(()=>sv?.cierreGastos??-1);
@@ -190,8 +191,10 @@ function App(){
   const [modal,setModal]=useState(null);
 
   const save=useCallback((p)=>{
-    persist({clientes,factReal,factFcst,gastosReal,gastosFcst,facturas,movs,cierreFact,cierreGastos,...p});
-  },[clientes,factReal,factFcst,gastosReal,gastosFcst,facturas,movs,cierreFact,cierreGastos]);
+    persist({clientes,factReal,factFcst,gastosReal,gastosFcst,facturas,movs,cierreFact,cierreGastos,saldo0,...p});
+  },[clientes,factReal,factFcst,gastosReal,gastosFcst,facturas,movs,cierreFact,cierreGastos,saldo0]);
+
+  const setSaldoApp=v=>{const n=pn(v);setSaldo0(n);save({saldo0:n});};
 
   // Clientes
   const addCliente=c=>{const nc=[...clientes,c];const nr={...factReal,[c.id]:Array(12).fill(0)};const nf={...factFcst,[c.id]:Array(12).fill(0)};setClientes(nc);setFactReal(nr);setFactFcst(nf);save({clientes:nc,factReal:nr,factFcst:nf});};
@@ -283,7 +286,7 @@ function App(){
       {sub==='gastos'&&<TabGastos gastosReal={gastosReal} gastosFcst={gastosFcst} gCombM={gCombM} setGR={setGR} setGF={setGF} setGMeta={setGMeta} delGasto={delGasto} setModal={setModal} cierreGastos={cierreGastos}/> }
       {sub==='facturas'&&<TabFacturas facturas={facturas} setFacturas={setFacturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} save={save}/>}
       {sub==='pyg'&&<TabPyG ingM={ingM} gCombM={gCombM} gastosReal={gastosReal} gastosFcst={gastosFcst} cierreFact={cierreFact} cierreGastos={cierreGastos}/>}
-      {sub==='caja'&&<TabCaja facturas={facturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} pagosExtM={pagosExtM} flujoCajaM={flujoCajaM} cierreFact={cierreFact} cierreGastos={cierreGastos}/>}
+      {sub==='caja'&&<TabCaja facturas={facturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} pagosExtM={pagosExtM} flujoCajaM={flujoCajaM} cierreFact={cierreFact} cierreGastos={cierreGastos} saldo0={saldo0} setSaldo0={setSaldoApp}/>}
       {sub==='extracto'&&<TabExtracto movs={movs} setMovs={setMovs} save={save}/>}
     </div>
   );
@@ -702,9 +705,8 @@ function TabPyG({ingM,gCombM,gastosReal,gastosFcst,cierreFact,cierreGastos}){
 }
 
 // ── CAJA REAL ────────────────────────────────────────────────────
-function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,flujoCajaM,cierreFact,cierreGastos}){
-  const [saldo0,setSaldo0]=useState(()=>{try{const d=JSON.parse(localStorage.getItem(SK)||'{}');return d?.saldo0??45000;}catch{return 45000;}});
-  const setSaldoG=v=>{setSaldo0(pn(v));try{const d=JSON.parse(localStorage.getItem(SK)||'{}');localStorage.setItem(SK,JSON.stringify({...d,saldo0:pn(v)}));}catch{}};
+function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,flujoCajaM,cierreFact,cierreGastos,saldo0,setSaldo0}){
+
   const saldoM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=flujoCajaM(i);return s;};
   const TC=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+cobrosRealesM(m),0):0;
   const TP=cierreGastos>=0?MESES.slice(0,cierreGastos+1).reduce((_,__,m)=>_+pagosExtM(m),0):0;
@@ -717,7 +719,7 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,flujoCajaM,cierre
         <div className="card-body" style={{display:'flex',alignItems:'center',gap:20,flexWrap:'wrap'}}>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
             <span style={{fontSize:12,color:'#555'}}>Saldo apertura:</span>
-            <input type="number" style={{width:150,padding:'6px 10px',border:'1px solid #dde0e6',borderRadius:5,fontSize:15,fontWeight:700,fontFamily:'monospace',color:'#1a2b4a'}} value={saldo0} onChange={e=>setSaldoG(e.target.value)}/>
+            <input type="number" style={{width:150,padding:'6px 10px',border:'1px solid #dde0e6',borderRadius:5,fontSize:15,fontWeight:700,fontFamily:'monospace',color:'#1a2b4a'}} value={saldo0} onChange={e=>setSaldo0(e.target.value)}/>
           </div>
           <div style={{fontSize:11}}>Saldo actual ({MESES[Math.max(cierreFact,cierreGastos,0)]}): <strong style={{color:SF>=0?'#1a7a45':'#b83232',fontSize:14}}>{fmt(SF)}</strong></div>
         </div>

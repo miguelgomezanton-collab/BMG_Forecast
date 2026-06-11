@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard · BMG Law Services</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#1a1a1a}
+.app{max-width:1400px;margin:0 auto;padding:16px}
+.header{background:#1a2b4a;color:#fff;padding:14px 20px;border-radius:8px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.header h1{font-size:15px;font-weight:700}
+.header-sub{font-size:11px;color:#a0b4d0;margin-top:2px}
+.main-nav{display:flex;gap:2px;background:#fff;border-radius:8px;padding:4px;margin-bottom:14px;border:1px solid #e0e0e0;flex-wrap:wrap}
+.main-nav button{padding:7px 16px;border:none;background:transparent;border-radius:5px;cursor:pointer;font-size:12px;color:#555;font-weight:500;display:flex;align-items:center;gap:5px;transition:.12s;white-space:nowrap}
+.main-nav button.active{background:#1a2b4a;color:#fff}
+.main-nav button:hover:not(.active){background:#f0f2f5}
+.card{background:#fff;border-radius:8px;border:1px solid #e0e0e0;margin-bottom:14px;overflow:hidden}
+.card-header{padding:11px 16px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:#fafafa}
+.card-header h2{font-size:12px;font-weight:700;color:#1a2b4a;text-transform:uppercase;letter-spacing:.04em}
+.card-body{padding:16px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px}
+.metric{background:#fff;border-radius:7px;padding:12px 14px;border:1px solid #e0e0e0}
+.metric-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.metric-val{font-size:19px;font-weight:700;line-height:1.1}
+.metric-sub{font-size:10px;color:#888;margin-top:3px}
+.metric-desv{font-size:11px;font-weight:600;margin-top:4px}
+.green{color:#1a7a45}.red{color:#b83232}.blue{color:#1a2b4a}.orange{color:#b06000}.gray{color:#888}
+.bg-green{background:#e4f4ec}.bg-red{background:#fdecea}.bg-orange{background:#fff8e6}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#f4f6f9;padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid #e4e8ee;white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid #f2f2f2;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafbfc}
+.num{text-align:right;font-variant-numeric:tabular-nums;font-family:monospace;font-size:11px}
+.total-row td{background:#e4ecf4;font-weight:700;font-size:12px;border-top:2px solid #1a2b4a}
+.overflow-x{overflow-x:auto}
+.desv-pos{color:#1a7a45;font-weight:600}
+.desv-neg{color:#b83232;font-weight:600}
+.desv-neu{color:#888}
+.chart-wrap{position:relative;height:280px;margin-top:8px}
+.tabs{display:flex;gap:0;border-bottom:2px solid #e4e8ee;margin-bottom:16px}
+.tab-btn{padding:7px 18px;border:none;background:transparent;cursor:pointer;font-size:12px;font-weight:600;color:#888;border-bottom:2px solid transparent;margin-bottom:-2px;display:flex;align-items:center;gap:5px;font-family:Arial,sans-serif}
+.tab-btn.active{color:#1a2b4a;border-bottom-color:#1a2b4a}
+.tab-btn:hover:not(.active){color:#333}
+.alert{padding:10px 14px;border-radius:6px;font-size:11px;margin-bottom:14px;display:flex;align-items:flex-start;gap:8px}
+.alert-warn{background:#fff8e6;color:#b06000;border:1px solid #f0d070}
+.pct-bar{height:6px;background:#e8e8e8;border-radius:3px;overflow:hidden;margin-top:5px}
+.pct-fill{height:100%;border-radius:3px;transition:.3s}
+.legend{display:flex;gap:16px;margin-bottom:10px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:#555}
+.legend-dot{width:12px;height:12px;border-radius:2px;flex-shrink:0}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef}=React;
+const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const SK_PPTO='bmg_presupuesto_2026_v1';
+const SK_SEG='bmg_seguimiento_2026_v1';
+
+const fmt=(n,dec=0)=>{
+  if(n===null||n===undefined||isNaN(n))return'—';
+  const s=Math.abs(n).toLocaleString('es-ES',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+  return(n<0?'-':'')+'€\u202f'+s;
+};
+const fmtPct=(n)=>n===null||isNaN(n)?'—':(n>=0?'+':'')+Math.round(n)+'%';
+const pct=(a,b)=>b?((a-b)/Math.abs(b))*100:null;
+const load=k=>{try{const r=localStorage.getItem(k);return r?JSON.parse(r):null;}catch{return null;}};
+
+// ── CHART COMPONENT ──────────────────────────────────────────────
+function BarChart({labels,datasets,height=280}){
+  const ref=useRef();
+  const chartRef=useRef();
+  useEffect(()=>{
+    if(!ref.current)return;
+    if(chartRef.current)chartRef.current.destroy();
+    chartRef.current=new Chart(ref.current,{
+      type:'bar',
+      data:{labels,datasets},
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmt(ctx.parsed.y)}}},
+        scales:{
+          x:{ticks:{font:{size:10}},grid:{display:false}},
+          y:{ticks:{callback:v=>fmt(v),font:{size:10}},grid:{color:'#f0f0f0'}}
+        }
+      }
+    });
+    return()=>{if(chartRef.current)chartRef.current.destroy();};
+  },[labels,JSON.stringify(datasets)]);
+  return <canvas ref={ref} style={{height}}/>;
+}
+
+// ── APP ──────────────────────────────────────────────────────────
+function App(){
+  const [ppto,setPpto]=useState(null);
+  const [seg,setSeg]=useState(null);
+  const [vista,setVista]=useState('ytd'); // 'ytd' | 'cierre'
+  const [detalle,setDetalle]=useState(false);
+
+  useEffect(()=>{
+    setPpto(load(SK_PPTO));
+    setSeg(load(SK_SEG));
+  },[]);
+
+  const noData=!ppto||!seg;
+
+  if(noData) return(
+    <div className="app">
+      <div className="header">
+        <div><h1><i className="ti ti-dashboard" style={{marginRight:7}}></i>BMG Law Services · Dashboard 2026</h1></div>
+      </div>
+      <div className="alert alert-warn">
+        <i className="ti ti-alert-triangle" style={{fontSize:18}}></i>
+        <div>
+          <strong>No se encuentran datos.</strong> Abre primero el <strong>Presupuesto</strong> (con datos fijados) y el <strong>Seguimiento</strong> (con datos reales introducidos) en este mismo navegador. Los datos deben estar en el mismo navegador y dominio que este fichero.
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Leer datos ──────────────────────────────────────────────────
+  const clientes_ppto=ppto.clientes||[];
+  const clientes_seg=seg.clientes||[];
+  const fact_ppto=ppto.fact||{};
+  const factReal=seg.factReal||{};
+  const factFcst=seg.factFcst||{};
+  const cierreFact=seg.cierreFact??-1;
+
+  // Combinar lista de clientes (union de ambos)
+  const todosClientes=[...new Map([...clientes_ppto,...clientes_seg].map(c=>[c.id,c])).values()];
+
+  // Presupuesto: facturación anual por cliente
+  const pptoClienteM=(cid,m)=>fact_ppto[cid]?.[m]||0;
+  const pptoTotalM=m=>todosClientes.reduce((s,c)=>s+pptoClienteM(c.id,m),0);
+  const pptoClienteAnual=cid=>MESES.reduce((_,__,m)=>_+pptoClienteM(cid,m),0);
+  const pptoTotalAnual=MESES.reduce((_,__,m)=>_+pptoTotalM(m),0);
+
+  // Real: factReal para meses cerrados, factFcst para el resto
+  const realClienteM=(cid,m)=>m<=cierreFact?(factReal[cid]?.[m]||0):(factFcst[cid]?.[m]||0);
+  const realTotalM=m=>todosClientes.reduce((s,c)=>s+realClienteM(c.id,m),0);
+  const realClienteAnual=cid=>MESES.reduce((_,__,m)=>_+realClienteM(cid,m),0);
+  const realTotalAnual=MESES.reduce((_,__,m)=>_+realTotalM(m),0);
+
+  // YTD: solo meses cerrados
+  const pptoYTDCliente=cid=>cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+pptoClienteM(cid,m),0):0;
+  const realYTDCliente=cid=>cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+(factReal[cid]?.[m]||0),0):0;
+  const pptoYTDTotal=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+pptoTotalM(m),0):0;
+  const realYTDTotal=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+MESES.slice(0,cierreFact+1).reduce(()=>0,0)+todosClientes.reduce((s,c)=>s+(factReal[c.id]?.[m]||0),0),0):0;
+
+  // Simplified YTD
+  const pptoYTD=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+pptoTotalM(m),0):0;
+  const realYTD=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+todosClientes.reduce((s,c)=>s+(factReal[c.id]?.[m]||0),0),0):0;
+  const desvYTD=realYTD-pptoYTD;
+  const desvYTDpct=pct(realYTD,pptoYTD);
+  const desvAnual=realTotalAnual-pptoTotalAnual;
+  const desvAnualPct=pct(realTotalAnual,pptoTotalAnual);
+
+  const mesLabel=cierreFact>=0?`Ene–${MESES[cierreFact]}`:'Sin datos cerrados';
+
+  return(
+    <div className="app">
+      <div className="header">
+        <div>
+          <h1><i className="ti ti-dashboard" style={{marginRight:7}}></i>BMG Law Services · Dashboard Ventas 2026</h1>
+          <div className="header-sub">Comparativa Presupuesto vs Real · Datos cerrados hasta {cierreFact>=0?MESES[cierreFact]:'—'}</div>
+        </div>
+      </div>
+
+      <div className="main-nav">
+        <button style={{color:'#bbb',cursor:'default'}}><i className="ti ti-target"></i>Presupuesto</button>
+        <button style={{color:'#bbb',cursor:'default'}}><i className="ti ti-chart-arrows-vertical"></i>Seguimiento</button>
+        <button className="active"><i className="ti ti-dashboard"></i>Dashboard</button>
+      </div>
+
+      {cierreFact<0&&<div className="alert alert-warn"><i className="ti ti-alert-triangle"></i><span>No hay meses cerrados en el seguimiento. Cierra al menos un mes para ver la comparativa YTD.</span></div>}
+
+      {/* KPIs globales */}
+      <div className="metrics">
+        <div className={`metric ${desvYTD>=0?'bg-green':desvYTD<0?'bg-red':''}`}>
+          <div className="metric-label">Real YTD ({mesLabel})</div>
+          <div className="metric-val green">{fmt(realYTD)}</div>
+          <div className="metric-sub">Presupuesto: {fmt(pptoYTD)}</div>
+          <div className={`metric-desv ${desvYTD>=0?'green':'red'}`}>{desvYTD>=0?'▲':'▼'} {fmt(Math.abs(desvYTD))} ({fmtPct(desvYTDpct)})</div>
+        </div>
+        <div className={`metric ${desvAnual>=0?'bg-green':desvAnual<0?'bg-red':''}`}>
+          <div className="metric-label">Proyección cierre año</div>
+          <div className="metric-val blue">{fmt(realTotalAnual)}</div>
+          <div className="metric-sub">Presupuesto: {fmt(pptoTotalAnual)}</div>
+          <div className={`metric-desv ${desvAnual>=0?'green':'red'}`}>{desvAnual>=0?'▲':'▼'} {fmt(Math.abs(desvAnual))} ({fmtPct(desvAnualPct)})</div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">% ejecución PPTO ({mesLabel})</div>
+          <div className={`metric-val ${pptoYTD?((realYTD/pptoYTD)>=1?'green':'orange'):'gray'}`}>{pptoYTD?Math.round(realYTD/pptoYTD*100)+'%':'—'}</div>
+          <div className="metric-sub">Sobre presupuesto YTD</div>
+          <div className="pct-bar"><div className="pct-fill" style={{width:Math.min(pptoYTD?realYTD/pptoYTD*100:0,150)+'%',background:pptoYTD&&realYTD>=pptoYTD?'#1a7a45':'#b06000'}}></div></div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">% ejecución PPTO (año)</div>
+          <div className={`metric-val ${pptoTotalAnual?((realTotalAnual/pptoTotalAnual)>=1?'green':'orange'):'gray'}`}>{pptoTotalAnual?Math.round(realTotalAnual/pptoTotalAnual*100)+'%':'—'}</div>
+          <div className="metric-sub">Proyección vs presupuesto</div>
+          <div className="pct-bar"><div className="pct-fill" style={{width:Math.min(pptoTotalAnual?realTotalAnual/pptoTotalAnual*100:0,150)+'%',background:pptoTotalAnual&&realTotalAnual>=pptoTotalAnual?'#1a7a45':'#b06000'}}></div></div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">Meses cerrados</div>
+          <div className="metric-val blue">{cierreFact>=0?cierreFact+1:0}/12</div>
+          <div className="metric-sub">{cierreFact>=0?`Hasta ${MESES[cierreFact]}`:'Ninguno cerrado'}</div>
+        </div>
+      </div>
+
+      {/* Gráfico mes a mes */}
+      <div className="card">
+        <div className="card-header">
+          <h2>Facturación mensual · Presupuesto vs Real/Forecast</h2>
+          <div className="tabs" style={{margin:0,border:'none'}}>
+            <button className={`tab-btn ${vista==='ytd'?'active':''}`} onClick={()=>setVista('ytd')}>YTD ({mesLabel})</button>
+            <button className={`tab-btn ${vista==='cierre'?'active':''}`} onClick={()=>setVista('cierre')}>Proyección año completo</button>
+          </div>
+        </div>
+        <div className="card-body">
+          <div className="legend">
+            <span className="legend-item"><span className="legend-dot" style={{background:'#1a2b4a'}}></span>Presupuesto</span>
+            <span className="legend-item"><span className="legend-dot" style={{background:'#1a7a45'}}></span>Real (cerrado)</span>
+            <span className="legend-item"><span className="legend-dot" style={{background:'#90b4d8'}}></span>Forecast</span>
+          </div>
+          {vista==='ytd'?(
+            <div className="chart-wrap">
+              <BarChart
+                labels={cierreFact>=0?MESES.slice(0,cierreFact+1):MESES}
+                datasets={[
+                  {label:'Presupuesto',data:cierreFact>=0?MESES.slice(0,cierreFact+1).map((_,m)=>pptoTotalM(m)):MESES.map((_,m)=>pptoTotalM(m)),backgroundColor:'#c8d4e4',borderRadius:3},
+                  {label:'Real',data:cierreFact>=0?MESES.slice(0,cierreFact+1).map((_,m)=>todosClientes.reduce((s,c)=>s+(factReal[c.id]?.[m]||0),0)):MESES.map((_,m)=>todosClientes.reduce((s,c)=>s+(factReal[c.id]?.[m]||0),0)),backgroundColor:'#1a7a45',borderRadius:3},
+                ]}
+              />
+            </div>
+          ):(
+            <div className="chart-wrap">
+              <BarChart
+                labels={MESES}
+                datasets={[
+                  {label:'Presupuesto',data:MESES.map((_,m)=>pptoTotalM(m)),backgroundColor:'#c8d4e4',borderRadius:3},
+                  {label:'Real',data:MESES.map((_,m)=>m<=cierreFact?todosClientes.reduce((s,c)=>s+(factReal[c.id]?.[m]||0),0):0),backgroundColor:'#1a7a45',borderRadius:3},
+                  {label:'Forecast',data:MESES.map((_,m)=>m>cierreFact?todosClientes.reduce((s,c)=>s+(factFcst[c.id]?.[m]||0),0):0),backgroundColor:'#90b4d8',borderRadius:3},
+                ]}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Tabla mes a mes */}
+      <div className="card">
+        <div className="card-header">
+          <h2>Tabla mensual · Presupuesto vs Real</h2>
+          <div className="tabs" style={{margin:0,border:'none'}}>
+            <button className={`tab-btn ${vista==='ytd'?'active':''}`} onClick={()=>setVista('ytd')}>YTD</button>
+            <button className={`tab-btn ${vista==='cierre'?'active':''}`} onClick={()=>setVista('cierre')}>Año completo</button>
+          </div>
+        </div>
+        <div className="overflow-x">
+        <table>
+          <thead><tr>
+            <th style={{minWidth:90}}>Mes</th>
+            <th className="num">Presupuesto</th>
+            <th className="num">Real / Forecast</th>
+            <th className="num">Desviación €</th>
+            <th className="num">Desviación %</th>
+            <th style={{minWidth:80}}>Estado</th>
+          </tr></thead>
+          <tbody>
+          {MESES.map((mes,m)=>{
+            const esReal=m<=cierreFact;
+            const esFcst=m>cierreFact;
+            if(vista==='ytd'&&!esReal)return null;
+            const pv=pptoTotalM(m);
+            const rv=esReal?todosClientes.reduce((s,c)=>s+(factReal[c.id]?.[m]||0),0):todosClientes.reduce((s,c)=>s+(factFcst[c.id]?.[m]||0),0);
+            const dev=rv-pv;
+            const devPct=pct(rv,pv);
+            return(
+              <tr key={m}>
+                <td style={{fontWeight:600}}>{mes} {esReal&&<span style={{fontSize:9,background:'#e4f4ec',color:'#1a7a45',padding:'1px 5px',borderRadius:3,marginLeft:4}}>real</span>}{esFcst&&vista==='cierre'&&<span style={{fontSize:9,background:'#e8f0fb',color:'#1a2b4a',padding:'1px 5px',borderRadius:3,marginLeft:4}}>fcst</span>}</td>
+                <td className="num">{fmt(pv)}</td>
+                <td className="num" style={{color:esReal?'#1a7a45':'#1a2b4a',fontWeight:esReal?600:400}}>{fmt(rv)}</td>
+                <td className={`num ${dev>0?'desv-pos':dev<0?'desv-neg':'desv-neu'}`}>{dev>0?'+':''}{fmt(dev)}</td>
+                <td className={`num ${dev>0?'desv-pos':dev<0?'desv-neg':'desv-neu'}`}>{fmtPct(devPct)}</td>
+                <td>
+                  {esReal&&(
+                    <div style={{display:'flex',alignItems:'center',gap:5}}>
+                      <div style={{flex:1,height:6,background:'#e8e8e8',borderRadius:3,overflow:'hidden'}}>
+                        <div style={{height:'100%',width:Math.min(pv?rv/pv*100:0,150)+'%',background:dev>=0?'#1a7a45':'#b83232',borderRadius:3}}></div>
+                      </div>
+                      <span style={{fontSize:10,color:'#888',whiteSpace:'nowrap'}}>{pv?Math.round(rv/pv*100)+'%':'—'}</span>
+                    </div>
+                  )}
+                  {esFcst&&vista==='cierre'&&<span style={{fontSize:10,color:'#888'}}>previsión</span>}
+                </td>
+              </tr>
+            );
+          }).filter(Boolean)}
+          <tr className="total-row">
+            <td>{vista==='ytd'?`TOTAL YTD (${mesLabel})`:'TOTAL AÑO'}</td>
+            <td className="num">{fmt(vista==='ytd'?pptoYTD:pptoTotalAnual)}</td>
+            <td className="num" style={{color:'#1a2b4a'}}>{fmt(vista==='ytd'?realYTD:realTotalAnual)}</td>
+            <td className={`num ${(vista==='ytd'?desvYTD:desvAnual)>=0?'desv-pos':'desv-neg'}`}>{(vista==='ytd'?desvYTD:desvAnual)>=0?'+':''}{fmt(Math.abs(vista==='ytd'?desvYTD:desvAnual))}</td>
+            <td className={`num ${(vista==='ytd'?desvYTDpct:desvAnualPct)>=0?'desv-pos':'desv-neg'}`}>{fmtPct(vista==='ytd'?desvYTDpct:desvAnualPct)}</td>
+            <td></td>
+          </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+      {/* Detalle por cliente */}
+      <div className="card">
+        <div className="card-header">
+          <h2>Detalle por cliente</h2>
+          <div className="tabs" style={{margin:0,border:'none'}}>
+            <button className={`tab-btn ${vista==='ytd'?'active':''}`} onClick={()=>setVista('ytd')}>YTD</button>
+            <button className={`tab-btn ${vista==='cierre'?'active':''}`} onClick={()=>setVista('cierre')}>Año completo</button>
+          </div>
+        </div>
+        <div className="overflow-x">
+        <table>
+          <thead><tr>
+            <th style={{minWidth:180}}>Cliente</th>
+            <th className="num">Presupuesto</th>
+            <th className="num">Real / Forecast</th>
+            <th className="num">Desv. €</th>
+            <th className="num">Desv. %</th>
+            <th style={{minWidth:100}}>Ejecución</th>
+          </tr></thead>
+          <tbody>
+          {todosClientes.map(c=>{
+            const pv=vista==='ytd'?pptoYTDCliente(c.id):pptoClienteAnual(c.id);
+            const rv=vista==='ytd'?realYTDCliente(c.id):realClienteAnual(c.id);
+            const dev=rv-pv;
+            const devPct=pct(rv,pv);
+            const ejec=pv?Math.round(rv/pv*100):null;
+            if(pv===0&&rv===0)return null;
+            return(
+              <tr key={c.id}>
+                <td style={{fontWeight:500}}>{c.nombre}</td>
+                <td className="num">{fmt(pv)}</td>
+                <td className="num" style={{fontWeight:600,color:'#1a2b4a'}}>{fmt(rv)}</td>
+                <td className={`num ${dev>0?'desv-pos':dev<0?'desv-neg':'desv-neu'}`}>{dev>0?'+':''}{fmt(dev)}</td>
+                <td className={`num ${dev>0?'desv-pos':dev<0?'desv-neg':'desv-neu'}`}>{fmtPct(devPct)}</td>
+                <td>
+                  <div style={{display:'flex',alignItems:'center',gap:6}}>
+                    <div style={{flex:1,height:6,background:'#e8e8e8',borderRadius:3,overflow:'hidden'}}>
+                      <div style={{height:'100%',width:Math.min(ejec||0,150)+'%',background:dev>=0?'#1a7a45':'#b83232',borderRadius:3,transition:'.3s'}}></div>
+                    </div>
+                    <span style={{fontSize:10,color:'#555',minWidth:32,textAlign:'right'}}>{ejec!==null?ejec+'%':'—'}</span>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+          <tr className="total-row">
+            <td>TOTAL</td>
+            <td className="num">{fmt(vista==='ytd'?pptoYTD:pptoTotalAnual)}</td>
+            <td className="num">{fmt(vista==='ytd'?realYTD:realTotalAnual)}</td>
+            <td className={`num ${(vista==='ytd'?desvYTD:desvAnual)>=0?'desv-pos':'desv-neg'}`}>{(vista==='ytd'?desvYTD:desvAnual)>=0?'+':''}{fmt(Math.abs(vista==='ytd'?desvYTD:desvAnual))}</td>
+            <td className={`num ${(vista==='ytd'?desvYTDpct:desvAnualPct)>=0?'desv-pos':'desv-neg'}`}>{fmtPct(vista==='ytd'?desvYTDpct:desvAnualPct)}</td>
+            <td></td>
+          </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

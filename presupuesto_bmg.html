@@ -145,15 +145,14 @@ const IMPTOS0=[
 
 // Plan de caja: filas editables manualmente
 // Cada fila: {id, concepto, tipo:'cobro'|'pago', imp:[12 meses]}
+// CAJA: solo cobros y pagos fiscales/propios.
+// Los pagos de explotación se toman directamente de gastos (automático).
 const CAJA0=[
-  {id:'cob_fact',  concepto:'Cobros de facturación',           tipo:'cobro', subtipo:'cobro',       imp:Array(12).fill(0)},
-  {id:'cob_otros', concepto:'Otros cobros',                    tipo:'cobro', subtipo:'cobro',       imp:Array(12).fill(0)},
-  {id:'pag_pers',  concepto:'Nóminas y Seguridad Social',      tipo:'pago',  subtipo:'explotacion', imp:Array(12).fill(0)},
-  {id:'pag_colab', concepto:'Colaboradores',                   tipo:'pago',  subtipo:'explotacion', imp:Array(12).fill(0)},
-  {id:'pag_estr',  concepto:'Gastos de estructura',            tipo:'pago',  subtipo:'explotacion', imp:Array(12).fill(0)},
-  {id:'pag_iva',   concepto:'Liquidación IVA (mod. 303)',      tipo:'pago',  subtipo:'impuestos',   imp:Array(12).fill(0)},
-  {id:'pag_irpf',  concepto:'Retenciones IRPF (mod. 111/115)', tipo:'pago',  subtipo:'impuestos',   imp:Array(12).fill(0)},
-  {id:'pag_is',    concepto:'Pago fraccionado IS (mod. 202)',  tipo:'pago',  subtipo:'impuestos',   imp:Array(12).fill(0)},
+  {id:'cob_fact',  concepto:'Cobros de facturación',           tipo:'cobro', subtipo:'cobro',     imp:Array(12).fill(0)},
+  {id:'cob_otros', concepto:'Otros cobros',                    tipo:'cobro', subtipo:'cobro',     imp:Array(12).fill(0)},
+  {id:'pag_iva',   concepto:'Liquidación IVA (mod. 303)',      tipo:'pago',  subtipo:'impuestos', imp:Array(12).fill(0)},
+  {id:'pag_irpf',  concepto:'Retenciones IRPF (mod. 111/115)',tipo:'pago',  subtipo:'impuestos', imp:Array(12).fill(0)},
+  {id:'pag_is',    concepto:'Pago fraccionado IS (mod. 202)', tipo:'pago',  subtipo:'impuestos', imp:Array(12).fill(0)},
 ];
 
 const fmt=(n,dec=0)=>{if(n===null||n===undefined||isNaN(n))return'—';const s=Math.abs(n).toLocaleString('es-ES',{minimumFractionDigits:dec,maximumFractionDigits:dec});return(n<0?'-':'')+'€\u202f'+s;};
@@ -255,19 +254,35 @@ function App(){
   const [gastos,setGastos]    =useState(()=>sv?.gastos  ||JSON.parse(JSON.stringify(GASTOS0)));
   const [imptos,setImptos]    =useState(()=>sv?.imptos  ||JSON.parse(JSON.stringify(IMPTOS0)));
   const [caja,setCaja]        =useState(()=>sv?.caja||JSON.parse(JSON.stringify(CAJA0)));
+  // cajaPagos: importes de caja por partida de gasto {gastoId: [12 meses]}
+  // Se inicializa con ceros para cada gasto; si hay un gasto nuevo no guardado, se añade con ceros
+  const [cajaPagos,setCajaPagos]=useState(()=>{
+    const saved=sv?.cajaPagos||{};
+    const init={};
+    (sv?.gastos||JSON.parse(JSON.stringify(GASTOS0))).forEach(g=>{
+      init[g.id]=saved[g.id]||Array(12).fill(0);
+    });
+    return init;
+  });
   const [saldo0,setSaldo0]    =useState(()=>sv?.saldo0??45000);
   const [locked,setLocked]    =useState(()=>sv?.locked||false);
   const [lockedAt,setLockedAt]=useState(()=>sv?.lockedAt||null);
   const [sub,setSub]          =useState('facturacion');
   const [modal,setModal]      =useState(null); // 'cliente' | {tipo:'gasto',grupo}
 
-  const save=useCallback((p)=>{persist({clientes,fact,gastos,imptos,caja,saldo0,locked,lockedAt,...p});},[clientes,fact,gastos,imptos,caja,saldo0,locked,lockedAt]);
+  const save=useCallback((p)=>{persist({clientes,fact,gastos,imptos,caja,cajaPagos,saldo0,locked,lockedAt,...p});},[clientes,fact,gastos,imptos,caja,cajaPagos,saldo0,locked,lockedAt]);
 
   // Edición celdas
   const setF=(cid,m,v)=>{if(locked)return;const arr=(fact[cid]||Array(12).fill(0)).slice();arr[m]=pn(v);const n={...fact,[cid]:arr};setFact(n);save({fact:n});};
   const setG=(gid,m,v)=>{if(locked)return;let val=pn(v);if(val>0)val=-val;const n=gastos.map(g=>g.id!==gid?g:{...g,imp:g.imp.map((x,i)=>i===m?val:x)});setGastos(n);save({gastos:n});};
   const setI=(iid,m,v)=>{if(locked)return;let val=pn(v);if(val>0)val=-val;const n=imptos.map(i=>i.id!==iid?i:{...i,imp:i.imp.map((x,j)=>j===m?val:x)});setImptos(n);save({imptos:n});};
   const setS=v=>{if(locked)return;const n=pn(v);setSaldo0(n);save({saldo0:n});};
+  const setCajaPago=(gid,m,v)=>{
+    if(locked)return;
+    const val=pn(v);
+    const np={...cajaPagos,[gid]:(cajaPagos[gid]||Array(12).fill(0)).map((x,i)=>i===m?val:x)};
+    setCajaPagos(np);save({cajaPagos:np});
+  };
   const setCajaRow=(rid,m,v)=>{
     if(locked)return;
     const val=pn(v);
@@ -302,10 +317,16 @@ function App(){
   };
 
   // Añadir/eliminar gastos
-  const addGasto=g=>{const n=[...gastos,g];setGastos(n);save({gastos:n});};
+  const addGasto=g=>{
+    const n=[...gastos,g];
+    const np={...cajaPagos,[g.id]:Array(12).fill(0)};
+    setGastos(n);setCajaPagos(np);save({gastos:n,cajaPagos:np});
+  };
   const delGasto=id=>{
     if(!confirm('¿Eliminar esta partida y todos sus datos?'))return;
-    const n=gastos.filter(g=>g.id!==id);setGastos(n);save({gastos:n});
+    const n=gastos.filter(g=>g.id!==id);
+    const np={...cajaPagos};delete np[id];
+    setGastos(n);setCajaPagos(np);save({gastos:n,cajaPagos:np});
   };
 
   // Lock
@@ -339,7 +360,7 @@ function App(){
   const TR=MESES.reduce((_,__,m)=>_+resM(m),0);
   const SF=saldoM(11);
 
-  const props={clientes,setClientes,fact,gastos,setGastos,imptos,caja,locked,ingM,ingIVAM,cvM,mbM,ebitM,imptM,resM,pagoCM,flujoM,saldoM,gfijM,setF,setG,setI,setS,saldo0,addCliente,delCliente,addGasto,delGasto,setModal,save,CV,setCajaRow,addCajaRow,delCajaRow};
+  const props={clientes,setClientes,fact,gastos,setGastos,imptos,caja,cajaPagos,locked,ingM,ingIVAM,cvM,mbM,ebitM,imptM,resM,pagoCM,flujoM,saldoM,gfijM,setF,setG,setI,setS,saldo0,addCliente,delCliente,addGasto,delGasto,setModal,save,CV,setCajaRow,addCajaRow,delCajaRow,setCajaPago};
 
   return(
     <div className="app">
@@ -677,7 +698,7 @@ function TabPyG({gastos,ingM,cvM,mbM,ebitM,CV}){
 }
 
 
-// ── FILA DE CAJA — componente independiente (evita pérdida de foco) ──
+// ── FILA DE CAJA (cobros e impuestos editables) ─────────────────
 function CajaRow({r,locked,setCajaRow,delCajaRow}){
   const tot=r.imp.reduce((s,v)=>s+v,0);
   const esCobro=r.tipo==='cobro';
@@ -697,34 +718,65 @@ function CajaRow({r,locked,setCajaRow,delCajaRow}){
       ))}
       <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:esCobro?'#f4fbf6':'#fdf8f0',color:esCobro?'#1a7a45':'#b83232'}}>{fmt(tot)}</td>
       {!locked&&<td style={{padding:'2px 4px'}}>
-        <button className="btn btn-sm btn-danger" title="Eliminar" onClick={()=>delCajaRow(r.id)}><i className="ti ti-trash"></i></button>
+        <button className="btn btn-sm btn-danger" onClick={()=>delCajaRow(r.id)}><i className="ti ti-trash"></i></button>
       </td>}
     </tr>
   );
 }
 
-// ── TESORERÍA ────────────────────────────────────────────────────
-function TabTes({caja,locked,saldo0,setS,setCajaRow,addCajaRow,delCajaRow}){
-  const cobrosM =m=>caja.filter(r=>r.tipo==='cobro').reduce((s,r)=>s+(r.imp[m]||0),0);
-  const pagosM  =m=>caja.filter(r=>r.tipo==='pago') .reduce((s,r)=>s+(r.imp[m]||0),0);
-  const flujoM  =m=>cobrosM(m)-pagosM(m);
-  const saldoM  =m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=flujoM(i);return s;};
+// ── FILA DE GASTO EN CAJA (editable, sincronizada con Gastos) ────
+function CajaGastoRow({g,cajaPagos,locked,setCajaPago}){
+  const imp=cajaPagos[g.id]||Array(12).fill(0);
+  const tot=imp.reduce((s,v)=>s+v,0);
+  return(
+    <tr>
+      <td className="sticky" style={{paddingLeft:20,fontSize:12,color:'#444'}}>
+        {g.concepto}
+        {g.iva>0&&<span style={{fontSize:9,background:'#e8f0fb',color:'#1a2b4a',padding:'0 4px',borderRadius:3,marginLeft:4}}>+{Math.round(g.iva*100)}%IVA</span>}
+        {g.irpf>0&&<span style={{fontSize:9,background:'#fff4e0',color:'#7a4000',padding:'0 4px',borderRadius:3,marginLeft:3}}>-{Math.round(g.irpf*100)}%IRPF</span>}
+      </td>
+      {MESES.map((_,m)=>(
+        <td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}>
+          <input type="number" className="cell-edit"
+            defaultValue={imp[m]||0}
+            disabled={locked}
+            onBlur={e=>setCajaPago(g.id,m,e.target.value)}
+            min={0}
+            style={{color:'#b83232'}}
+          />
+        </td>
+      ))}
+      <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#fdf8f0',color:'#b83232'}}>{fmt(tot)}</td>
+      <td></td>
+    </tr>
+  );
+}
 
-  const TC=MESES.reduce((_,__,m)=>_+cobrosM(m),0);
-  const TP=MESES.reduce((_,__,m)=>_+pagosM(m),0);
-  const SF=saldoM(11);
-  const saldos=MESES.map((_,m)=>saldoM(m));
-  const minS=Math.min(...saldos);
-  const mesBajo=saldos.findIndex(s=>s===minS);
+// ── TESORERÍA ────────────────────────────────────────────────────
+function TabTes({caja,cajaPagos,gastos,locked,saldo0,setS,setCajaRow,addCajaRow,delCajaRow,setCajaPago}){
+  const cobrosM  =m=>caja.filter(r=>r.tipo==='cobro').reduce((s,r)=>s+(r.imp[m]||0),0);
+  const pagosExplM=m=>gastos.reduce((s,g)=>s+((cajaPagos[g.id]||Array(12).fill(0))[m]||0),0);
+  const pagosFiscM=m=>caja.filter(r=>r.tipo==='pago'&&r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
+  const pagosM   =m=>pagosExplM(m)+pagosFiscM(m);
+  const flujoM   =m=>cobrosM(m)-pagosM(m);
+  const saldoM   =m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=flujoM(i);return s;};
+
+  const TC   =MESES.reduce((_,__,m)=>_+cobrosM(m),0);
+  const TExpl=MESES.reduce((_,__,m)=>_+pagosExplM(m),0);
+  const TFisc=MESES.reduce((_,__,m)=>_+pagosFiscM(m),0);
+  const TP   =TExpl+TFisc;
+  const SF   =saldoM(11);
+  const minS =Math.min(...MESES.map((_,m)=>saldoM(m)));
+  const mesBajo=MESES.findIndex((_,m)=>saldoM(m)===minS);
+  const grupos=['Personal','Colaboradores','Estructura'];
 
   return(
     <div>
       <div className="alert alert-info">
         <i className="ti ti-info-circle"></i>
-        <span>Plan de caja <strong>100% manual</strong>. Introduce directamente los cobros y pagos previstos cada mes. El saldo acumulado se calcula automáticamente.</span>
+        <span>Las partidas de gasto aparecen aquí automáticamente — introduce el importe de caja previsto para cada una. Si añades un gasto nuevo en Gastos, aparece aquí con ceros. Los pagos fiscales y cobros son líneas propias de caja.</span>
       </div>
 
-      {/* Saldo inicial */}
       <div className="card" style={{marginBottom:14}}>
         <div className="card-header"><h2>Saldo bancario inicial · 1 enero 2026</h2></div>
         <div className="card-body" style={{display:'flex',alignItems:'center',gap:20,flexWrap:'wrap'}}>
@@ -734,37 +786,32 @@ function TabTes({caja,locked,saldo0,setS,setCajaRow,addCajaRow,delCajaRow}){
               style={{width:150,padding:'6px 10px',border:'1px solid #dde0e6',borderRadius:5,fontSize:15,fontWeight:700,fontFamily:'monospace',color:'#1a2b4a'}}
               value={saldo0} disabled={locked} onChange={e=>setS(e.target.value)}/>
           </div>
-          <div style={{fontSize:11,color:'#555'}}>
-            Saldo fin de año: <strong style={{color:SF>=0?'#1a7a45':'#b83232',fontSize:14}}>{fmt(SF)}</strong>
-          </div>
-          {minS<20000&&(
-            <div style={{fontSize:11,background:'#fff8e0',color:'#7a5000',padding:'5px 10px',borderRadius:5,border:'1px solid #f0d070',display:'flex',alignItems:'center',gap:5}}>
-              <i className="ti ti-alert-triangle"></i>Mes más ajustado: <strong>{MESES[mesBajo]}</strong> ({fmt(minS)})
-            </div>
-          )}
+          <div style={{fontSize:11}}>Saldo fin de año: <strong style={{color:SF>=0?'#1a7a45':'#b83232',fontSize:14}}>{fmt(SF)}</strong></div>
+          {minS<20000&&<div style={{fontSize:11,background:'#fff8e0',color:'#7a5000',padding:'5px 10px',borderRadius:5,border:'1px solid #f0d070',display:'flex',alignItems:'center',gap:5}}>
+            <i className="ti ti-alert-triangle"></i>Mes más ajustado: <strong>{MESES[mesBajo]}</strong> ({fmt(minS)})
+          </div>}
         </div>
       </div>
 
-      {/* Tabla plan de caja */}
       <div className="card">
-        <div className="card-header">
-          <h2>Plan de caja mensual · 2026</h2>
-          <span style={{fontSize:10,color:'#888'}}>{locked?'Solo lectura':'Editable — introduce los importes directamente'}</span>
-        </div>
+        <div className="card-header"><h2>Plan de caja mensual · 2026</h2></div>
         <div className="overflow-x">
-        <table style={{minWidth:1200}}>
+        <table style={{minWidth:1220}}>
           <thead><tr>
-            <th className="sticky" style={{minWidth:220}}>Concepto</th>
+            <th className="sticky" style={{minWidth:230}}>Concepto</th>
             {MESES.map(m=><th key={m} className="mh" style={{minWidth:72}}>{m}</th>)}
             <th className="mh mh-total" style={{minWidth:82}}>Total año</th>
             {!locked&&<th style={{width:32}}></th>}
           </tr></thead>
           <tbody>
+
             {/* COBROS */}
             <tr className="section-row"><td className="sticky" colSpan={locked?14:15}>Cobros</td></tr>
-            {caja.filter(r=>r.tipo==='cobro').map(r=><CajaRow key={r.id} r={r} locked={locked} setCajaRow={setCajaRow} delCajaRow={delCajaRow}/>)}
-            {!locked&&<tr><td colSpan={locked?14:15} style={{padding:'4px 8px',background:'#fafafa'}}>
-              <button className="btn-add" style={{borderColor:'#a0d4b0',color:'#1a7a45'}} onClick={()=>addCajaRow('cobro')}>
+            {caja.filter(r=>r.tipo==='cobro').map(r=>(
+              <CajaRow key={r.id} r={r} locked={locked} setCajaRow={setCajaRow} delCajaRow={delCajaRow}/>
+            ))}
+            {!locked&&<tr><td colSpan={15} style={{padding:'4px 8px',background:'#fafafa'}}>
+              <button className="btn-add" style={{borderColor:'#a0d4b0',color:'#1a7a45'}} onClick={()=>addCajaRow('cobro','cobro')}>
                 <i className="ti ti-plus"></i>Añadir línea de cobro
               </button>
             </td></tr>}
@@ -775,55 +822,60 @@ function TabTes({caja,locked,saldo0,setS,setCajaRow,addCajaRow,delCajaRow}){
               {!locked&&<td></td>}
             </tr>
 
-            {/* PAGOS EXPLOTACIÓN */}
-            <tr className="section-row"><td className="sticky" colSpan={locked?14:15}>Pagos de explotación</td></tr>
-            {caja.filter(r=>r.tipo==='pago'&&(r.subtipo==='explotacion'||!r.subtipo)).map(r=><CajaRow key={r.id} r={r} locked={locked} setCajaRow={setCajaRow} delCajaRow={delCajaRow}/>)}
-            {!locked&&<tr><td colSpan={locked?14:15} style={{padding:'4px 8px',background:'#fafafa'}}>
-              <button className="btn-add" style={{borderColor:'#e4b0b0',color:'#b83232'}} onClick={()=>addCajaRow('pago','explotacion')}>
-                <i className="ti ti-plus"></i>Añadir pago de explotación
-              </button>
-            </td></tr>}
+            {/* PAGOS EXPLOTACIÓN — partidas de Gastos, importes editables */}
+            <tr className="section-row"><td className="sticky" colSpan={locked?14:15}>
+              Pagos de explotación
+              <span style={{fontSize:9,background:'#dce8f8',color:'#1a2b4a',padding:'1px 7px',borderRadius:10,fontWeight:600,marginLeft:8}}>partidas de Gastos · importe editable</span>
+            </td></tr>
+            {grupos.map(gr=>{
+              const gg=gastos.filter(g=>g.grupo===gr);
+              if(!gg.length)return null;
+              const tGrM=m=>gg.reduce((s,g)=>s+((cajaPagos[g.id]||Array(12).fill(0))[m]||0),0);
+              const tGrA=MESES.reduce((_,__,m)=>_+tGrM(m),0);
+              return[
+                <tr key={`hdr${gr}`} style={{background:'#f4f6f9'}}>
+                  <td className="sticky" colSpan={locked?14:15} style={{paddingLeft:12,fontWeight:700,fontSize:10,color:'#1a2b4a',textTransform:'uppercase',letterSpacing:'.04em'}}>{gr}</td>
+                </tr>,
+                ...gg.map(g=><CajaGastoRow key={g.id} g={g} cajaPagos={cajaPagos} locked={locked} setCajaPago={setCajaPago}/>),
+                <tr key={`tot${gr}`} style={{background:'#f0f2f6'}}>
+                  <td className="sticky" style={{paddingLeft:12,fontWeight:700,fontSize:11,color:'#b83232'}}>Subtotal {gr}</td>
+                  {MESES.map((_,m)=><td key={m} className="num red" style={{fontWeight:600}}>{fmt(tGrM(m))}</td>)}
+                  <td className="num red" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(tGrA)}</td>
+                  {!locked&&<td></td>}
+                </tr>
+              ];
+            })}
             <tr style={{background:'#f4e8e8'}}>
               <td className="sticky" style={{fontWeight:700,color:'#b83232',paddingLeft:8,fontSize:11}}>Subtotal explotación</td>
-              {MESES.map((_,m)=>{
-                const t=caja.filter(r=>r.tipo==='pago'&&(r.subtipo==='explotacion'||!r.subtipo)).reduce((s,r)=>s+(r.imp[m]||0),0);
-                return<td key={m} className="num red" style={{fontWeight:600}}>{fmt(t)}</td>;
-              })}
-              <td className="num red" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a'}}>
-                {fmt(MESES.reduce((_,__,m)=>_+caja.filter(r=>r.tipo==='pago'&&(r.subtipo==='explotacion'||!r.subtipo)).reduce((s,r)=>s+(r.imp[m]||0),0),0))}
-              </td>
+              {MESES.map((_,m)=><td key={m} className="num red" style={{fontWeight:600}}>{fmt(pagosExplM(m))}</td>)}
+              <td className="num red" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a'}}>{fmt(TExpl)}</td>
               {!locked&&<td></td>}
             </tr>
 
-            {/* PAGOS IMPUESTOS */}
+            {/* PAGOS FISCALES */}
             <tr className="section-row"><td className="sticky" colSpan={locked?14:15}>Pagos fiscales (IVA, IRPF, IS)</td></tr>
-            {caja.filter(r=>r.tipo==='pago'&&r.subtipo==='impuestos').map(r=><CajaRow key={r.id} r={r} locked={locked} setCajaRow={setCajaRow} delCajaRow={delCajaRow}/>)}
-            {!locked&&<tr><td colSpan={locked?14:15} style={{padding:'4px 8px',background:'#fafafa'}}>
+            {caja.filter(r=>r.tipo==='pago'&&r.subtipo==='impuestos').map(r=>(
+              <CajaRow key={r.id} r={r} locked={locked} setCajaRow={setCajaRow} delCajaRow={delCajaRow}/>
+            ))}
+            {!locked&&<tr><td colSpan={15} style={{padding:'4px 8px',background:'#fafafa'}}>
               <button className="btn-add" style={{borderColor:'#c8b0d8',color:'#6a2b9a'}} onClick={()=>addCajaRow('pago','impuestos')}>
                 <i className="ti ti-plus"></i>Añadir pago fiscal
               </button>
             </td></tr>}
             <tr style={{background:'#f0e8f8'}}>
               <td className="sticky" style={{fontWeight:700,color:'#6a2b9a',paddingLeft:8,fontSize:11}}>Subtotal fiscal</td>
-              {MESES.map((_,m)=>{
-                const t=caja.filter(r=>r.tipo==='pago'&&r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
-                return<td key={m} className="num" style={{fontWeight:600,color:'#6a2b9a'}}>{fmt(t)}</td>;
-              })}
-              <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#6a2b9a'}}>
-                {fmt(MESES.reduce((_,__,m)=>_+caja.filter(r=>r.tipo==='pago'&&r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0),0))}
-              </td>
+              {MESES.map((_,m)=><td key={m} className="num" style={{fontWeight:600,color:'#6a2b9a'}}>{fmt(pagosFiscM(m))}</td>)}
+              <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#6a2b9a'}}>{fmt(TFisc)}</td>
               {!locked&&<td></td>}
             </tr>
 
-            {/* TOTAL PAGOS */}
+            {/* TOTALES */}
             <tr style={{background:'#fdecea'}}>
               <td className="sticky" style={{fontWeight:700,color:'#b83232',paddingLeft:8}}>TOTAL PAGOS</td>
               {MESES.map((_,m)=><td key={m} className="num red" style={{fontWeight:700}}>{fmt(pagosM(m))}</td>)}
               <td className="num red" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(TP)}</td>
               {!locked&&<td></td>}
             </tr>
-
-            {/* FLUJO Y SALDO */}
             <tr style={{background:'#e4ecf4'}}>
               <td className="sticky" style={{fontWeight:700}}>FLUJO NETO MENSUAL</td>
               {MESES.map((_,m)=><td key={m} className={`num ${flujoM(m)>=0?'green':'red'}`} style={{fontWeight:700}}>{fmt(flujoM(m))}</td>)}
@@ -832,18 +884,17 @@ function TabTes({caja,locked,saldo0,setS,setCajaRow,addCajaRow,delCajaRow}){
             </tr>
             <tr className="result-row">
               <td className="sticky">SALDO ACUMULADO</td>
-              {MESES.map((_,m)=>{
-                const s=saldoM(m);
-                return<td key={m} className="num" style={{fontWeight:700,background:s<20000?'#8b2020':undefined}}>{fmt(s)}</td>;
-              })}
+              {MESES.map((_,m)=>{const s=saldoM(m);return<td key={m} className="num" style={{fontWeight:700,background:s<20000?'#8b2020':undefined}}>{fmt(s)}</td>;})}
               <td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.3)',fontWeight:700}}>{fmt(SF)}</td>
               {!locked&&<td></td>}
             </tr>
+
           </tbody>
         </table>
         </div>
         <div style={{padding:'7px 14px',fontSize:10,color:'#888',borderTop:'1px solid #f0f0f0',background:'#fafafa'}}>
-          <i className="ti ti-info-circle" style={{marginRight:4}}></i>Saldo en rojo oscuro = por debajo de 20.000 € (umbral de alerta operativa)
+          <i className="ti ti-info-circle" style={{marginRight:4}}></i>
+          Rojo oscuro = saldo por debajo de 20.000 €
         </div>
       </div>
     </div>

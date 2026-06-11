@@ -677,9 +677,34 @@ function TabPyG({gastos,ingM,cvM,mbM,ebitM,CV}){
 }
 
 
+// ── FILA DE CAJA — componente independiente (evita pérdida de foco) ──
+function CajaRow({r,locked,setCajaRow,delCajaRow}){
+  const tot=r.imp.reduce((s,v)=>s+v,0);
+  const esCobro=r.tipo==='cobro';
+  return(
+    <tr>
+      <td className="sticky" style={{paddingLeft:16,fontWeight:500}}>{r.concepto}</td>
+      {MESES.map((_,m)=>(
+        <td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}>
+          <input type="number" className="cell-edit"
+            defaultValue={r.imp[m]||0}
+            disabled={locked}
+            onBlur={e=>setCajaRow(r.id,m,e.target.value)}
+            min={0}
+            style={{color:esCobro?'#1a7a45':'#b83232'}}
+          />
+        </td>
+      ))}
+      <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:esCobro?'#f4fbf6':'#fdf8f0',color:esCobro?'#1a7a45':'#b83232'}}>{fmt(tot)}</td>
+      {!locked&&<td style={{padding:'2px 4px'}}>
+        <button className="btn btn-sm btn-danger" title="Eliminar" onClick={()=>delCajaRow(r.id)}><i className="ti ti-trash"></i></button>
+      </td>}
+    </tr>
+  );
+}
+
 // ── TESORERÍA ────────────────────────────────────────────────────
 function TabTes({caja,locked,saldo0,setS,setCajaRow,addCajaRow,delCajaRow}){
-  // Cobros y pagos totales por mes desde las filas manuales
   const cobrosM =m=>caja.filter(r=>r.tipo==='cobro').reduce((s,r)=>s+(r.imp[m]||0),0);
   const pagosM  =m=>caja.filter(r=>r.tipo==='pago') .reduce((s,r)=>s+(r.imp[m]||0),0);
   const flujoM  =m=>cobrosM(m)-pagosM(m);
@@ -691,31 +716,6 @@ function TabTes({caja,locked,saldo0,setS,setCajaRow,addCajaRow,delCajaRow}){
   const saldos=MESES.map((_,m)=>saldoM(m));
   const minS=Math.min(...saldos);
   const mesBajo=saldos.findIndex(s=>s===minS);
-
-  const CRow=({r})=>{
-    const tot=r.imp.reduce((s,v)=>s+v,0);
-    const esCobro=r.tipo==='cobro';
-    return(
-      <tr>
-        <td className="sticky" style={{paddingLeft:16,fontWeight:500}}>{r.concepto}</td>
-        {MESES.map((_,m)=>(
-          <td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}>
-            <input type="number" className="cell-edit"
-              value={r.imp[m]||0}
-              disabled={locked}
-              onChange={e=>setCajaRow(r.id,m,e.target.value)}
-              min={0}
-              style={{color:esCobro?'#1a7a45':'#b83232'}}
-            />
-          </td>
-        ))}
-        <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:esCobro?'#f4fbf6':'#fdf8f0',color:esCobro?'#1a7a45':'#b83232'}}>{fmt(tot)}</td>
-        {!locked&&<td style={{padding:'2px 4px'}}>
-          <button className="btn btn-sm btn-danger" title="Eliminar" onClick={()=>delCajaRow(r.id)}><i className="ti ti-trash"></i></button>
-        </td>}
-      </tr>
-    );
-  };
 
   return(
     <div>
@@ -762,7 +762,7 @@ function TabTes({caja,locked,saldo0,setS,setCajaRow,addCajaRow,delCajaRow}){
           <tbody>
             {/* COBROS */}
             <tr className="section-row"><td className="sticky" colSpan={locked?14:15}>Cobros</td></tr>
-            {caja.filter(r=>r.tipo==='cobro').map(r=><CRow key={r.id} r={r}/>)}
+            {caja.filter(r=>r.tipo==='cobro').map(r=><CajaRow key={r.id} r={r} locked={locked} setCajaRow={setCajaRow} delCajaRow={delCajaRow}/>)}
             {!locked&&<tr><td colSpan={locked?14:15} style={{padding:'4px 8px',background:'#fafafa'}}>
               <button className="btn-add" style={{borderColor:'#a0d4b0',color:'#1a7a45'}} onClick={()=>addCajaRow('cobro')}>
                 <i className="ti ti-plus"></i>Añadir línea de cobro
@@ -777,7 +777,7 @@ function TabTes({caja,locked,saldo0,setS,setCajaRow,addCajaRow,delCajaRow}){
 
             {/* PAGOS EXPLOTACIÓN */}
             <tr className="section-row"><td className="sticky" colSpan={locked?14:15}>Pagos de explotación</td></tr>
-            {caja.filter(r=>r.tipo==='pago'&&(r.subtipo==='explotacion'||!r.subtipo)).map(r=><CRow key={r.id} r={r}/>)}
+            {caja.filter(r=>r.tipo==='pago'&&(r.subtipo==='explotacion'||!r.subtipo)).map(r=><CajaRow key={r.id} r={r} locked={locked} setCajaRow={setCajaRow} delCajaRow={delCajaRow}/>)}
             {!locked&&<tr><td colSpan={locked?14:15} style={{padding:'4px 8px',background:'#fafafa'}}>
               <button className="btn-add" style={{borderColor:'#e4b0b0',color:'#b83232'}} onClick={()=>addCajaRow('pago','explotacion')}>
                 <i className="ti ti-plus"></i>Añadir pago de explotación
@@ -797,7 +797,7 @@ function TabTes({caja,locked,saldo0,setS,setCajaRow,addCajaRow,delCajaRow}){
 
             {/* PAGOS IMPUESTOS */}
             <tr className="section-row"><td className="sticky" colSpan={locked?14:15}>Pagos fiscales (IVA, IRPF, IS)</td></tr>
-            {caja.filter(r=>r.tipo==='pago'&&r.subtipo==='impuestos').map(r=><CRow key={r.id} r={r}/>)}
+            {caja.filter(r=>r.tipo==='pago'&&r.subtipo==='impuestos').map(r=><CajaRow key={r.id} r={r} locked={locked} setCajaRow={setCajaRow} delCajaRow={delCajaRow}/>)}
             {!locked&&<tr><td colSpan={locked?14:15} style={{padding:'4px 8px',background:'#fafafa'}}>
               <button className="btn-add" style={{borderColor:'#c8b0d8',color:'#6a2b9a'}} onClick={()=>addCajaRow('pago','impuestos')}>
                 <i className="ti ti-plus"></i>Añadir pago fiscal

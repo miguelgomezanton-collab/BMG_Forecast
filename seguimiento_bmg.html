@@ -184,14 +184,26 @@ function App(){
   const [facturas,setFacturas]=useState(()=>sv?.facturas||[]);
   const [movs,setMovs]=useState(()=>sv?.movs||[]);
   const [saldo0,setSaldo0]=useState(()=>sv?.saldo0??45000);
+  // cajaPagosReal: importes de caja por partida de gasto en seguimiento {gastoId: [12 meses]}
+  const [cajaPagosReal,setCajaPagosReal]=useState(()=>{
+    const saved=sv?.cajaPagosReal||{};
+    const init={};
+    (sv?.gastosReal||JSON.parse(JSON.stringify(GASTOS0))).forEach(g=>{
+      init[g.id]=saved[g.id]||Array(12).fill(0);
+    });
+    return init;
+  });
   const [cierreFact,setCierreFact]=useState(()=>sv?.cierreFact??-1);
+  const [cierreExtracto,setCierreExtracto]=useState(()=>sv?.cierreExtracto??-1);
+  // Reglas aprendidas: {conceptoClave: etiqueta} — se aprende cuando el usuario etiqueta un movimiento
+  const [reglas,setReglas]=useState(()=>sv?.reglas||{});
   const [cierreGastos,setCierreGastos]=useState(()=>sv?.cierreGastos??-1);
   const [sub,setSub]=useState('facturacion');
   const [modal,setModal]=useState(null);
 
   // Ref siempre actualizado — evita el problema de closures stale en handlers
   const stateRef=React.useRef({});
-  stateRef.current={clientes,factReal,factFcst,gastosReal,gastosFcst,facturas,movs,saldo0,cierreFact,cierreGastos};
+  stateRef.current={clientes,factReal,factFcst,gastosReal,gastosFcst,facturas,movs,saldo0,cierreFact,cierreGastos,cierreExtracto,cajaPagosReal,reglas};
 
   // save() siempre usa el estado más reciente via stateRef + el parche
   const save=(patch={})=>{
@@ -203,10 +215,26 @@ function App(){
   const delCliente=id=>{if(!confirm('¿Eliminar?'))return;const nc=clientes.filter(c=>c.id!==id);const nr={...factReal};const nf={...factFcst};delete nr[id];delete nf[id];setClientes(nc);setFactReal(nr);setFactFcst(nf);save({clientes:nc,factReal:nr,factFcst:nf});};
   const setIVACliente=(cid,v)=>{const iva=Math.min(100,Math.max(0,parseFloat(v)||0))/100;const nc=clientes.map(c=>c.id===cid?{...c,iva}:c);setClientes(nc);save({clientes:nc});};
   const setSaldoApp=v=>{const n=pn(v);setSaldo0(n);save({saldo0:n});};
+  const setCajaPagoReal=(gid,m,v)=>{
+    const val=pn(v);
+    const ncp={...cajaPagosReal,[gid]:(cajaPagosReal[gid]||Array(12).fill(0)).map((x,i)=>i===m?val:x)};
+    setCajaPagosReal(ncp);save({cajaPagosReal:ncp});
+  };
 
   // Gastos
-  const addGasto=g=>{const nr=[...gastosReal,g];const nf=[...gastosFcst,{...g}];setGastosReal(nr);setGastosFcst(nf);save({gastosReal:nr,gastosFcst:nf});};
-  const delGasto=id=>{if(!confirm('¿Eliminar?'))return;const nr=gastosReal.filter(g=>g.id!==id);const nf=gastosFcst.filter(g=>g.id!==id);setGastosReal(nr);setGastosFcst(nf);save({gastosReal:nr,gastosFcst:nf});};
+  const addGasto=g=>{
+    const nr=[...gastosReal,g];const nf=[...gastosFcst,{...g}];
+    const ncp={...cajaPagosReal,[g.id]:Array(12).fill(0)};
+    setGastosReal(nr);setGastosFcst(nf);setCajaPagosReal(ncp);
+    save({gastosReal:nr,gastosFcst:nf,cajaPagosReal:ncp});
+  };
+  const delGasto=id=>{
+    if(!confirm('¿Eliminar?'))return;
+    const nr=gastosReal.filter(g=>g.id!==id);const nf=gastosFcst.filter(g=>g.id!==id);
+    const ncp={...cajaPagosReal};delete ncp[id];
+    setGastosReal(nr);setGastosFcst(nf);setCajaPagosReal(ncp);
+    save({gastosReal:nr,gastosFcst:nf,cajaPagosReal:ncp});
+  };
   const setGMeta=(gid,field,v)=>{const val=Math.min(100,Math.max(0,parseFloat(v)||0))/100;const nr=gastosReal.map(g=>g.id!==gid?g:{...g,[field]:val});const nf=gastosFcst.map(g=>g.id!==gid?g:{...g,[field]:val});setGastosReal(nr);setGastosFcst(nf);save({gastosReal:nr,gastosFcst:nf});};
   const setGR=(gid,m,v)=>{let val=pn(v);if(val>0)val=-val;const n=gastosReal.map(g=>g.id!==gid?g:{...g,imp:g.imp.map((x,i)=>i===m?val:x)});setGastosReal(n);save({gastosReal:n});};
   const setGF=(gid,m,v)=>{let val=pn(v);if(val>0)val=-val;const n=gastosFcst.map(g=>g.id!==gid?g:{...g,imp:g.imp.map((x,i)=>i===m?val:x)});setGastosFcst(n);save({gastosFcst:n});};
@@ -265,6 +293,14 @@ function App(){
             </select>
           </div>
           <div style={{display:'flex',alignItems:'center',gap:6}}>
+            <span style={{fontSize:10,color:'#a0b4d0',whiteSpace:'nowrap'}}>Extracto cerrado hasta:</span>
+            <select value={cierreExtracto} onChange={e=>{const v=parseInt(e.target.value);setCierreExtracto(v);save({cierreExtracto:v});}}
+              style={{fontSize:11,padding:'3px 7px',borderRadius:4,border:'1px solid rgba(255,255,255,.2)',background:'rgba(255,255,255,.1)',color:'#fff',fontFamily:'Arial,sans-serif',cursor:'pointer'}}>
+              <option value={-1}>Sin cerrar</option>
+              {MESES.map((m,i)=><option key={i} value={i}>{m}</option>)}
+            </select>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:6}}>
             <span style={{fontSize:10,color:'#a0b4d0',whiteSpace:'nowrap'}}>Gastos cerrados hasta:</span>
             <select value={cierreGastos} onChange={e=>{
               const v=parseInt(e.target.value);
@@ -317,8 +353,8 @@ function App(){
       {sub==='gastos'&&<TabGastos gastosReal={gastosReal} gastosFcst={gastosFcst} gCombM={gCombM} setGR={setGR} setGF={setGF} setGMeta={setGMeta} delGasto={delGasto} setModal={setModal} cierreGastos={cierreGastos}/> }
       {sub==='facturas'&&<TabFacturas facturas={facturas} setFacturas={setFacturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} save={save} cierreFact={cierreFact}/>}
       {sub==='pyg'&&<TabPyG ingM={ingM} gCombM={gCombM} gastosReal={gastosReal} gastosFcst={gastosFcst} cierreFact={cierreFact} cierreGastos={cierreGastos}/>}
-      {sub==='caja'&&<TabCaja facturas={facturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} pagosExtM={pagosExtM} flujoCajaM={flujoCajaM} cierreFact={cierreFact} cierreGastos={cierreGastos} saldo0={saldo0} setSaldo0={setSaldoApp}/>}
-      {sub==='extracto'&&<TabExtracto movs={movs} setMovs={setMovs} save={save}/>}
+      {sub==='caja'&&<TabCaja facturas={facturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} pagosExtM={pagosExtM} flujoCajaM={flujoCajaM} cierreFact={cierreFact} cierreGastos={cierreGastos} cierreExtracto={cierreExtracto} saldo0={saldo0} setSaldo0={setSaldoApp} gastosReal={gastosReal} gastosFcst={gastosFcst} cajaPagosReal={cajaPagosReal} setCajaPagoReal={setCajaPagoReal} ingFcstM={ingFcstM} ingIVARealM={ingIVARealM} movs={movs}/>}
+      {sub==='extracto'&&<TabExtracto movs={movs} setMovs={setMovs} save={save} gastosReal={gastosReal} gastosFcst={gastosFcst} reglas={reglas} setReglas={setReglas}/>}
     </div>
   );
 }
@@ -539,7 +575,7 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
     const r=new FileReader();
     r.onload=ev=>{
       try{
-        const wb=window.XLSX.read(ev.target.result,{type:'array',cellDates:true});
+        const wb=window.XLSX.read(ev.target.result,{type:'array',cellDates:false});
         let pendRows=[],nvRows=[];
         wb.SheetNames.forEach(n=>{
           const u=n.toUpperCase();
@@ -548,29 +584,134 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
           else if(u.includes('NO VENCIDA')||u.includes('EMITIDA'))nvRows=rows;
         });
         if(!pendRows.length)pendRows=window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
-        const toISO=v=>{if(!v)return'';if(v instanceof Date)return v.toISOString().split('T')[0];if(typeof v==='number'&&v>40000){const d=new Date((v-25569)*86400000);return d.toISOString().split('T')[0];}const s=String(v).trim();const p=s.split(/[\/\-\.]/);if(p.length===3)return p[0].length===4?`${p[0]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`:`${p[2].length===2?'20'+p[2]:p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;return s;};
+
+        // Convertir número serial Excel → fecha ISO
+        const serialToISO=v=>{
+          if(!v||v==='')return'';
+          if(typeof v==='number'&&v>40000){
+            const d=new Date(Math.round((v-25569)*86400*1000));
+            return d.toISOString().split('T')[0];
+          }
+          const s=String(v).trim();
+          const p=s.split(/[\/\-\.]/);
+          if(p.length===3)return p[0].length===4
+            ?`${p[0]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`
+            :`${p[2].length===2?'20'+p[2]:p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+          return s;
+        };
+
+        // Normalizar estado al vocabulario de la app
+        const normEstado=s=>{
+          const u=String(s||'').trim().toUpperCase();
+          if(!u)return'Pendiente';
+          if(u.includes('PDT RESOL')||u.includes('RESOLUC'))return'PDT Resolución Jud.';
+          if(u.includes('CONTROLAD'))return'Controlado';
+          if(u.includes('SIN RESP'))return'Sin Respuesta';
+          if(u.includes('NUEVO VENC'))return'Nuevo Vencimiento';
+          if(u.includes('COBRAD'))return'Cobrada';
+          if(u.includes('INCOBR'))return'Incobrable';
+          if(u.includes('CANCEL'))return'Cancelada';
+          if(u.includes('DISPUT'))return'En disputa';
+          if(u.includes('NO VENCID'))return'No vencida';
+          // Capitalizar primera letra de cada palabra
+          return s.trim().replace(/\w/g,c=>c.toUpperCase());
+        };
+
+        // Calcular mes de cobro estimado según días de retraso
+        const mesCobro=dias=>{
+          if(dias>500)return 11;
+          if(dias>365)return Math.min(10,11);
+          if(dias>180)return Math.min(9,11);
+          if(dias>90)return Math.min(8,11);
+          if(dias>30)return Math.min(7,11);
+          return Math.min(6,11);
+        };
+
         const parseHoja=(rows,defEstado)=>{
           if(!rows||rows.length<2)return[];
           const hdrs=rows[0].map(h=>String(h||'').trim().toUpperCase());
-          const ci={};[['factura',['FACTURA','Nº FACTURA']],['cliente',['CLIENTE']],['clienteNm',['DEUDOR','NOMBRE']],['fecha',['FECHA FACTURA','FECHA FRA','FECHA']],['importe',['IMPORTE FACTURA','IMPORTE','TOTAL']],['diasRetraso',['DÍAS RETRASO','DIAS RETRASO']],['estado',['ESTADO']],['respuesta',['RESPUESTA','OBSERVACIONES']]].forEach(([k,als])=>{const i=hdrs.findIndex(h=>als.some(a=>h.includes(a)));if(i>=0)ci[k]=i;});
-          if(ci.factura===undefined)return[];
+          const ci={};
+          [
+            ['exp',       ['EXP.','EXP']],
+            ['cliente',   ['CLIENTE']],
+            ['clienteNm', ['CLIENTE NM','NOMBRE CLIENTE','DEUDOR','CLIENTE NM']],
+            ['factura',   ['FACTURA','Nº FACTURA','NUM FACTURA']],
+            ['fecha',     ['FECHA FACTURA','FECHA FRA','FECHA']],
+            ['importe',   ['IMPORTE FACTURA','IMPORTE','TOTAL']],
+            ['dias',      ['DÍAS RETRASO','DIAS RETRASO','DIAS']],
+            ['reclamado', ['RECLAMACIÓN','RECLAMACION']],
+            ['vecesRecl', ['VECES RECL','VECES']],
+            ['ultimaRecl',['ÚLTIMA RECL','ULTIMA RECL']],
+            ['respuesta', ['RESPUESTA']],
+            ['respCliente',['RESPUESTA CLIENTE','OBSERVACIONES','COMENTARIOS']],
+            ['estado',    ['ESTADO']],
+          ].forEach(([k,als])=>{
+            const i=hdrs.findIndex(h=>als.some(a=>h.includes(a)));
+            if(i>=0)ci[k]=i;
+          });
+
+          if(ci.factura===undefined||ci.importe===undefined)return[];
+
           return rows.slice(1).map(row=>{
             const g=i=>i!==undefined?String(row[i]??'').trim():'';
-            const factura=g(ci.factura);const importe=parseFloat(String(g(ci.importe)).replace(',','.'))||0;
-            if(!factura||!importe)return null;
-            const fechaISO=toISO(ci.fecha!==undefined?row[ci.fecha]:'');
-            const diasRetraso=parseInt(g(ci.diasRetraso))||0;
-            const mesCobro=diasRetraso>200?Math.min(9,11):diasRetraso>60?Math.min(8,11):Math.min(6,11);
-            return{id:factura,cliente:g(ci.cliente),clienteNm:g(ci.clienteNm),fecha:fechaISO,importe,diasRetraso,mesCobro,estado:defEstado==='No vencida'?'No vencida':g(ci.estado)||'Pendiente',fechaCobro:'',respuestaCliente:g(ci.respuesta)};
+            const factura=g(ci.factura);
+            if(!factura)return null;
+            const importeRaw=parseFloat(String(g(ci.importe)).replace(/\./g,'').replace(',','.'))||0;
+            if(!importeRaw)return null;
+            const fechaISO=serialToISO(ci.fecha!==undefined?row[ci.fecha]:'');
+            const dias=parseInt(g(ci.dias))||0;
+            const estadoRaw=g(ci.estado);
+            const estado=defEstado==='No vencida'?'No vencida':normEstado(estadoRaw);
+            return{
+              id:factura,
+              exp:g(ci.exp),
+              cliente:g(ci.cliente),
+              clienteNm:g(ci.clienteNm),
+              fecha:fechaISO,
+              importe:importeRaw,
+              diasRetraso:dias,
+              mesCobro:mesCobro(dias),
+              reclamado:g(ci.reclamado),
+              vecesRecl:g(ci.vecesRecl),
+              ultimaRecl:serialToISO(ci.ultimaRecl!==undefined?row[ci.ultimaRecl]:''),
+              respuesta:g(ci.respuesta),
+              respuestaCliente:g(ci.respCliente),
+              estado,
+              fechaCobro:'',
+            };
           }).filter(Boolean);
         };
-        const delExcel=[...parseHoja(pendRows,'Pendiente'),...parseHoja(nvRows,'No vencida')];
+
+        const delPend=parseHoja(pendRows,'Pendiente');
+        const delNV=parseHoja(nvRows,'No vencida');
+        const delExcel=[...delPend,...delNV];
+
+        // Reglas de fusión:
+        // 1. Cobradas → nunca se tocan
+        // 2. En disputa / PDT Resolución / Incobrable → se conservan aunque no estén en el Excel
+        // 3. Todo lo demás del Excel → se actualiza/añade
         const cobradas=facturas.filter(f=>f.estado==='Cobrada');
+        const preservar=['En disputa','PDT Resolución Jud.','Incobrable'];
+        const conservadas=facturas.filter(f=>preservar.includes(f.estado));
         const cobIds=new Set(cobradas.map(f=>f.id));
+        const consIds=new Set(conservadas.map(f=>f.id));
         const exIds=new Set(delExcel.map(f=>f.id));
-        const merged=[...cobradas,...delExcel.filter(f=>!cobIds.has(f.id)),...facturas.filter(f=>!exIds.has(f.id)&&['En disputa','PDT Resolución Jud.','Controlado','Incobrable'].includes(f.estado))];
-        upd(merged);setImportLog({fecha:new Date().toLocaleDateString('es-ES'),total:delExcel.length});
-      }catch(err){alert('Error: '+err.message);}
+
+        // Excel actualiza sus propios (excepto cobradas y conservadas)
+        const delFinal=delExcel.filter(f=>!cobIds.has(f.id)&&!consIds.has(f.id));
+        // Conservadas que no están en el Excel se mantienen
+        const conservadasFuera=conservadas.filter(f=>!exIds.has(f.id));
+        const merged=[...cobradas,...delFinal,...conservadasFuera];
+
+        upd(merged);
+        setImportLog({
+          fecha:new Date().toLocaleDateString('es-ES'),
+          totalPend:delPend.length,
+          totalNV:delNV.length,
+          cobradas:cobradas.length,
+          conservadas:conservadasFuera.length,
+        });
+      }catch(err){alert('Error al leer el archivo: '+err.message);console.error(err);}
     };
     r.readAsArrayBuffer(file);e.target.value='';
   };
@@ -598,7 +739,12 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
             </label>
             <div style={{fontSize:11,color:'#555',lineHeight:1.9}}>🔒 Cobradas — nunca se modifican<br/>🔄 Excel — se actualizan/añaden<br/>⚠️ En disputa/Judicial — se conservan</div>
           </div>
-          {importLog&&<div style={{marginTop:10,padding:'8px 12px',borderRadius:6,background:'#e4f4ec',border:'1px solid #a0d4b0',fontSize:11,color:'#1a5c30'}}><i className="ti ti-circle-check" style={{marginRight:5}}></i>Importado el {importLog.fecha} · {importLog.total} facturas</div>}
+          {importLog&&<div style={{marginTop:10,padding:'8px 12px',borderRadius:6,background:'#e4f4ec',border:'1px solid #a0d4b0',fontSize:11,color:'#1a5c30',lineHeight:1.8}}>
+            <i className="ti ti-circle-check" style={{marginRight:5}}></i>
+            <strong>Importado el {importLog.fecha}</strong><br/>
+            · {importLog.totalPend} facturas pendientes · {importLog.totalNV} no vencidas<br/>
+            · {importLog.cobradas} cobradas preservadas · {importLog.conservadas} en disputa/judicial conservadas
+          </div>}
         </div>
       </div>
       <div className="card">
@@ -642,11 +788,12 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
         </div>
         <div className="overflow-x">
         <table>
-          <thead><tr><th>Nº Factura</th><th>Cliente</th><th>Deudor</th><th>Fecha</th><th className="num">Importe</th><th className="num">Días</th><th>Cobro est.</th><th>Estado</th><th>F. Cobro</th><th></th></tr></thead>
+          <thead><tr><th>Exp.</th><th>Nº Factura</th><th>Cliente</th><th>Deudor</th><th>Fecha</th><th className="num">Importe</th><th className="num">Días</th><th>Cobro est.</th><th>Estado</th><th style={{maxWidth:200}}>Observaciones</th><th>F. Cobro</th><th></th></tr></thead>
           <tbody>
           {filtradas.map(f=>{
             const dias=parseInt(f.diasRetraso)||0;
             return(<tr key={f.id} style={{background:f.estado==='Cobrada'?'#f4fbf6':undefined}}>
+              <td style={{fontSize:10,color:'#888'}}>{f.exp||'—'}</td>
               <td style={{fontFamily:'monospace',fontSize:11}}>{f.id}</td>
               <td style={{fontWeight:600,fontSize:11}}>{f.cliente}</td>
               <td style={{fontSize:11,color:'#555',maxWidth:130,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.clienteNm||'—'}</td>
@@ -655,11 +802,12 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
               <td className="num" style={{fontSize:11,color:dias>365?'#b83232':dias>180?'#b06000':'#555'}}>{dias||'—'}</td>
               <td><select value={f.mesCobro} onChange={ev=>upd(facturas.map(x=>x.id===f.id?{...x,mesCobro:parseInt(ev.target.value)}:x))} style={{fontSize:10,padding:'2px 4px',border:'1px solid #ddd',borderRadius:4,width:88,fontFamily:'Arial,sans-serif'}}>{MESES_FULL.map((m,i)=><option key={i} value={i}>{m}</option>)}</select></td>
               <td><select value={f.estado} onChange={e=>{const nuevo=e.target.value;if(nuevo==='Cobrada'&&f.estado!=='Cobrada')cambiarEstado(f.id,nuevo);else upd(facturas.map(x=>x.id===f.id?{...x,estado:nuevo}:x));}} style={{fontSize:10,padding:'2px 4px',border:'1px solid #ddd',borderRadius:4,width:140,fontFamily:'Arial,sans-serif'}}>{ESTADOS_FAC.map(e=><option key={e}>{e}</option>)}</select></td>
+              <td style={{fontSize:10,color:'#555',maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={f.respuestaCliente}>{f.respuestaCliente||'—'}</td>
               <td style={{fontSize:11,color:'#1a7a45',whiteSpace:'nowrap'}}>{f.fechaCobro||'—'}</td>
               <td><button className="btn btn-sm" style={{marginRight:2}} onClick={()=>{setForm({...f});setEditId(f.id);}}><i className="ti ti-edit"></i></button><button className="btn btn-sm btn-danger" onClick={()=>upd(facturas.filter(x=>x.id!==f.id))}><i className="ti ti-trash"></i></button></td>
             </tr>);
           })}
-          {filtradas.length===0&&<tr><td colSpan={10} style={{textAlign:'center',padding:20,color:'#aaa'}}>Sin resultados</td></tr>}
+          {filtradas.length===0&&<tr><td colSpan={12} style={{textAlign:'center',padding:20,color:'#aaa'}}>Sin resultados</td></tr>}
           </tbody>
         </table>
         </div>
@@ -735,58 +883,205 @@ function TabPyG({ingM,gCombM,gastosReal,gastosFcst,cierreFact,cierreGastos}){
 }
 
 // ── CAJA REAL ────────────────────────────────────────────────────
-function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,flujoCajaM,cierreFact,cierreGastos,saldo0,setSaldo0}){
+// ── FILA GASTO EN CAJA REAL ──────────────────────────────────────
+function CajaGastoRowReal({g,cajaPagosReal,cierreGastos,setCajaPagoReal}){
+  const imp=cajaPagosReal[g.id]||Array(12).fill(0);
+  const tot=imp.reduce((s,v)=>s+v,0);
+  return(
+    <tr>
+      <td className="sticky" style={{paddingLeft:20,fontSize:12,color:'#444'}}>
+        {g.concepto}
+        {g.iva>0&&<span style={{fontSize:9,background:'#e8f0fb',color:'#1a2b4a',padding:'0 4px',borderRadius:3,marginLeft:4}}>+{Math.round(g.iva*100)}%IVA</span>}
+        {g.irpf>0&&<span style={{fontSize:9,background:'#fff4e0',color:'#7a4000',padding:'0 4px',borderRadius:3,marginLeft:3}}>-{Math.round(g.irpf*100)}%IRPF</span>}
+      </td>
+      {MESES.map((_,m)=>{
+        const esCerrado=m<=cierreGastos;
+        return(
+          <td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0',background:esCerrado?'#f4fbf6':'#f4f7fd'}}>
+            <input type="number" className="cell-edit"
+              key={`cpr-${g.id}-${m}-${esCerrado?1:0}`}
+              defaultValue={imp[m]||0}
+              onChange={e=>setCajaPagoReal(g.id,m,e.target.value)}
+              min={0}
+              style={{color:esCerrado?'#1a7a45':'#1a2b4a',borderBottomColor:esCerrado?'#a0d4b0':'#90b0d8',fontWeight:esCerrado?600:400}}
+            />
+          </td>
+        );
+      })}
+      <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#fdf8f0',color:'#b83232'}}>{fmt(tot)}</td>
+    </tr>
+  );
+}
 
-  const saldoM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=flujoCajaM(i);return s;};
-  const TC=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+cobrosRealesM(m),0):0;
+function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,flujoCajaM,cierreFact,cierreGastos,cierreExtracto,saldo0,setSaldo0,gastosReal,gastosFcst,cajaPagosReal,setCajaPagoReal,ingFcstM,ingIVARealM,movs}){
+  // Pagos de explotación = cajaPagosReal (editable por partida)
+  const pagosExplM=m=>(gastosReal||[]).reduce((s,g)=>s+((cajaPagosReal[g.id]||Array(12).fill(0))[m]||0),0);
+  const saldoM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=cobrosRealesM(i)+pagosExtM(i);return s;};
+  const TC=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+cobrosRealesM(m),0):0; // solo reales para saldo
   const TP=cierreGastos>=0?MESES.slice(0,cierreGastos+1).reduce((_,__,m)=>_+pagosExtM(m),0):0;
   const SF=saldoM(Math.max(cierreFact,cierreGastos,0));
+  const grupos=['Personal','Colaboradores','Estructura'];
+
   return(
     <div>
-      <div className="alert alert-info"><i className="ti ti-info-circle"></i><span>Cobros = facturas marcadas como Cobradas. Pagos = extracto bancario. Cobros pendientes = previsión de meses futuros.</span></div>
+      <div className="alert alert-info"><i className="ti ti-info-circle"></i>
+        <span>Las partidas de gasto aparecen automáticamente. Introduce el importe de caja real/previsto para cada una. Los cobros vienen de facturas cobradas. Los meses verdes = cerrados.</span>
+      </div>
+
       <div className="card" style={{marginBottom:14}}>
         <div className="card-header"><h2>Saldo bancario inicial · 1 enero 2026</h2></div>
         <div className="card-body" style={{display:'flex',alignItems:'center',gap:20,flexWrap:'wrap'}}>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
             <span style={{fontSize:12,color:'#555'}}>Saldo apertura:</span>
-            <input type="number" style={{width:150,padding:'6px 10px',border:'1px solid #dde0e6',borderRadius:5,fontSize:15,fontWeight:700,fontFamily:'monospace',color:'#1a2b4a'}} value={saldo0} onChange={e=>setSaldo0(e.target.value)}/>
+            <input type="number" style={{width:150,padding:'6px 10px',border:'1px solid #dde0e6',borderRadius:5,fontSize:15,fontWeight:700,fontFamily:'monospace',color:'#1a2b4a'}}
+              value={saldo0} onChange={e=>setSaldo0(e.target.value)}/>
           </div>
           <div style={{fontSize:11}}>Saldo actual ({MESES[Math.max(cierreFact,cierreGastos,0)]}): <strong style={{color:SF>=0?'#1a7a45':'#b83232',fontSize:14}}>{fmt(SF)}</strong></div>
         </div>
       </div>
+
       <div className="card">
-        <div className="card-header"><h2>Plan de caja real · 2026</h2></div>
+        <div className="card-header"><h2>Plan de caja real · 2026</h2><span style={{fontSize:10,color:'#888'}}>Verde = cerrado · Azul = forecast/previsto</span></div>
         <div className="overflow-x">
-        <table style={{minWidth:1100}}>
+        <table style={{minWidth:1220}}>
           <thead><tr>
-            <th className="sticky" style={{minWidth:220}}>Concepto</th>
-            {MESES.map((m,i)=><th key={i} className="mh" style={{minWidth:72,background:i<cierreFact?'#e8f7ee':i===cierreFact?'#fff4e0':'#f4f6f9',color:i<cierreFact?'#1a7a45':i===cierreFact?'#b06000':'#999'}}>
-              {m}{i<cierreFact?' ✓':i===cierreFact?' →':''}
-            </th>)}
-            <th className="mh mh-total" style={{minWidth:82}}>YTD</th>
+            <th className="sticky" style={{minWidth:230}}>Concepto</th>
+            {MESES.map((m,i)=>{
+              const esCF=i<=cierreFact;const esCG=i<=cierreGastos;
+              return(<th key={i} className="mh" style={{minWidth:72,
+                background:esCF||esCG?'#e4f4ec':'#e8f0fb',
+                color:esCF||esCG?'#1a7a45':'#1a2b4a',
+                borderTop:esCF||esCG?'2px solid #a0d4b0':'2px solid #90b0d8'}}>
+                {m}<div style={{fontSize:8,fontWeight:400,marginTop:1}}>{esCF||esCG?'real':'fcst'}</div>
+              </th>);
+            })}
+            <th className="mh mh-total" style={{minWidth:82}}>Total</th>
           </tr></thead>
           <tbody>
+
+            {/* COBROS */}
             <tr className="section-row"><td className="sticky" colSpan={14}>Cobros</td></tr>
-            <tr style={{background:'#f4fbf6'}}><td className="sticky" style={{fontWeight:700,paddingLeft:16,color:'#1a7a45'}}>Cobros reales (facturas cobradas)</td>
-              {MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a7a45',fontWeight:600,background:m>cierreFact?'#fafafa':undefined}}>{m<=cierreFact?fmt(cobrosRealesM(m)):'—'}</td>)}
-              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a7a45'}}>{fmt(TC)}</td>
+
+            {/* 1. COBROS REALES — extracto bancario, meses cerrados */}
+            <tr style={{background:'#f4fbf6'}}>
+              <td className="sticky" style={{fontWeight:600,paddingLeft:16,color:'#1a7a45',fontSize:12}}>
+                Cobros reales (extracto bancario)
+                <div style={{fontSize:9,color:'#888',fontWeight:400}}>meses cerrados · confirmado por el banco</div>
+              </td>
+              {MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a7a45',fontWeight:600,background:m>cierreFact?'#fafafa':undefined}}>
+                {m<=cierreFact?fmt(cobrosRealesM(m)):'—'}
+              </td>)}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a7a45'}}>
+                {fmt(cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+cobrosRealesM(m),0):0)}
+              </td>
             </tr>
-            <tr style={{background:'#f4f8ff'}}><td className="sticky" style={{paddingLeft:16,color:'#888',fontStyle:'italic'}}>↳ Cobros pendientes previstos</td>
-              {MESES.map((_,m)=><td key={m} className="num" style={{fontSize:11,color:'#1a2b4a',fontStyle:'italic'}}>{m>cierreFact?fmt(cobrosPendM(m)):'—'}</td>)}
-              <td className="num" style={{borderLeft:'2px solid #1a2b4a',color:'#888',fontStyle:'italic'}}>{fmt(MESES.slice(cierreFact+1).reduce((_,__,i)=>_+cobrosPendM(cierreFact+1+i),0))}</td>
+
+            {/* 2. ENTRADAS PENDIENTES DE COBRO — facturas con fecha prevista, meses cerrados */}
+            <tr style={{background:'#f0fbf4'}}>
+              <td className="sticky" style={{fontWeight:600,paddingLeft:16,color:'#1a6a3a',fontSize:12}}>
+                Entradas pendientes de cobro
+                <div style={{fontSize:9,color:'#888',fontWeight:400}}>facturas del Excel con fecha prevista de cobro</div>
+              </td>
+              {MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a6a3a',fontWeight:500,background:m>cierreFact?'#fafafa':undefined}}>
+                {m<=cierreFact?fmt(cobrosPendM(m)):'—'}
+              </td>)}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a6a3a'}}>
+                {fmt(cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+cobrosPendM(m),0):0)}
+              </td>
             </tr>
-            <tr className="section-row"><td className="sticky" colSpan={14}>Pagos (extracto bancario)</td></tr>
-            <tr><td className="sticky" style={{fontWeight:700,paddingLeft:16,color:'#b83232'}}>Total pagos reales</td>
-              {MESES.map((_,m)=><td key={m} className="num" style={{color:'#b83232',fontWeight:600,background:m>cierreGastos?'#fafafa':undefined}}>{m<=cierreGastos?fmt(pagosExtM(m)):'—'}</td>)}
+
+            {/* 3. ENTRADAS POR FORECAST — meses no cerrados en facturación */}
+            <tr style={{background:'#f4f7fd'}}>
+              <td className="sticky" style={{fontWeight:600,paddingLeft:16,color:'#1a2b4a',fontSize:12}}>
+                Entradas por forecast (facturación prevista)
+                <div style={{fontSize:9,color:'#888',fontWeight:400}}>meses no cerrados · sin facturas generadas aún</div>
+              </td>
+              {MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a2b4a',fontWeight:500,background:m<=cierreFact?'#fafafa':undefined}}>
+                {m>cierreFact?fmt(ingFcstM(m)):'—'}
+              </td>)}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a2b4a'}}>
+                {fmt(MESES.slice(cierreFact+1).reduce((_,__,i)=>_+ingFcstM(cierreFact+1+i),0))}
+              </td>
+            </tr>
+
+            {/* TOTAL COBROS */}
+            <tr style={{background:'#e4f4ec'}}>
+              <td className="sticky" style={{fontWeight:700,color:'#1a7a45',paddingLeft:8}}>TOTAL COBROS</td>
+              {MESES.map((_,m)=>{
+                const v=m<=cierreFact
+                  ?(cobrosRealesM(m)+cobrosPendM(m))
+                  :ingFcstM(m);
+                return<td key={m} className="num green" style={{fontWeight:700}}>{fmt(v)}</td>;
+              })}
+              <td className="num green" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>
+                {fmt(
+                  (cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+(cobrosRealesM(m)+cobrosPendM(m)),0):0)
+                  +MESES.slice(cierreFact+1).reduce((_,__,i)=>_+ingFcstM(cierreFact+1+i),0)
+                )}
+              </td>
+            </tr>
+
+            {/* PAGOS EXPLOTACIÓN — partidas de gastosReal, editable */}
+            <tr className="section-row"><td className="sticky" colSpan={14}>
+              Pagos de explotación
+              <span style={{fontSize:9,background:'#dce8f8',color:'#1a2b4a',padding:'1px 7px',borderRadius:10,fontWeight:600,marginLeft:8}}>partidas de Gastos · editable</span>
+            </td></tr>
+            {grupos.map(gr=>{
+              const gg=(gastosReal||[]).filter(g=>g.grupo===gr);
+              if(!gg.length)return null;
+              const tGrM=m=>gg.reduce((s,g)=>s+((cajaPagosReal[g.id]||Array(12).fill(0))[m]||0),0);
+              const tGrA=MESES.reduce((_,__,m)=>_+tGrM(m),0);
+              return[
+                <tr key={`hdr${gr}`} style={{background:'#f4f6f9'}}>
+                  <td className="sticky" colSpan={14} style={{paddingLeft:12,fontWeight:700,fontSize:10,color:'#1a2b4a',textTransform:'uppercase',letterSpacing:'.04em'}}>{gr}</td>
+                </tr>,
+                ...gg.map(g=><CajaGastoRowReal key={g.id} g={g} cajaPagosReal={cajaPagosReal} cierreGastos={cierreGastos} setCajaPagoReal={setCajaPagoReal}/>),
+                <tr key={`tot${gr}`} style={{background:'#f0f2f6'}}>
+                  <td className="sticky" style={{paddingLeft:12,fontWeight:700,fontSize:11,color:'#b83232'}}>Subtotal {gr}</td>
+                  {MESES.map((_,m)=><td key={m} className="num red" style={{fontWeight:600}}>{fmt(tGrM(m))}</td>)}
+                  <td className="num red" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(tGrA)}</td>
+                </tr>
+              ];
+            })}
+            <tr style={{background:'#f4e8e8'}}>
+              <td className="sticky" style={{fontWeight:700,color:'#b83232',paddingLeft:8,fontSize:11}}>Subtotal explotación</td>
+              {MESES.map((_,m)=><td key={m} className="num red" style={{fontWeight:600}}>{fmt(pagosExplM(m))}</td>)}
+              <td className="num red" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a'}}>{fmt(MESES.reduce((_,__,m)=>_+pagosExplM(m),0))}</td>
+            </tr>
+
+            {/* PAGOS EXTRACTO */}
+            <tr className="section-row"><td className="sticky" colSpan={14}>
+              Pagos del extracto bancario
+              {cierreExtracto>=0&&<span style={{fontSize:9,background:'#e4f4ec',color:'#1a7a45',padding:'1px 7px',borderRadius:10,fontWeight:600,marginLeft:8}}>Cerrado hasta {MESES[cierreExtracto]}</span>}
+            </td></tr>
+            <tr>
+              <td className="sticky" style={{fontWeight:700,paddingLeft:16,color:'#b83232'}}>Total pagos extracto</td>
+              {MESES.map((_,m)=>{
+                const cerrado=cierreExtracto>=0&&m<=cierreExtracto;
+                return<td key={m} className="num" style={{color:'#b83232',fontWeight:cerrado?700:500,background:cerrado?'#f4fbf6':'#fafafa'}}>
+                  {cerrado?fmt(pagosExtM(m)):'—'}
+                </td>;
+              })}
               <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#b83232'}}>{fmt(TP)}</td>
             </tr>
-            <tr style={{background:'#e4ecf4'}}><td className="sticky" style={{fontWeight:700}}>FLUJO NETO REAL</td>
-              {MESES.map((_,m)=><td key={m} className={`num ${flujoCajaM(m)>=0?'green':'red'}`} style={{fontWeight:700,background:m>Math.max(cierreFact,cierreGastos)?'#f4f6f9':undefined}}>{m<=Math.max(cierreFact,cierreGastos)?fmt(flujoCajaM(m)):'—'}</td>)}
+
+            {/* TOTALES */}
+            <tr style={{background:'#e4ecf4'}}>
+              <td className="sticky" style={{fontWeight:700}}>FLUJO NETO</td>
+              {MESES.map((_,m)=>{
+                const f=flujoCajaM(m);
+                return<td key={m} className={`num ${f>=0?'green':'red'}`} style={{fontWeight:700,background:m>Math.max(cierreFact,cierreGastos)?'#f4f6f9':undefined}}>{m<=Math.max(cierreFact,cierreGastos)?fmt(f):'—'}</td>;
+              })}
               <td className={`num ${TC+TP>=0?'green':'red'}`} style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(TC+TP)}</td>
             </tr>
-            <tr className="result-row"><td className="sticky">SALDO ACUMULADO</td>
-              {MESES.map((_,m)=>{const s=saldoM(m);return<td key={m} className="num" style={{fontWeight:700,background:m<=Math.max(cierreFact,cierreGastos)&&s<20000?'#8b2020':m>Math.max(cierreFact,cierreGastos)?'rgba(0,0,0,.2)':undefined,color:m>Math.max(cierreFact,cierreGastos)?'rgba(255,255,255,.3)':undefined}}>{m<=Math.max(cierreFact,cierreGastos)?fmt(s):'—'}</td>;})}
-              <td className="num" style={{fontWeight:700,borderLeft:'2px solid rgba(255,255,255,.3)'}}>{MESES[Math.max(cierreFact,cierreGastos,0)]}: {fmt(SF)}</td>
+            <tr className="result-row">
+              <td className="sticky">SALDO ACUMULADO</td>
+              {MESES.map((_,m)=>{
+                const s=saldoM(m);
+                const vis=m<=Math.max(cierreFact,cierreGastos);
+                return<td key={m} className="num" style={{fontWeight:700,background:vis&&s<20000?'#8b2020':!vis?'rgba(0,0,0,.2)':undefined,color:!vis?'rgba(255,255,255,.3)':undefined}}>{vis?fmt(s):'—'}</td>;
+              })}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid rgba(255,255,255,.3)'}}>{fmt(SF)}</td>
             </tr>
           </tbody>
         </table>
@@ -796,121 +1091,331 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,flujoCajaM,cierre
   );
 }
 
-// ── EXTRACTO BANCARIO ────────────────────────────────────────────
-const CATS=['Nóminas personal fijo (neto)','Seguridad Social empresa','Rosalía / LexConnect / Alejandro / Laura','Legal Pigeon','623 Mario','623 Miguel','623 Marc','623 Apoint','623 Ignacio','623 Jorge','623 Luis Miralbell','Alquiler oficina Barcelona','Informática','Otros gastos operativos','Traspaso entre cuentas','Nueva deuda / financiación','Sin categorizar'];
-
-function TabExtracto({movs,setMovs,save}){
+// ══════════════════════════════════════════════════════════════════
+// EXTRACTO BANCARIO
+// ══════════════════════════════════════════════════════════════════
+function TabExtracto({movs,setMovs,save,gastosReal,gastosFcst,reglas,setReglas}){
   const [banco,setBanco]=useState('CAIXABANK');
   const [filtroMes,setFiltroMes]=useState('todos');
-  const [bancos,setBancos]=useState(['CAIXABANK','SABADELL','CAJAMAR','BSCH','BANKINTER']);
+  const [filtroBanco,setFiltroBanco]=useState('todos');
+  const [filtroEtiqueta,setFiltroEtiqueta]=useState('todas');
+  const [bancos]=useState(['CAIXABANK','SABADELL','CAJAMAR','BSCH','BANKINTER','OTRO']);
+  const [importLog,setImportLog]=useState(null);
 
-  const autocat=(c,imp)=>{
-    const s=c.toLowerCase();
-    if(imp>0)return s.includes('traspas')?'Traspaso entre cuentas':s.includes('prestam')||s.includes('financ')?'Nueva deuda / financiación':'Sin categorizar';
-    if(s.includes('nomin')||s.includes('salari'))return'Nóminas personal fijo (neto)';
-    if(s.includes('seguridad social')||s.includes(' ss '))return'Seguridad Social empresa';
-    if(s.includes('alquiler'))return'Alquiler oficina Barcelona';
-    if(s.includes('hacienda')||s.includes('irpf')||s.includes('aeat'))return'Otros gastos operativos';
-    if(s.includes('mario'))return'623 Mario';if(s.includes('miguel'))return'623 Miguel';
-    if(s.includes('marc'))return'623 Marc';if(s.includes('legalpigeon'))return'Legal Pigeon';
-    return'Otros gastos operativos';
+  // Categorías = partidas de gastos + fijas de caja + traspaso
+  const gastosUnicos=[...new Map((gastosReal||[]).map(g=>[g.id,g])).values()];
+  const CATS_FIJAS=['Traspaso entre cuentas','Cobro de cliente','Sin categorizar'];
+  const CATS=[...gastosUnicos.map(g=>g.concepto),...CATS_FIJAS];
+
+  // Extraer clave normalizada del concepto para matching
+  const extractClave=(concepto)=>{
+    // Quitar números, referencias, caracteres especiales — dejar palabras clave
+    return concepto.toLowerCase()
+      .replace(/[0-9*\/\\]+/g,' ')
+      .replace(/\s+/g,' ')
+      .trim()
+      .slice(0,60);
   };
 
-  const importarXLSX=e=>{
+  // Buscar en reglas aprendidas — match exacto o por prefijo largo
+  const buscarRegla=(concepto)=>{
+    const clave=extractClave(concepto);
+    // Exacto
+    if(reglas[clave])return reglas[clave];
+    // Buscar si alguna clave guardada es sufijo/prefijo del concepto actual
+    const claves=Object.keys(reglas);
+    for(const k of claves){
+      if(k.length>12&&(clave.includes(k)||k.includes(clave.slice(0,Math.min(clave.length,k.length)))))return reglas[k];
+    }
+    return null;
+  };
+
+  // Autocategorización — primero reglas aprendidas, luego keywords
+  const autocat=(concepto,imp)=>{
+    // 1. Reglas aprendidas (máxima prioridad)
+    const aprendida=buscarRegla(concepto);
+    if(aprendida)return aprendida;
+
+    const s=concepto.toLowerCase().replace(/\s+/g,' ');
+    // 2. Entradas
+    if(imp>0){
+      if(s.includes('traspas')||s.includes('transfer'))return'Traspaso entre cuentas';
+      return'Cobro de cliente';
+    }
+    // 3. Match en partidas de gasto por nombre
+    const gastoMatch=gastosUnicos.find(g=>{
+      const cn=g.concepto.toLowerCase();
+      const palabras=cn.split(/\s+/).filter(p=>p.length>4);
+      return palabras.some(p=>s.includes(p));
+    });
+    if(gastoMatch)return gastoMatch.concepto;
+    // 4. Keywords fijos
+    if(s.includes('nomin')||s.includes('salari'))return(gastosUnicos.find(g=>g.id==='nominas')?.concepto||'Sin categorizar');
+    if(s.includes('seguridad social')||s.includes('tgss'))return(gastosUnicos.find(g=>g.id==='ss')?.concepto||'Sin categorizar');
+    if(s.includes('alquiler'))return(gastosUnicos.find(g=>g.id==='alquiler')?.concepto||'Sin categorizar');
+    if(s.includes('netflix')||s.includes('spotify')||s.includes('google')||s.includes('microsoft')||s.includes('mongo')||s.includes('aws')||s.includes('squarespace'))return(gastosUnicos.find(g=>g.id==='it')?.concepto||'Sin categorizar');
+    if(s.includes('traspas')||s.includes('transfer entre'))return'Traspaso entre cuentas';
+    return'Sin categorizar';
+  };
+
+  // Importar XLS/XLSX del banco
+  const importarExtracto=e=>{
     const file=e.target.files[0];if(!file)return;
+    const ext=file.name.split('.').pop().toLowerCase();
     const r=new FileReader();
     r.onload=ev=>{
       try{
-        const wb=window.XLSX.read(ev.target.result,{type:'array',cellDates:true});
-        const rows=window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
-        let hRow=0;for(let i=0;i<Math.min(5,rows.length);i++){if(rows[i].map(c=>String(c).toLowerCase()).some(c=>c.includes('fecha')||c.includes('importe'))){hRow=i;break;}}
+        let wb;
+        if(ext==='xls'){
+          // XLS: usar SheetJS con type binary
+          wb=window.XLSX.read(ev.target.result,{type:'binary',cellDates:true});
+        }else{
+          wb=window.XLSX.read(ev.target.result,{type:'array',cellDates:true});
+        }
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=window.XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        if(rows.length<2){alert('Archivo vacío o sin datos.');return;}
+
+        // Detectar fila de cabecera (buscar "fecha" o "concepto")
+        let hRow=0;
+        for(let i=0;i<Math.min(5,rows.length);i++){
+          const r0=rows[i].map(c=>String(c).toLowerCase().trim());
+          if(r0.some(c=>c.includes('fecha'))||r0.some(c=>c.includes('concepto'))){hRow=i;break;}
+        }
         const hdrs=rows[hRow].map(c=>String(c).toLowerCase().trim());
-        const ci={fecha:hdrs.findIndex(h=>h.includes('fecha')),concepto:hdrs.findIndex(h=>h.includes('concepto')||h.includes('descripci')),importe:hdrs.findIndex(h=>h.includes('importe')||h.includes('cargo'))};
-        if(ci.fecha<0)ci.fecha=0;if(ci.concepto<0)ci.concepto=1;if(ci.importe<0)ci.importe=2;
-        const existentes=new Set(movs.map(m=>`${m.fecha}|${m.concepto}|${m.importe}|${m.banco}`));
-        const nuevos=[];let añ=0,dup=0;
+        const ci={
+          fecha:hdrs.findIndex(h=>h.includes('fecha')||h.includes('date')),
+          concepto:hdrs.findIndex(h=>h.includes('concepto')||h.includes('descripci')||h.includes('movim')),
+          importe:hdrs.findIndex(h=>h.includes('importe')||h.includes('cargo')||h.includes('amount')),
+          saldo:hdrs.findIndex(h=>h.includes('saldo')||h.includes('balance')),
+        };
+        if(ci.fecha<0)ci.fecha=0;
+        if(ci.concepto<0)ci.concepto=1;
+        if(ci.importe<0)ci.importe=2;
+
+        const toISO=v=>{
+          if(!v||v==='')return'';
+          if(v instanceof Date)return v.toISOString().split('T')[0];
+          if(typeof v==='number'&&v>40000){const d=new Date(Math.round((v-25569)*86400*1000));return d.toISOString().split('T')[0];}
+          const s=String(v).trim().split(' ')[0]; // remove time part
+          const p=s.split(/[\/\-\.]/);
+          if(p.length===3)return p[0].length===4?`${p[0]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`:`${p[2].length===2?'20'+p[2]:p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+          return s;
+        };
+
+        const existentes=new Set(movs.map(m=>`${m.fechaISO}|${m.concepto.slice(0,40)}|${m.importe}|${m.banco}`));
+        const nuevos=[];let añ=0,dup=0,err=0;
         rows.slice(hRow+1).forEach((row,idx)=>{
           if(!row[ci.fecha]&&!row[ci.importe])return;
-          let fechaISO='',fechaStr='';
-          const fRaw=row[ci.fecha];
-          if(fRaw instanceof Date){fechaISO=fRaw.toISOString().split('T')[0];fechaStr=`${String(fRaw.getDate()).padStart(2,'0')}/${String(fRaw.getMonth()+1).padStart(2,'0')}/${fRaw.getFullYear()}`;}
-          else if(typeof fRaw==='number'&&fRaw>40000){const d=new Date((fRaw-25569)*86400000);fechaISO=d.toISOString().split('T')[0];fechaStr=`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;}
-          else{fechaStr=String(fRaw||'').trim();const p=fechaStr.split(/[\/\-\.]/);if(p.length===3)fechaISO=p[0].length===4?`${p[0]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`:`${p[2].length===2?'20'+p[2]:p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;}
+          const fechaISO=toISO(row[ci.fecha]);
           if(!fechaISO)return;
-          const concepto=String(row[ci.concepto]||'').replace(/\s+/g,' ').trim();if(!concepto)return;
-          const importe=parseFloat(String(row[ci.importe]||'').replace(',','.').replace(/[^0-9.-]/g,''));if(isNaN(importe))return;
+          const conceptoRaw=String(row[ci.concepto]||'').replace(/\n/g,' ').replace(/\s+/g,' ').trim();
+          if(!conceptoRaw)return;
+          const imp=parseFloat(String(row[ci.importe]||'').replace(/[^0-9.,\-]/g,'').replace(',','.'))||0;
+          if(imp===0){err++;return;}
           const mes=new Date(fechaISO).getMonth();
-          const k=`${fechaStr}|${concepto}|${importe}|${banco}`;
-          if(existentes.has(k)){dup++;return;}existentes.add(k);
-          nuevos.push({id:'e'+Date.now()+'_'+idx,fecha:fechaStr,fechaISO,concepto,importe,mes,banco,categoria:autocat(concepto,importe)});añ++;
+          if(isNaN(mes))return;
+          const k=`${fechaISO}|${conceptoRaw.slice(0,40)}|${imp}|${banco}`;
+          if(existentes.has(k)){dup++;return;}
+          existentes.add(k);
+          nuevos.push({
+            id:'e'+Date.now()+'_'+idx,
+            fecha:String(row[ci.fecha]).split(' ')[0].split('T')[0]||fechaISO,
+            fechaISO,
+            concepto:conceptoRaw,
+            importe:imp,
+            saldo:ci.saldo>=0?parseFloat(String(row[ci.saldo]||'').replace(/[^0-9.,\-]/g,'').replace(',','.'))||null:null,
+            mes,
+            año:new Date(fechaISO).getFullYear(),
+            banco,
+            etiqueta:autocat(conceptoRaw,imp),
+          });
+          añ++;
         });
         const n=[...movs,...nuevos];setMovs(n);save({movs:n});
-        alert(`✓ ${añ} movimientos añadidos${dup>0?` · ${dup} duplicados`:''}`);
-      }catch(err){alert('Error: '+err.message);}
+        setImportLog({banco,fecha:new Date().toLocaleDateString('es-ES'),añadidos:añ,duplicados:dup});
+      }catch(err){alert('Error al leer el archivo: '+err.message);console.error(err);}
     };
-    r.readAsArrayBuffer(file);e.target.value='';
+    ext==='xls'?r.readAsBinaryString(file):r.readAsArrayBuffer(file);
+    e.target.value='';
   };
 
-  const updCat=(id,cat)=>{const n=movs.map(m=>m.id===id?{...m,categoria:cat}:m);setMovs(n);save({movs:n});};
-  const del=id=>{const n=movs.filter(m=>m.id!==id);setMovs(n);save({movs:n});};
+  const updEtiqueta=(id,etiqueta)=>{
+    // 1. Guardar regla aprendida
+    const mv=movs.find(m=>m.id===id);
+    const nuevasReglas={...reglas};
+    if(mv){
+      const clave=extractClave(mv.concepto);
+      nuevasReglas[clave]=etiqueta;
+    }
+    // 2. Re-aplicar a todos los movimientos con concepto similar que estén sin categorizar
+    const n=movs.map(m=>{
+      if(m.id===id)return{...m,etiqueta};
+      // Re-aplicar solo si está sin categorizar o si el concepto es muy similar (mismo inicio)
+      if(mv&&m.etiqueta==='Sin categorizar'){
+        const claveMov=extractClave(m.concepto);
+        const claveRef=extractClave(mv.concepto);
+        // Match si las primeras 20 chars son iguales (mismo tipo de movimiento)
+        if(claveMov.slice(0,20)===claveRef.slice(0,20)&&claveMov.length>10)return{...m,etiqueta};
+      }
+      return m;
+    });
+    setMovs(n);setReglas(nuevasReglas);save({movs:n,reglas:nuevasReglas});
+  };
+  const del=(id)=>{const n=movs.filter(m=>m.id!==id);setMovs(n);save({movs:n});};
+  const limpiar=()=>{if(!confirm('¿Borrar TODOS los movimientos?'))return;setMovs([]);save({movs:[]});};
 
-  const filtrados=movs.filter(m=>filtroMes==='todos'||m.mes===parseInt(filtroMes)).sort((a,b)=>(b.fechaISO||'').localeCompare(a.fechaISO||''));
-  const sinCat=movs.filter(m=>m.categoria==='Sin categorizar'&&m.importe>0).length;
+  // Filtros
+  const filtrados=movs
+    .filter(m=>filtroMes==='todos'||m.mes===parseInt(filtroMes))
+    .filter(m=>filtroBanco==='todos'||m.banco===filtroBanco)
+    .filter(m=>filtroEtiqueta==='todas'||m.etiqueta===filtroEtiqueta)
+    .sort((a,b)=>(b.fechaISO||'').localeCompare(a.fechaISO||''));
+
+  const bancosUsados=[...new Set(movs.map(m=>m.banco))].sort();
+  const sinCat=movs.filter(m=>m.etiqueta==='Sin categorizar').length;
+  const totalFiltrado=filtrados.reduce((s,m)=>s+m.importe,0);
+  const entradas=filtrados.filter(m=>m.importe>0&&m.etiqueta!=='Traspaso entre cuentas').reduce((s,m)=>s+m.importe,0);
+  const salidas=filtrados.filter(m=>m.importe<0&&m.etiqueta!=='Traspaso entre cuentas').reduce((s,m)=>s+m.importe,0);
+  const traspasos=filtrados.filter(m=>m.etiqueta==='Traspaso entre cuentas').reduce((s,m)=>s+Math.abs(m.importe),0);
+
+  // Resumen por etiqueta para el mes filtrado
+  const resumenEtiquetas=CATS.filter(c=>c!=='Sin categorizar'&&c!=='Traspaso entre cuentas').map(cat=>{
+    const total=filtrados.filter(m=>m.etiqueta===cat).reduce((s,m)=>s+m.importe,0);
+    return{cat,total};
+  }).filter(r=>r.total!==0);
 
   return(
     <div>
-      <div className="alert alert-info"><i className="ti ti-info-circle"></i><span>Los <strong>cobros de facturas NO van aquí</strong> — se gestionan en "Clientes pendientes cobro". Aquí solo gastos, traspasos y deuda.</span></div>
+      <div className="alert alert-info">
+        <i className="ti ti-info-circle"></i>
+        <span>Los movimientos etiquetados como <strong>"Traspaso entre cuentas"</strong> no cuentan para caja ni tesorería. El resto va a Tesorería según mes y etiqueta. <strong>Categoriza primero, luego cierra el mes en Caja real.</strong></span>
+      </div>
+
+      {/* Importar extracto */}
       <div className="card">
         <div className="card-header"><h2>Importar extracto bancario</h2></div>
         <div className="card-body">
-          <div style={{display:'flex',gap:12,alignItems:'center',flexWrap:'wrap',marginBottom:12}}>
-            <div style={{display:'flex',flexDirection:'column',gap:3}}><label style={{fontSize:10,fontWeight:700,color:'#666',textTransform:'uppercase'}}>Banco</label>
-              <select value={banco} onChange={e=>setBanco(e.target.value)} style={{padding:'5px 8px',border:'1px solid #dde0e6',borderRadius:5,fontSize:12,fontFamily:'Arial,sans-serif'}}>
+          <div style={{display:'flex',gap:12,alignItems:'flex-end',flexWrap:'wrap',marginBottom:12}}>
+            <div style={{display:'flex',flexDirection:'column',gap:4}}>
+              <label style={{fontSize:10,fontWeight:700,color:'#666',textTransform:'uppercase'}}>Banco</label>
+              <select value={banco} onChange={e=>setBanco(e.target.value)}
+                style={{padding:'6px 10px',border:'1px solid #dde0e6',borderRadius:5,fontSize:12,fontFamily:'Arial,sans-serif',minWidth:140}}>
                 {bancos.map(b=><option key={b}>{b}</option>)}
               </select>
             </div>
+            <label style={{border:'2px dashed #c0cad8',borderRadius:7,padding:'10px 18px',cursor:'pointer',fontSize:11,color:'#888',display:'flex',alignItems:'center',gap:8}}>
+              <i className="ti ti-file-spreadsheet" style={{fontSize:20,color:'#1a2b4a'}}></i>
+              <div>
+                <strong>Subir extracto {banco} (.xls / .xlsx)</strong>
+                <div style={{fontSize:10,color:'#aaa',marginTop:2}}>Formato: Fecha · Concepto · Importe · Saldo</div>
+              </div>
+              <input type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={importarExtracto}/>
+            </label>
           </div>
-          <label className="upload-area" style={{maxWidth:280}}>
-            <i className="ti ti-file-spreadsheet" style={{fontSize:22,display:'block',marginBottom:6,color:'#1a2b4a'}}></i>
-            <strong>Subir extracto bancario (.xlsx)</strong>
-            <span style={{fontSize:10,color:'#aaa',display:'block',marginTop:4}}>Formato: Fecha | Concepto | Importe</span>
-            <input type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={importarXLSX}/>
-          </label>
+          {importLog&&<div style={{padding:'8px 12px',borderRadius:6,background:'#e4f4ec',border:'1px solid #a0d4b0',fontSize:11,color:'#1a5c30',display:'inline-flex',gap:8,alignItems:'center'}}>
+            <i className="ti ti-circle-check"></i>
+            <span><strong>{importLog.banco}</strong> · {importLog.fecha} · <strong>{importLog.añadidos}</strong> movimientos importados{importLog.duplicados>0?` · ${importLog.duplicados} duplicados omitidos`:''}</span>
+          </div>}
         </div>
       </div>
-      {movs.length>0&&<div className="card">
-        <div className="card-header">
-          <h2>Movimientos ({filtrados.length})</h2>
-          <div style={{display:'flex',gap:6}}>
-            <select value={filtroMes} onChange={e=>setFiltroMes(e.target.value)} style={{fontSize:11,padding:'3px 6px',border:'1px solid #dde0e6',borderRadius:4,fontFamily:'Arial,sans-serif'}}><option value="todos">Todos</option>{MESES_FULL.map((m,i)=><option key={i} value={i}>{m}</option>)}</select>
-            {sinCat>0&&<span style={{fontSize:11,background:'#fff8e0',color:'#7a5000',padding:'3px 8px',borderRadius:4,border:'1px solid #f0d070'}}>{sinCat} sin categorizar</span>}
-            <button className="btn btn-sm btn-danger" onClick={()=>{if(confirm('¿Borrar todo?')){setMovs([]);save({movs:[]});}}}>Limpiar</button>
+
+      {movs.length>0&&<>
+        {/* KPIs */}
+        <div className="metrics">
+          <div className="metric"><div className="metric-label">Movimientos</div><div className="metric-val blue">{filtrados.length}</div><div className="metric-sub">de {movs.length} totales</div></div>
+          <div className="metric"><div className="metric-label">Reglas aprendidas</div><div className="metric-val blue">{Object.keys(reglas).length}</div><div className="metric-sub">conceptos memorizados</div></div>
+          <div className="metric"><div className="metric-label">Entradas (sin traspasos)</div><div className="metric-val green">{fmt(entradas)}</div></div>
+          <div className="metric"><div className="metric-label">Salidas (sin traspasos)</div><div className="metric-val red">{fmt(salidas)}</div></div>
+          <div className="metric"><div className="metric-label">Flujo neto</div><div className={`metric-val ${totalFiltrado>=0?'green':'red'}`}>{fmt(totalFiltrado)}</div></div>
+          {traspasos>0&&<div className="metric"><div className="metric-label">Traspasos internos</div><div className="metric-val gray">{fmt(traspasos)}</div><div className="metric-sub">no cuentan en caja</div></div>}
+          {sinCat>0&&<div className="metric" style={{background:'#fff8e6',border:'1px solid #f0d070'}}><div className="metric-label">Sin categorizar</div><div className="metric-val orange">{sinCat}</div><div className="metric-sub">pendientes de etiquetar</div></div>}
+        </div>
+
+        {/* Resumen por etiqueta */}
+        {resumenEtiquetas.length>0&&<div className="card" style={{marginBottom:14}}>
+          <div className="card-header"><h2>Resumen por categoría</h2><span style={{fontSize:10,color:'#888'}}>{filtroMes==='todos'?'Todos los meses':MESES_FULL[parseInt(filtroMes)]}</span></div>
+          <div className="card-body" style={{display:'flex',flexWrap:'wrap',gap:8}}>
+            {resumenEtiquetas.map(({cat,total})=>(
+              <div key={cat} style={{background:'#f4f6f9',border:'1px solid #e0e4ea',borderRadius:6,padding:'8px 12px',minWidth:180,cursor:'pointer'}} onClick={()=>setFiltroEtiqueta(filtroEtiqueta===cat?'todas':cat)}>
+                <div style={{fontSize:10,color:'#888',marginBottom:3,textOverflow:'ellipsis',overflow:'hidden',whiteSpace:'nowrap'}}>{cat}</div>
+                <div style={{fontSize:14,fontWeight:700,color:total<0?'#b83232':'#1a7a45',fontFamily:'monospace'}}>{fmt(total)}</div>
+              </div>
+            ))}
+          </div>
+        </div>}
+
+        {/* Filtros + tabla */}
+        <div className="card">
+          <div className="card-header">
+            <h2>Movimientos ({filtrados.length}) · {fmt(totalFiltrado)}</h2>
+            <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+              <select value={filtroMes} onChange={e=>setFiltroMes(e.target.value)}
+                style={{fontSize:11,padding:'3px 7px',border:'1px solid #dde0e6',borderRadius:4,fontFamily:'Arial,sans-serif'}}>
+                <option value="todos">Todos los meses</option>
+                {MESES_FULL.map((m,i)=><option key={i} value={i}>{m}</option>)}
+              </select>
+              {bancosUsados.length>1&&<select value={filtroBanco} onChange={e=>setFiltroBanco(e.target.value)}
+                style={{fontSize:11,padding:'3px 7px',border:'1px solid #dde0e6',borderRadius:4,fontFamily:'Arial,sans-serif'}}>
+                <option value="todos">Todos los bancos</option>
+                {bancosUsados.map(b=><option key={b}>{b}</option>)}
+              </select>}
+              <select value={filtroEtiqueta} onChange={e=>setFiltroEtiqueta(e.target.value)}
+                style={{fontSize:11,padding:'3px 7px',border:'1px solid #dde0e6',borderRadius:4,fontFamily:'Arial,sans-serif',maxWidth:200}}>
+                <option value="todas">Todas las categorías</option>
+                {CATS.map(c=><option key={c}>{c}</option>)}
+              </select>
+              <button onClick={limpiar}
+                style={{padding:'3px 8px',borderRadius:4,border:'1px solid #e4c0c0',background:'transparent',color:'#b83232',cursor:'pointer',fontSize:11,fontFamily:'Arial,sans-serif'}}>
+                <i className="ti ti-trash"></i> Limpiar todo
+              </button>
+            </div>
+          </div>
+          <div className="overflow-x">
+          <table>
+            <thead><tr>
+              <th style={{minWidth:90,whiteSpace:'nowrap'}}>Fecha</th>
+              <th style={{minWidth:280}}>Concepto</th>
+              <th style={{minWidth:80}}>Banco</th>
+              <th className="num" style={{minWidth:90}}>Importe</th>
+              <th style={{minWidth:200}}>Categoría</th>
+              <th style={{width:30}}></th>
+            </tr></thead>
+            <tbody>
+            {filtrados.map(mv=>{
+              const esTraspaso=mv.etiqueta==='Traspaso entre cuentas';
+              const esSinCat=mv.etiqueta==='Sin categorizar';
+              return(
+                <tr key={mv.id} style={{background:esTraspaso?'#f4f4f4':esSinCat&&mv.importe<0?'#fffbe6':undefined,opacity:esTraspaso?0.6:1}}>
+                  <td style={{fontSize:11,whiteSpace:'nowrap',color:'#555'}}>{mv.fechaISO||mv.fecha}</td>
+                  <td style={{fontSize:11,maxWidth:280,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={mv.concepto}>{mv.concepto}</td>
+                  <td style={{fontSize:10,color:'#888'}}>{mv.banco}</td>
+                  <td className={`num ${mv.importe>0?'green':mv.importe<0?'red':'gray'}`} style={{fontWeight:600}}>{fmt(mv.importe)}</td>
+                  <td>
+                    <select value={mv.etiqueta||'Sin categorizar'} onChange={e=>updEtiqueta(mv.id,e.target.value)}
+                      style={{fontSize:10,padding:'2px 4px',border:'1px solid #ddd',borderRadius:4,width:'100%',fontFamily:'Arial,sans-serif',
+                        background:esTraspaso?'#f4f4f4':esSinCat&&mv.importe<0?'#fffbe6':'#fff',
+                        color:esTraspaso?'#888':'#1a1a1a'}}>
+                      {CATS.map(c=><option key={c}>{c}</option>)}
+                    </select>
+                  </td>
+                  <td><button onClick={()=>del(mv.id)}
+                    style={{padding:'1px 5px',borderRadius:3,border:'1px solid #e4c0c0',background:'transparent',color:'#b83232',cursor:'pointer',fontSize:10,fontFamily:'Arial,sans-serif'}}>
+                    <i className="ti ti-x"></i>
+                  </button></td>
+                </tr>
+              );
+            })}
+            {filtrados.length===0&&<tr><td colSpan={6} style={{textAlign:'center',padding:20,color:'#aaa'}}>Sin movimientos</td></tr>}
+            </tbody>
+          </table>
           </div>
         </div>
-        <div className="overflow-x">
-        <table>
-          <thead><tr><th>Fecha</th><th>Concepto</th><th>Banco</th><th className="num">Importe</th><th>Mes</th><th>Categoría</th><th></th></tr></thead>
-          <tbody>
-          {filtrados.map(mv=>(
-            <tr key={mv.id} style={{background:mv.categoria==='Sin categorizar'&&mv.importe>0?'#fffbe6':undefined}}>
-              <td style={{fontSize:11,whiteSpace:'nowrap'}}>{mv.fecha}</td>
-              <td style={{fontSize:11,maxWidth:260,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={mv.concepto}>{mv.concepto}</td>
-              <td style={{fontSize:11}}>{mv.banco}</td>
-              <td className={`num ${mv.importe>=0?'green':'red'}`} style={{fontWeight:600}}>{fmt(mv.importe)}</td>
-              <td style={{fontSize:11}}>{MESES[mv.mes]}</td>
-              <td><select value={mv.categoria} onChange={e=>updCat(mv.id,e.target.value)} style={{fontSize:10,padding:'2px 4px',border:'1px solid #ddd',borderRadius:4,width:200,fontFamily:'Arial,sans-serif',background:mv.categoria==='Sin categorizar'&&mv.importe>0?'#fffbe6':'#fff'}}>
-                {CATS.map(c=><option key={c}>{c}</option>)}
-              </select></td>
-              <td><button className="btn btn-sm btn-danger" onClick={()=>del(mv.id)}><i className="ti ti-x"></i></button></td>
-            </tr>
-          ))}
-          </tbody>
-        </table>
-        </div>
-      </div>}
+      </>}
     </div>
   );
 }
+
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>

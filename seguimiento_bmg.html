@@ -796,7 +796,11 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
       <div className="card">
         <div className="card-header">
           <h2>Listado ({filtradas.length})</h2>
-          <div style={{display:'flex',gap:6}}>
+          <div style={{display:'flex',gap:6,alignItems:'center'}}>
+            <button onClick={()=>{if(!confirm('¿Borrar todas las facturas?'))return;upd([]);}}
+              style={{padding:'3px 8px',borderRadius:4,border:'1px solid #e4c0c0',background:'transparent',color:'#b83232',cursor:'pointer',fontSize:11,fontFamily:'Arial,sans-serif',display:'inline-flex',alignItems:'center',gap:4}}>
+              <i className="ti ti-trash"></i> Limpiar todo
+            </button>
             <select value={filtroMes} onChange={e=>setFiltroMes(e.target.value)} style={{fontSize:11,padding:'3px 6px',border:'1px solid #dde0e6',borderRadius:4,fontFamily:'Arial,sans-serif'}}>
               <option value="todos">Todos los meses</option>{MESES_FULL.map((m,i)=><option key={i} value={i}>{m}</option>)}
             </select>

@@ -596,39 +596,39 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
           return 0;
         };
 
-        // Parsear importe — si es número lo devuelve tal cual
+        // Parsear importe — maneja tanto "54,45" como "54.45" como "1.089,00"
         const parseImporte=(v)=>{
           if(v===''||v===null||v===undefined)return 0;
-          if(typeof v==='number')return Math.abs(v);
-          // String: limpiar y convertir
-          let s=String(v).trim().replace(/[€$ ]/g,'');
-          // Formato europeo con punto de miles: "1.089,45"
-          if(s.indexOf(',')>=0&&s.indexOf('.')>=0&&s.lastIndexOf('.')===s.length-7){
-            // punto cada 3 dígitos antes de la coma → europeo
+          if(typeof v==='number')return v;
+          let s=String(v).trim().replace(/[€$\s]/g,'');
+          // Formato europeo: 1.089,45 → 1089.45
+          if(s.indexOf(',')>=0&&s.indexOf('.')>0&&s.lastIndexOf('.')<s.length-4){
             s=s.replace(/\./g,'').replace(',','.');
-          } else if(s.indexOf(',')>=0&&s.indexOf('.')<0){
-            // solo coma → decimal europeo "54,45"
+          } else {
+            // Formato anglosajón o mixto: quitar puntos de miles si hay coma decimal
             s=s.replace(',','.');
           }
-          // si solo tiene punto → anglosajón, ya está bien
           return parseFloat(s)||0;
         };
 
         // Convertir fecha — maneja tanto serial como string
         const toISO=v=>{
           if(!v||v==='')return'';
-          if(typeof v==='number'&&v>40000){
-            const d=new Date(Math.round((v-25569)*86400*1000));
+          const num=typeof v==='number'?v:parseFloat(String(v).trim());
+          if(!isNaN(num)&&num>40000&&num<60000){
+            const d=new Date(Date.UTC(1899,11,30)+Math.round(num)*86400000);
             return d.toISOString().split('T')[0];
           }
           const s=String(v).trim().split(' ')[0].split('T')[0];
-          // Ya viene como YYYY-MM-DD desde SheetJS con raw:false
-          if(s.match(/^\d{4}-\d{2}-\d{2}$/))return s;
-          const p=s.split(/[\/\-\.]/);
-          if(p.length===3)return p[0].length===4
-            ?`${p[0]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`
-            :`${p[2].length===2?'20'+p[2]:p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
-          return s;
+          if(s.length===10&&s[4]==='-'&&s[7]==='-')return s;
+          const sep=s.indexOf('/')>=0?'/':s.indexOf('-')>=0?'-':'.';
+          const p=s.split(sep);
+          if(p.length===3){
+            if(p[0].length===4)return p[0]+'-'+p[1].padStart(2,'0')+'-'+p[2].padStart(2,'0');
+            const y=p[2].length===2?'20'+p[2]:p[2];
+            return y+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0');
+          }
+          return'';
         };
 
         // Normalizar estado
@@ -648,13 +648,20 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
         };
 
         // Mes de cobro estimado por días de retraso
-        const mesCobro=dias=>{
-          if(dias>500)return 11;
-          if(dias>365)return 10;
-          if(dias>180)return 9;
-          if(dias>90)return 8;
-          if(dias>30)return 7;
-          return 6;
+        const mesCobro=(fechaISO)=>{
+          if(!fechaISO)return 6;
+          const num=typeof fechaISO==='number'?fechaISO:parseFloat(String(fechaISO).trim());
+          let fecha;
+          if(!isNaN(num)&&num>40000&&num<60000){
+            fecha=new Date(Date.UTC(1899,11,30)+Math.round(num)*86400000);
+          } else {
+            fecha=new Date(fechaISO);
+          }
+          if(isNaN(fecha.getTime()))return 6;
+          const cobro=new Date(fecha.getTime()+61*24*60*60*1000);
+          const now=new Date();
+          if(cobro<now)return Math.min(now.getMonth()+1,11);
+          return cobro.getMonth();
         };
 
         const parseHoja=(rows,defEstado)=>{
@@ -688,6 +695,7 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
             const g=i=>i!==undefined?String(row[i]??'').trim():'';
             const factura=g(ci.factura);
             if(!factura||factura===''||factura==='undefined')return null;
+            if(factura.toUpperCase().startsWith('NM'))return null;
             const importeRaw=parseImporte(ci.importe!==undefined?row[ci.importe]:'');
             if(!importeRaw)return null;
             const fechaISO=toISO(ci.fecha!==undefined?row[ci.fecha]:'');
@@ -701,7 +709,7 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
               fecha:fechaISO,
               importe:importeRaw,
               diasRetraso:dias,
-              mesCobro:mesCobro(dias),
+              mesCobro:mesCobro(ci.fecha!==undefined?row[ci.fecha]:fechaISO),
               respuestaCliente:g(ci.respCliente),
               estado,
               fechaCobro:'',
@@ -800,16 +808,6 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
         <div className="card-header">
           <h2>Listado ({filtradas.length})</h2>
           <div style={{display:'flex',gap:6,alignItems:'center'}}>
-            <button onClick={()=>{
-              const total=facturas.reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
-              const ids=facturas.map(f=>f.id);
-              const dups=[...new Set(ids.filter((id,i)=>ids.indexOf(id)!==i))];
-              const porEstado={};
-              facturas.forEach(f=>{porEstado[f.estado]=(porEstado[f.estado]||0)+1;});
-              alert('Total facturas: '+facturas.length+'\nImporte total: '+Math.round(total)+'\nDuplicados: '+dups.length+(dups.length?'\n'+dups.slice(0,3).join(', '):'')+'\n\nPor estado:\n'+Object.entries(porEstado).map(([k,v])=>k+': '+v).join('\n'));
-            }} style={{padding:'3px 8px',borderRadius:4,border:'1px solid #c0d0e0',background:'transparent',color:'#1a2b4a',cursor:'pointer',fontSize:11,fontFamily:'Arial,sans-serif'}}>
-              🔍 Diagnóstico
-            </button>
             <button onClick={()=>{if(!confirm('¿Borrar todas las facturas?'))return;upd([]);}}
               style={{padding:'3px 8px',borderRadius:4,border:'1px solid #e4c0c0',background:'transparent',color:'#b83232',cursor:'pointer',fontSize:11,fontFamily:'Arial,sans-serif',display:'inline-flex',alignItems:'center',gap:4}}>
               <i className="ti ti-trash"></i> Limpiar todo
@@ -1203,7 +1201,7 @@ function TabExtracto({movs,setMovs,save,gastosReal,gastosFcst,reglas,setReglas})
     // 3. Match en partidas de gasto por nombre
     const gastoMatch=gastosUnicos.find(g=>{
       const cn=g.concepto.toLowerCase();
-      const palabras=cn.split(/\s+/).filter(p=>p.length>4);
+      const palabras=cn.split(" ").filter(p=>p.length>4);
       return palabras.some(p=>s.includes(p));
     });
     if(gastoMatch)return gastoMatch.concepto;
@@ -1256,7 +1254,7 @@ function TabExtracto({movs,setMovs,save,gastosReal,gastosFcst,reglas,setReglas})
           if(v instanceof Date)return v.toISOString().split('T')[0];
           if(typeof v==='number'&&v>40000){const d=new Date(Math.round((v-25569)*86400*1000));return d.toISOString().split('T')[0];}
           const s=String(v).trim().split(' ')[0]; // remove time part
-          const p=s.split(/[\/\-\.]/);
+          const p=s.indexOf('/')>=0?s.split('/'):s.indexOf('-')>=0?s.split('-'):s.split('.');
           if(p.length===3)return p[0].length===4?`${p[0]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`:`${p[2].length===2?'20'+p[2]:p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
           return s;
         };

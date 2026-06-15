@@ -251,7 +251,8 @@ function App(){
   const cobrosPendM=m=>facturas.filter(f=>f.mesCobro===m&&!['Cobrada','Cancelada','Incobrable'].includes(f.estado)).reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
 
   // Pagos del extracto
-  const pagosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.importe<0).reduce((s,mv)=>s+mv.importe,0);
+  const ETIQ_EXCLUIR=['Traspaso entre cuentas','Cobro de cliente'];
+  const pagosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.importe<0&&!ETIQ_EXCLUIR.includes(mv.etiqueta)).reduce((s,mv)=>s+mv.importe,0);
   const flujoCajaM=m=>cobrosRealesM(m)+pagosExtM(m);
 
   const totRealYTD=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+ingRealM(m),0):0;
@@ -353,7 +354,7 @@ function App(){
       {sub==='gastos'&&<TabGastos gastosReal={gastosReal} gastosFcst={gastosFcst} gCombM={gCombM} setGR={setGR} setGF={setGF} setGMeta={setGMeta} delGasto={delGasto} setModal={setModal} cierreGastos={cierreGastos}/> }
       {sub==='facturas'&&<TabFacturas facturas={facturas} setFacturas={setFacturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} save={save} cierreFact={cierreFact}/>}
       {sub==='pyg'&&<TabPyG ingM={ingM} gCombM={gCombM} gastosReal={gastosReal} gastosFcst={gastosFcst} cierreFact={cierreFact} cierreGastos={cierreGastos}/>}
-      {sub==='caja'&&<TabCaja facturas={facturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} pagosExtM={pagosExtM} flujoCajaM={flujoCajaM} cierreFact={cierreFact} cierreGastos={cierreGastos} cierreExtracto={cierreExtracto} saldo0={saldo0} setSaldo0={setSaldoApp} gastosReal={gastosReal} gastosFcst={gastosFcst} cajaPagosReal={cajaPagosReal} setCajaPagoReal={setCajaPagoReal} ingFcstM={ingFcstM} ingIVARealM={ingIVARealM} movs={movs}/>}
+      {sub==='caja'&&<TabCaja facturas={facturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} pagosExtM={pagosExtM} cobrosExtM={cobrosExtM} flujoCajaM={flujoCajaM} cierreFact={cierreFact} cierreGastos={cierreGastos} cierreExtracto={cierreExtracto} saldo0={saldo0} setSaldo0={setSaldoApp} gastosReal={gastosReal} gastosFcst={gastosFcst} cajaPagosReal={cajaPagosReal} setCajaPagoReal={setCajaPagoReal} ingFcstM={ingFcstM} ingIVARealM={ingIVARealM} movs={movs}/>}
       {sub==='extracto'&&<TabExtracto movs={movs} setMovs={setMovs} save={save} gastosReal={gastosReal} gastosFcst={gastosFcst} reglas={reglas} setReglas={setReglas}/>}
     </div>
   );
@@ -575,24 +576,51 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
     const r=new FileReader();
     r.onload=ev=>{
       try{
-        const wb=window.XLSX.read(ev.target.result,{type:'array',cellDates:false});
+        const wb=window.XLSX.read(ev.target.result,{type:'array',cellDates:false,cellText:false,raw:false});
         let pendRows=[],nvRows=[];
         wb.SheetNames.forEach(n=>{
           const u=n.toUpperCase();
-          const rows=window.XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:''});
-          if(u.includes('PENDIENTE'))pendRows=rows;
-          else if(u.includes('NO VENCIDA')||u.includes('EMITIDA'))nvRows=rows;
+          if(u.includes('PENDIENTE')){
+            pendRows=window.XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:'',raw:false});
+          } else if(u.includes('NO VENCIDA')||u.includes('EMITIDA')){
+            nvRows=window.XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:'',raw:false});
+          }
         });
-        if(!pendRows.length)pendRows=window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
 
-        // Convertir número serial Excel → fecha ISO
-        const serialToISO=v=>{
+        // Encontrar fila de cabecera (primera fila con datos no vacíos)
+        const findHeader=(rows)=>{
+          for(let i=0;i<rows.length;i++){
+            const noVacias=rows[i].filter(c=>c!==''&&c!==null&&c!==undefined);
+            if(noVacias.length>=3)return i;
+          }
+          return 0;
+        };
+
+        // Parsear importe — maneja tanto "54,45" como "54.45" como "1.089,00"
+        const parseImporte=(v)=>{
+          if(v===''||v===null||v===undefined)return 0;
+          if(typeof v==='number')return v;
+          let s=String(v).trim().replace(/[€$\s]/g,'');
+          // Formato europeo: 1.089,45 → 1089.45
+          if(s.match(/^\d{1,3}(\.\d{3})*(,\d+)?$/)){
+            s=s.replace(/\./g,'').replace(',','.');
+          } else {
+            // Formato anglosajón o mixto: quitar puntos de miles si hay coma decimal
+            s=s.replace(',','.');
+          }
+          return parseFloat(s)||0;
+        };
+
+        // Convertir fecha — maneja tanto serial como string
+        const toISO=v=>{
           if(!v||v==='')return'';
           if(typeof v==='number'&&v>40000){
             const d=new Date(Math.round((v-25569)*86400*1000));
             return d.toISOString().split('T')[0];
           }
-          const s=String(v).trim();
+          const s=String(v).trim().split(' ')[0].split('T')[0];
+          // Ya viene como YYYY-MM-DD desde SheetJS con raw:false
+          if(s.match(/^\d{4}-\d{2}-\d{2}$/))return s;
           const p=s.split(/[\/\-\.]/);
           if(p.length===3)return p[0].length===4
             ?`${p[0]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`
@@ -600,7 +628,7 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
           return s;
         };
 
-        // Normalizar estado al vocabulario de la app
+        // Normalizar estado
         const normEstado=s=>{
           const u=String(s||'').trim().toUpperCase();
           if(!u)return'Pendiente';
@@ -613,55 +641,55 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
           if(u.includes('CANCEL'))return'Cancelada';
           if(u.includes('DISPUT'))return'En disputa';
           if(u.includes('NO VENCID'))return'No vencida';
-          // Capitalizar primera letra de cada palabra
-          return s.trim().replace(/\w/g,c=>c.toUpperCase());
+          return s.trim();
         };
 
-        // Calcular mes de cobro estimado según días de retraso
+        // Mes de cobro estimado por días de retraso
         const mesCobro=dias=>{
           if(dias>500)return 11;
-          if(dias>365)return Math.min(10,11);
-          if(dias>180)return Math.min(9,11);
-          if(dias>90)return Math.min(8,11);
-          if(dias>30)return Math.min(7,11);
-          return Math.min(6,11);
+          if(dias>365)return 10;
+          if(dias>180)return 9;
+          if(dias>90)return 8;
+          if(dias>30)return 7;
+          return 6;
         };
 
         const parseHoja=(rows,defEstado)=>{
           if(!rows||rows.length<2)return[];
-          const hdrs=rows[0].map(h=>String(h||'').trim().toUpperCase());
+          const hRow=findHeader(rows);
+          const hdrs=rows[hRow].map(h=>String(h||'').trim().toUpperCase());
           const ci={};
           [
-            ['exp',       ['EXP.','EXP']],
-            ['cliente',   ['CLIENTE']],
-            ['clienteNm', ['CLIENTE NM','NOMBRE CLIENTE','DEUDOR','CLIENTE NM']],
-            ['factura',   ['FACTURA','Nº FACTURA','NUM FACTURA']],
-            ['fecha',     ['FECHA FACTURA','FECHA FRA','FECHA']],
-            ['importe',   ['IMPORTE FACTURA','IMPORTE','TOTAL']],
-            ['dias',      ['DÍAS RETRASO','DIAS RETRASO','DIAS']],
-            ['reclamado', ['RECLAMACIÓN','RECLAMACION']],
-            ['vecesRecl', ['VECES RECL','VECES']],
-            ['ultimaRecl',['ÚLTIMA RECL','ULTIMA RECL']],
-            ['respuesta', ['RESPUESTA']],
-            ['respCliente',['RESPUESTA CLIENTE','OBSERVACIONES','COMENTARIOS']],
-            ['estado',    ['ESTADO']],
+            ['exp',        ['EXP.','EXP']],
+            ['cliente',    ['CLIENTE']],
+            ['clienteNm',  ['CLIENTE NM','NOMBRE CLIENTE','DEUDOR']],
+            ['factura',    ['FACTURA','Nº FACTURA']],
+            ['fecha',      ['FECHA FACTURA','FECHA FRA','FECHA']],
+            ['importe',    ['IMPORTE FACTURA','IMPORTE','TOTAL']],
+            ['dias',       ['DÍAS RETRASO','DIAS RETRASO','DIAS']],
+            ['respCliente',['RESPUESTA CLIENTE','OBSERVACIONES']],
+            ['estado',     ['ESTADO']],
           ].forEach(([k,als])=>{
-            const i=hdrs.findIndex(h=>als.some(a=>h.includes(a)));
-            if(i>=0)ci[k]=i;
+            // Para cada alias buscar en headers, pero CLIENTE NM debe ir antes que CLIENTE
+            const idx=hdrs.findIndex(h=>als.some(a=>h===a||h.startsWith(a)));
+            if(idx>=0&&ci[k]===undefined)ci[k]=idx;
           });
 
-          if(ci.factura===undefined||ci.importe===undefined)return[];
+          // CLIENTE NM puede estar en col 2 (índice 2) aunque se detecte después
+          // Forzar: si CLIENTE está en col 1, CLIENTE NM suele estar en col 2
+          if(ci.cliente===1&&ci.clienteNm===undefined)ci.clienteNm=2;
 
-          return rows.slice(1).map(row=>{
+          if(ci.factura===undefined)return[];
+
+          return rows.slice(hRow+1).map(row=>{
             const g=i=>i!==undefined?String(row[i]??'').trim():'';
             const factura=g(ci.factura);
-            if(!factura)return null;
-            const importeRaw=parseFloat(String(g(ci.importe)).replace(/\./g,'').replace(',','.'))||0;
+            if(!factura||factura===''||factura==='undefined')return null;
+            const importeRaw=parseImporte(ci.importe!==undefined?row[ci.importe]:'');
             if(!importeRaw)return null;
-            const fechaISO=serialToISO(ci.fecha!==undefined?row[ci.fecha]:'');
+            const fechaISO=toISO(ci.fecha!==undefined?row[ci.fecha]:'');
             const dias=parseInt(g(ci.dias))||0;
-            const estadoRaw=g(ci.estado);
-            const estado=defEstado==='No vencida'?'No vencida':normEstado(estadoRaw);
+            const estado=defEstado==='No vencida'?'No vencida':normEstado(g(ci.estado));
             return{
               id:factura,
               exp:g(ci.exp),
@@ -671,10 +699,6 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
               importe:importeRaw,
               diasRetraso:dias,
               mesCobro:mesCobro(dias),
-              reclamado:g(ci.reclamado),
-              vecesRecl:g(ci.vecesRecl),
-              ultimaRecl:serialToISO(ci.ultimaRecl!==undefined?row[ci.ultimaRecl]:''),
-              respuesta:g(ci.respuesta),
               respuestaCliente:g(ci.respCliente),
               estado,
               fechaCobro:'',
@@ -686,20 +710,14 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
         const delNV=parseHoja(nvRows,'No vencida');
         const delExcel=[...delPend,...delNV];
 
-        // Reglas de fusión:
-        // 1. Cobradas → nunca se tocan
-        // 2. En disputa / PDT Resolución / Incobrable → se conservan aunque no estén en el Excel
-        // 3. Todo lo demás del Excel → se actualiza/añade
+        // Reglas de fusión
         const cobradas=facturas.filter(f=>f.estado==='Cobrada');
         const preservar=['En disputa','PDT Resolución Jud.','Incobrable'];
         const conservadas=facturas.filter(f=>preservar.includes(f.estado));
         const cobIds=new Set(cobradas.map(f=>f.id));
         const consIds=new Set(conservadas.map(f=>f.id));
         const exIds=new Set(delExcel.map(f=>f.id));
-
-        // Excel actualiza sus propios (excepto cobradas y conservadas)
         const delFinal=delExcel.filter(f=>!cobIds.has(f.id)&&!consIds.has(f.id));
-        // Conservadas que no están en el Excel se mantienen
         const conservadasFuera=conservadas.filter(f=>!exIds.has(f.id));
         const merged=[...cobradas,...delFinal,...conservadasFuera];
 
@@ -711,10 +729,11 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
           cobradas:cobradas.length,
           conservadas:conservadasFuera.length,
         });
-      }catch(err){alert('Error al leer el archivo: '+err.message);console.error(err);}
+      }catch(err){alert('Error: '+err.message);console.error(err);}
     };
     r.readAsArrayBuffer(file);e.target.value='';
   };
+
 
   const filtradas=facturas.filter(f=>filtroMes==='todos'||f.mesCobro===parseInt(filtroMes)).filter(f=>filtroEstado==='todos'||f.estado===filtroEstado).sort((a,b)=>parseInt(b.diasRetraso||0)-parseInt(a.diasRetraso||0));
   const pendTotal=facturas.filter(f=>!['Cobrada','Cancelada','Incobrable'].includes(f.estado)).reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
@@ -913,11 +932,11 @@ function CajaGastoRowReal({g,cajaPagosReal,cierreGastos,setCajaPagoReal}){
   );
 }
 
-function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,flujoCajaM,cierreFact,cierreGastos,cierreExtracto,saldo0,setSaldo0,gastosReal,gastosFcst,cajaPagosReal,setCajaPagoReal,ingFcstM,ingIVARealM,movs}){
+function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,flujoCajaM,cierreFact,cierreGastos,cierreExtracto,saldo0,setSaldo0,gastosReal,gastosFcst,cajaPagosReal,setCajaPagoReal,ingFcstM,ingIVARealM,movs}){
   // Pagos de explotación = cajaPagosReal (editable por partida)
   const pagosExplM=m=>(gastosReal||[]).reduce((s,g)=>s+((cajaPagosReal[g.id]||Array(12).fill(0))[m]||0),0);
   const saldoM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=cobrosRealesM(i)+pagosExtM(i);return s;};
-  const TC=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+cobrosRealesM(m),0):0; // solo reales para saldo
+  const TC=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+cobrosRealesM(m)+cobrosExtM(m),0):0;
   const TP=cierreGastos>=0?MESES.slice(0,cierreGastos+1).reduce((_,__,m)=>_+pagosExtM(m),0):0;
   const SF=saldoM(Math.max(cierreFact,cierreGastos,0));
   const grupos=['Personal','Colaboradores','Estructura'];
@@ -962,11 +981,11 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,flujoCajaM,cierre
             {/* COBROS */}
             <tr className="section-row"><td className="sticky" colSpan={14}>Cobros</td></tr>
 
-            {/* 1. COBROS REALES — extracto bancario, meses cerrados */}
+            {/* 1. COBROS REALES — facturas cobradas, meses cerrados */}
             <tr style={{background:'#f4fbf6'}}>
               <td className="sticky" style={{fontWeight:600,paddingLeft:16,color:'#1a7a45',fontSize:12}}>
-                Cobros reales (extracto bancario)
-                <div style={{fontSize:9,color:'#888',fontWeight:400}}>meses cerrados · confirmado por el banco</div>
+                Cobros de facturas
+                <div style={{fontSize:9,color:'#888',fontWeight:400}}>facturas marcadas como cobradas · meses cerrados</div>
               </td>
               {MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a7a45',fontWeight:600,background:m>cierreFact?'#fafafa':undefined}}>
                 {m<=cierreFact?fmt(cobrosRealesM(m)):'—'}
@@ -975,6 +994,28 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,flujoCajaM,cierre
                 {fmt(cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+cobrosRealesM(m),0):0)}
               </td>
             </tr>
+
+            {/* 1b. COBROS EXTRACTO — movimientos etiquetados "Cobro de cliente" */}
+            {(()=>{
+              const TCext=cierreExtracto>=0?MESES.slice(0,cierreExtracto+1).reduce((_,__,m)=>_+cobrosExtM(m),0):0;
+              if(TCext===0&&MESES.every((_,m)=>cobrosExtM(m)===0))return null;
+              return(
+                <tr style={{background:'#edfaf2'}}>
+                  <td className="sticky" style={{fontWeight:600,paddingLeft:16,color:'#1a7a45',fontSize:12}}>
+                    Cobros del extracto
+                    <div style={{fontSize:9,color:'#888',fontWeight:400}}>etiqueta "Cobro de cliente" en el extracto bancario</div>
+                  </td>
+                  {MESES.map((_,m)=>{
+                    const cerrado=cierreExtracto>=0&&m<=cierreExtracto;
+                    const v=cobrosExtM(m);
+                    return<td key={m} className="num" style={{color:'#1a7a45',fontWeight:cerrado?600:400,background:cerrado?'#edfaf2':'#fafafa'}}>
+                      {v>0?fmt(v):'—'}
+                    </td>;
+                  })}
+                  <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a7a45'}}>{fmt(TCext)}</td>
+                </tr>
+              );
+            })()}
 
             {/* 2. ENTRADAS PENDIENTES DE COBRO — facturas con fecha prevista, meses cerrados */}
             <tr style={{background:'#f0fbf4'}}>
@@ -1009,13 +1050,13 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,flujoCajaM,cierre
               <td className="sticky" style={{fontWeight:700,color:'#1a7a45',paddingLeft:8}}>TOTAL COBROS</td>
               {MESES.map((_,m)=>{
                 const v=m<=cierreFact
-                  ?(cobrosRealesM(m)+cobrosPendM(m))
+                  ?(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m))
                   :ingFcstM(m);
                 return<td key={m} className="num green" style={{fontWeight:700}}>{fmt(v)}</td>;
               })}
               <td className="num green" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>
                 {fmt(
-                  (cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+(cobrosRealesM(m)+cobrosPendM(m)),0):0)
+                  (cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m)),0):0)
                   +MESES.slice(cierreFact+1).reduce((_,__,i)=>_+ingFcstM(cierreFact+1+i),0)
                 )}
               </td>
@@ -1275,9 +1316,11 @@ function TabExtracto({movs,setMovs,save,gastosReal,gastosFcst,reglas,setReglas})
   const bancosUsados=[...new Set(movs.map(m=>m.banco))].sort();
   const sinCat=movs.filter(m=>m.etiqueta==='Sin categorizar').length;
   const totalFiltrado=filtrados.reduce((s,m)=>s+m.importe,0);
-  const entradas=filtrados.filter(m=>m.importe>0&&m.etiqueta!=='Traspaso entre cuentas').reduce((s,m)=>s+m.importe,0);
-  const salidas=filtrados.filter(m=>m.importe<0&&m.etiqueta!=='Traspaso entre cuentas').reduce((s,m)=>s+m.importe,0);
+  const EXCLUIR_CAJA=['Traspaso entre cuentas','Cobro de cliente'];
+  const entradas=filtrados.filter(m=>m.importe>0&&!EXCLUIR_CAJA.includes(m.etiqueta)).reduce((s,m)=>s+m.importe,0);
+  const salidas=filtrados.filter(m=>m.importe<0&&!EXCLUIR_CAJA.includes(m.etiqueta)).reduce((s,m)=>s+m.importe,0);
   const traspasos=filtrados.filter(m=>m.etiqueta==='Traspaso entre cuentas').reduce((s,m)=>s+Math.abs(m.importe),0);
+  const cobrosCliente=filtrados.filter(m=>m.etiqueta==='Cobro de cliente').reduce((s,m)=>s+m.importe,0);
 
   // Resumen por etiqueta para el mes filtrado
   const resumenEtiquetas=CATS.filter(c=>c!=='Sin categorizar'&&c!=='Traspaso entre cuentas').map(cat=>{
@@ -1325,8 +1368,9 @@ function TabExtracto({movs,setMovs,save,gastosReal,gastosFcst,reglas,setReglas})
         <div className="metrics">
           <div className="metric"><div className="metric-label">Movimientos</div><div className="metric-val blue">{filtrados.length}</div><div className="metric-sub">de {movs.length} totales</div></div>
           <div className="metric"><div className="metric-label">Reglas aprendidas</div><div className="metric-val blue">{Object.keys(reglas).length}</div><div className="metric-sub">conceptos memorizados</div></div>
-          <div className="metric"><div className="metric-label">Entradas (sin traspasos)</div><div className="metric-val green">{fmt(entradas)}</div></div>
-          <div className="metric"><div className="metric-label">Salidas (sin traspasos)</div><div className="metric-val red">{fmt(salidas)}</div></div>
+          <div className="metric"><div className="metric-label">Cobros de clientes</div><div className="metric-val green">{fmt(cobrosCliente)}</div><div className="metric-sub">no van a tesorería (gestionado en pendientes)</div></div>
+          <div className="metric"><div className="metric-label">Entradas a tesorería</div><div className="metric-val green">{fmt(entradas)}</div><div className="metric-sub">sin traspasos ni cobros cliente</div></div>
+          <div className="metric"><div className="metric-label">Salidas a tesorería</div><div className="metric-val red">{fmt(salidas)}</div></div>
           <div className="metric"><div className="metric-label">Flujo neto</div><div className={`metric-val ${totalFiltrado>=0?'green':'red'}`}>{fmt(totalFiltrado)}</div></div>
           {traspasos>0&&<div className="metric"><div className="metric-label">Traspasos internos</div><div className="metric-val gray">{fmt(traspasos)}</div><div className="metric-sub">no cuentan en caja</div></div>}
           {sinCat>0&&<div className="metric" style={{background:'#fff8e6',border:'1px solid #f0d070'}}><div className="metric-label">Sin categorizar</div><div className="metric-val orange">{sinCat}</div><div className="metric-sub">pendientes de etiquetar</div></div>}

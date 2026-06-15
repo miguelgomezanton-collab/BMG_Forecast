@@ -92,20 +92,20 @@ const CV=['nominas','ss','rosalia','legalpigeon'];
 const ESTADOS_FAC=['Pendiente','No vencida','Cobrada','En disputa','Controlado','PDT Resolución Jud.','Nuevo Vencimiento','Sin Respuesta','Incobrable','Cancelada'];
 
 const CLIENTES0=[
-  {id:'bsabadell',nombre:'Banco Sabadell',iva:0.21},
-  {id:'link',nombre:'Link Finanzas',iva:0.21},
-  {id:'aiqon',nombre:'Aiqon',iva:0},
-  {id:'claimup',nombre:'Claim Up',iva:0.21},
-  {id:'reclamio',nombre:'Reclamio',iva:0.21},
-  {id:'cajamar',nombre:'Cajamar',iva:0.21},
-  {id:'caixabank',nombre:'CaixaBank',iva:0.21},
-  {id:'hispania',nombre:'Hispania / EOS / Sareb',iva:0.21},
-  {id:'otros',nombre:'Otros clientes',iva:0.21},
-  {id:'madrid',nombre:'Madrid',iva:0.21},
-  {id:'gestoria',nombre:'Gestoría',iva:0.21},
-  {id:'fiscal',nombre:'Fiscal',iva:0.21},
-  {id:'procesal',nombre:'Procesal',iva:0.21},
-  {id:'consultoria',nombre:'Consultoría',iva:0.21},
+  {id:'bsabadell',nombre:'Banco Sabadell',iva:0.21,plazo:60},
+  {id:'link',nombre:'Link Finanzas',iva:0.21,plazo:60},
+  {id:'aiqon',nombre:'Aiqon',iva:0,plazo:60},
+  {id:'claimup',nombre:'Claim Up',iva:0.21,plazo:60},
+  {id:'reclamio',nombre:'Reclamio',iva:0.21,plazo:60},
+  {id:'cajamar',nombre:'Cajamar',iva:0.21,plazo:60},
+  {id:'caixabank',nombre:'CaixaBank',iva:0.21,plazo:60},
+  {id:'hispania',nombre:'Hispania / EOS / Sareb',iva:0.21,plazo:60},
+  {id:'otros',nombre:'Otros clientes',iva:0.21,plazo:60},
+  {id:'madrid',nombre:'Madrid',iva:0.21,plazo:60},
+  {id:'gestoria',nombre:'Gestoría',iva:0.21,plazo:60},
+  {id:'fiscal',nombre:'Fiscal',iva:0.21,plazo:60},
+  {id:'procesal',nombre:'Procesal',iva:0.21,plazo:60},
+  {id:'consultoria',nombre:'Consultoría',iva:0.21,plazo:60},
 ];
 
 const GASTOS0=[
@@ -214,6 +214,7 @@ function App(){
   const addCliente=c=>{const nc=[...clientes,c];const nr={...factReal,[c.id]:Array(12).fill(0)};const nf={...factFcst,[c.id]:Array(12).fill(0)};setClientes(nc);setFactReal(nr);setFactFcst(nf);save({clientes:nc,factReal:nr,factFcst:nf});};
   const delCliente=id=>{if(!confirm('¿Eliminar?'))return;const nc=clientes.filter(c=>c.id!==id);const nr={...factReal};const nf={...factFcst};delete nr[id];delete nf[id];setClientes(nc);setFactReal(nr);setFactFcst(nf);save({clientes:nc,factReal:nr,factFcst:nf});};
   const setIVACliente=(cid,v)=>{const iva=Math.min(100,Math.max(0,parseFloat(v)||0))/100;const nc=clientes.map(c=>c.id===cid?{...c,iva}:c);setClientes(nc);save({clientes:nc});};
+  const setPlazoCobro=(cid,v)=>{const plazo=Math.max(0,parseInt(v)||60);const nc=clientes.map(c=>c.id===cid?{...c,plazo}:c);setClientes(nc);save({clientes:nc});};
   const setSaldoApp=v=>{const n=pn(v);setSaldo0(n);save({saldo0:n});};
   const setCajaPagoReal=(gid,m,v)=>{
     const val=pn(v);
@@ -242,6 +243,14 @@ function App(){
   // Cálculos — usan cierreFact/cierreGastos en lugar de MES_ACTUAL fijo
   const ingRealM=m=>clientes.reduce((s,c)=>(factReal[c.id]?.[m]||0)+s,0);
   const ingFcstM=m=>clientes.reduce((s,c)=>(factFcst[c.id]?.[m]||0)+s,0);
+  // Cobros forecast por mes destino: suma base*IVA de cada cliente desplazado por su plazo
+  const cobrosFcstM=m=>clientes.reduce((s,c)=>{
+    const plazoMeses=Math.round((c.plazo||60)/30); // plazo en meses (60d≈2, 30d≈1, 90d≈3)
+    const mOrigen=m-plazoMeses; // mes de facturación que cobra en mes m
+    if(mOrigen<0||mOrigen>11)return s;
+    const base=factFcst[c.id]?.[mOrigen]||0;
+    return s+base*(1+(c.iva||0));
+  },0);
   const ingM=m=>m<=cierreFact?ingRealM(m):ingFcstM(m);
   const ingIVARealM=m=>clientes.reduce((s,c)=>{const b=factReal[c.id]?.[m]||0;return s+b*(1+(c.iva||0));},0);
   const gCombM=m=>(m<=cierreGastos?gastosReal:gastosFcst).reduce((s,g)=>s+(g.imp[m]||0),0);
@@ -253,6 +262,7 @@ function App(){
   // Pagos del extracto
   const ETIQ_EXCLUIR=['Traspaso entre cuentas','Cobro de cliente'];
   const pagosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.importe<0&&!ETIQ_EXCLUIR.includes(mv.etiqueta)).reduce((s,mv)=>s+mv.importe,0);
+  const cobrosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.importe>0&&!ETIQ_EXCLUIR.includes(mv.etiqueta)).reduce((s,mv)=>s+mv.importe,0);
   const flujoCajaM=m=>cobrosRealesM(m)+pagosExtM(m);
 
   const totRealYTD=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+ingRealM(m),0):0;
@@ -350,18 +360,18 @@ function App(){
         <button className={sub==='extracto'?'active':''} onClick={()=>setSub('extracto')}><i className="ti ti-credit-card"></i>Extracto bancario</button>
       </div>
 
-      {sub==='facturacion'&&<TabFact clientes={clientes} factReal={factReal} factFcst={factFcst} ingRealM={ingRealM} ingFcstM={ingFcstM} ingM={ingM} ingIVARealM={ingIVARealM} setFactReal={setFactReal} setFactFcst={setFactFcst} setIVACliente={setIVACliente} delCliente={delCliente} setModal={setModal} save={save} cierreFact={cierreFact}/> }
+      {sub==='facturacion'&&<TabFact clientes={clientes} factReal={factReal} factFcst={factFcst} ingRealM={ingRealM} ingFcstM={ingFcstM} ingM={ingM} ingIVARealM={ingIVARealM} setFactReal={setFactReal} setFactFcst={setFactFcst} setIVACliente={setIVACliente} setPlazoCobro={setPlazoCobro} delCliente={delCliente} setModal={setModal} save={save} cierreFact={cierreFact}/> }
       {sub==='gastos'&&<TabGastos gastosReal={gastosReal} gastosFcst={gastosFcst} gCombM={gCombM} setGR={setGR} setGF={setGF} setGMeta={setGMeta} delGasto={delGasto} setModal={setModal} cierreGastos={cierreGastos}/> }
       {sub==='facturas'&&<TabFacturas facturas={facturas} setFacturas={setFacturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} save={save} cierreFact={cierreFact}/>}
       {sub==='pyg'&&<TabPyG ingM={ingM} gCombM={gCombM} gastosReal={gastosReal} gastosFcst={gastosFcst} cierreFact={cierreFact} cierreGastos={cierreGastos}/>}
-      {sub==='caja'&&<TabCaja facturas={facturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} pagosExtM={pagosExtM} cobrosExtM={cobrosExtM} flujoCajaM={flujoCajaM} cierreFact={cierreFact} cierreGastos={cierreGastos} cierreExtracto={cierreExtracto} saldo0={saldo0} setSaldo0={setSaldoApp} gastosReal={gastosReal} gastosFcst={gastosFcst} cajaPagosReal={cajaPagosReal} setCajaPagoReal={setCajaPagoReal} ingFcstM={ingFcstM} ingIVARealM={ingIVARealM} movs={movs}/>}
+      {sub==='caja'&&<TabCaja facturas={facturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} pagosExtM={pagosExtM} cobrosExtM={cobrosExtM} cobrosFcstM={cobrosFcstM} flujoCajaM={flujoCajaM} cierreFact={cierreFact} cierreGastos={cierreGastos} cierreExtracto={cierreExtracto} saldo0={saldo0} setSaldo0={setSaldoApp} gastosReal={gastosReal} gastosFcst={gastosFcst} cajaPagosReal={cajaPagosReal} setCajaPagoReal={setCajaPagoReal} ingFcstM={ingFcstM} ingIVARealM={ingIVARealM} movs={movs}/>}
       {sub==='extracto'&&<TabExtracto movs={movs} setMovs={setMovs} save={save} gastosReal={gastosReal} gastosFcst={gastosFcst} reglas={reglas} setReglas={setReglas}/>}
     </div>
   );
 }
 
 // ── FACTURACIÓN REAL ─────────────────────────────────────────────
-function FactRow({c,factReal,factFcst,setFactReal,setFactFcst,setIVACliente,delCliente,save,cierreFact}){
+function FactRow({c,factReal,factFcst,setFactReal,setFactFcst,setIVACliente,setPlazoCobro,delCliente,save,cierreFact}){
   const totReal=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+(factReal[c.id]?.[m]||0),0):0;
   const totCierre=totReal+MESES.slice(cierreFact+1).reduce((_,__,i)=>_+(factFcst[c.id]?.[cierreFact+1+i]||0),0);
   const setR=(m,v)=>{const val=pn(v);const n={...factReal,[c.id]:(factReal[c.id]||Array(12).fill(0)).map((x,i)=>i===m?val:x)};setFactReal(n);save({factReal:n});};
@@ -374,6 +384,13 @@ function FactRow({c,factReal,factFcst,setFactReal,setFactFcst,setIVACliente,delC
           <input type="number" defaultValue={+(c.iva*100).toFixed(1)} onBlur={e=>setIVACliente(c.id,e.target.value)} min={0} max={100} step={0.1}
             style={{width:42,textAlign:'center',border:'1px solid #dde0e6',borderRadius:4,padding:'2px 3px',fontSize:11,fontFamily:'monospace',background:'#f8f9ff'}}/>
           <span style={{fontSize:10,color:'#888'}}>%</span>
+        </div>
+      </td>
+      <td style={{textAlign:'center',padding:'3px 5px'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:2}}>
+          <input type="number" defaultValue={c.plazo||60} onBlur={e=>setPlazoCobro(c.id,e.target.value)} min={0} max={365} step={30}
+            style={{width:42,textAlign:'center',border:'1px solid #dde0e6',borderRadius:4,padding:'2px 3px',fontSize:11,fontFamily:'monospace',background:'#f0fff4'}}/>
+          <span style={{fontSize:10,color:'#888'}}>d</span>
         </div>
       </td>
       {MESES.map((_,m)=>{
@@ -393,7 +410,7 @@ function FactRow({c,factReal,factFcst,setFactReal,setFactFcst,setIVACliente,delC
   );
 }
 
-function TabFact({clientes,factReal,factFcst,ingRealM,ingFcstM,ingM,ingIVARealM,setFactReal,setFactFcst,setIVACliente,delCliente,setModal,save,cierreFact}){
+function TabFact({clientes,factReal,factFcst,ingRealM,ingFcstM,ingM,ingIVARealM,setFactReal,setFactFcst,setIVACliente,setPlazoCobro,delCliente,setModal,save,cierreFact}){
   const totRealYTD=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+ingRealM(m),0):0;
   const totFcst=MESES.slice(cierreFact+1).reduce((_,__,i)=>_+ingFcstM(cierreFact+1+i),0);
   return(
@@ -418,6 +435,7 @@ function TabFact({clientes,factReal,factFcst,ingRealM,ingFcstM,ingM,ingIVARealM,
           <thead><tr>
             <th className="sticky" style={{minWidth:190}}>Cliente</th>
             <th style={{minWidth:66,textAlign:'center',fontSize:9}}>IVA %</th>
+            <th style={{minWidth:58,textAlign:'center',fontSize:9}}>Plazo</th>
             {MESES.map((m,i)=><th key={i} className="mh" style={{minWidth:68,background:i<=cierreFact?'#e4f4ec':'#e8f0fb',color:i<=cierreFact?'#1a7a45':'#1a2b4a',borderTop:i<=cierreFact?'2px solid #a0d4b0':'2px solid #90b0d8'}}>
               {m}<div style={{fontSize:8,fontWeight:400,marginTop:1}}>{i<=cierreFact?'real':'fcst'}</div>
             </th>)}
@@ -426,7 +444,7 @@ function TabFact({clientes,factReal,factFcst,ingRealM,ingFcstM,ingM,ingIVARealM,
             <th style={{width:32}}></th>
           </tr></thead>
           <tbody>
-          {clientes.map(c=><FactRow key={c.id} c={c} factReal={factReal} factFcst={factFcst} setFactReal={setFactReal} setFactFcst={setFactFcst} setIVACliente={setIVACliente} delCliente={delCliente} save={save} cierreFact={cierreFact}/>)}
+          {clientes.map(c=><FactRow key={c.id} c={c} factReal={factReal} factFcst={factFcst} setFactReal={setFactReal} setFactFcst={setFactFcst} setIVACliente={setIVACliente} setPlazoCobro={setPlazoCobro} delCliente={delCliente} save={save} cierreFact={cierreFact}/>)}
           <tr><td colSpan={MESES.length+4} style={{padding:'6px 8px'}}><button className="btn-add" onClick={()=>setModal('cliente')}><i className="ti ti-plus"></i>Añadir cliente / línea de facturación</button></td></tr>
           <tr style={{background:'#e4f4ec',borderTop:'2px solid #a0d4b0'}}>
             <td className="sticky" colSpan={2} style={{fontWeight:700,color:'#1a7a45',fontSize:11}}>TOTAL REAL YTD</td>
@@ -947,7 +965,7 @@ function CajaGastoRowReal({g,cajaPagosReal,cierreGastos,setCajaPagoReal}){
   );
 }
 
-function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,flujoCajaM,cierreFact,cierreGastos,cierreExtracto,saldo0,setSaldo0,gastosReal,gastosFcst,cajaPagosReal,setCajaPagoReal,ingFcstM,ingIVARealM,movs}){
+function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobrosFcstM,flujoCajaM,cierreFact,cierreGastos,cierreExtracto,saldo0,setSaldo0,gastosReal,gastosFcst,cajaPagosReal,setCajaPagoReal,ingFcstM,ingIVARealM,movs}){
   // Pagos de explotación = cajaPagosReal (editable por partida)
   const pagosExplM=m=>(gastosReal||[]).reduce((s,g)=>s+((cajaPagosReal[g.id]||Array(12).fill(0))[m]||0),0);
   const saldoM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=cobrosRealesM(i)+pagosExtM(i);return s;};
@@ -1053,10 +1071,10 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,flujoC
                 <div style={{fontSize:9,color:'#888',fontWeight:400}}>meses no cerrados · sin facturas generadas aún</div>
               </td>
               {MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a2b4a',fontWeight:500,background:m<=cierreFact?'#fafafa':undefined}}>
-                {m>cierreFact?fmt(ingFcstM(m)):'—'}
+                {m>cierreFact?fmt(cobrosFcstM(m)):'—'}
               </td>)}
               <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a2b4a'}}>
-                {fmt(MESES.slice(cierreFact+1).reduce((_,__,i)=>_+ingFcstM(cierreFact+1+i),0))}
+                {fmt(MESES.slice(cierreFact+1).reduce((_,__,i)=>_+cobrosFcstM(cierreFact+1+i),0))}
               </td>
             </tr>
 
@@ -1066,13 +1084,13 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,flujoC
               {MESES.map((_,m)=>{
                 const v=m<=cierreFact
                   ?(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m))
-                  :ingFcstM(m);
+                  :cobrosFcstM(m);
                 return<td key={m} className="num green" style={{fontWeight:700}}>{fmt(v)}</td>;
               })}
               <td className="num green" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>
                 {fmt(
                   (cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m)),0):0)
-                  +MESES.slice(cierreFact+1).reduce((_,__,i)=>_+ingFcstM(cierreFact+1+i),0)
+                  +MESES.slice(cierreFact+1).reduce((_,__,i)=>_+cobrosFcstM(cierreFact+1+i),0)
                 )}
               </td>
             </tr>

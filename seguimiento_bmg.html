@@ -596,18 +596,21 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
           return 0;
         };
 
-        // Parsear importe — maneja tanto "54,45" como "54.45" como "1.089,00"
+        // Parsear importe — si es número lo devuelve tal cual
         const parseImporte=(v)=>{
           if(v===''||v===null||v===undefined)return 0;
-          if(typeof v==='number')return v;
-          let s=String(v).trim().replace(/[€$\s]/g,'');
-          // Formato europeo: 1.089,45 → 1089.45
-          if(s.match(/^\d{1,3}(\.\d{3})*(,\d+)?$/)){
+          if(typeof v==='number')return Math.abs(v);
+          // String: limpiar y convertir
+          let s=String(v).trim().replace(/[€$ ]/g,'');
+          // Formato europeo con punto de miles: "1.089,45"
+          if(s.indexOf(',')>=0&&s.indexOf('.')>=0&&s.lastIndexOf('.')===s.length-7){
+            // punto cada 3 dígitos antes de la coma → europeo
             s=s.replace(/\./g,'').replace(',','.');
-          } else {
-            // Formato anglosajón o mixto: quitar puntos de miles si hay coma decimal
+          } else if(s.indexOf(',')>=0&&s.indexOf('.')<0){
+            // solo coma → decimal europeo "54,45"
             s=s.replace(',','.');
           }
+          // si solo tiene punto → anglosajón, ya está bien
           return parseFloat(s)||0;
         };
 
@@ -797,6 +800,16 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
         <div className="card-header">
           <h2>Listado ({filtradas.length})</h2>
           <div style={{display:'flex',gap:6,alignItems:'center'}}>
+            <button onClick={()=>{
+              const total=facturas.reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
+              const ids=facturas.map(f=>f.id);
+              const dups=[...new Set(ids.filter((id,i)=>ids.indexOf(id)!==i))];
+              const porEstado={};
+              facturas.forEach(f=>{porEstado[f.estado]=(porEstado[f.estado]||0)+1;});
+              alert('Total facturas: '+facturas.length+'\nImporte total: '+Math.round(total)+'\nDuplicados: '+dups.length+(dups.length?'\n'+dups.slice(0,3).join(', '):'')+'\n\nPor estado:\n'+Object.entries(porEstado).map(([k,v])=>k+': '+v).join('\n'));
+            }} style={{padding:'3px 8px',borderRadius:4,border:'1px solid #c0d0e0',background:'transparent',color:'#1a2b4a',cursor:'pointer',fontSize:11,fontFamily:'Arial,sans-serif'}}>
+              🔍 Diagnóstico
+            </button>
             <button onClick={()=>{if(!confirm('¿Borrar todas las facturas?'))return;upd([]);}}
               style={{padding:'3px 8px',borderRadius:4,border:'1px solid #e4c0c0',background:'transparent',color:'#b83232',cursor:'pointer',fontSize:11,fontFamily:'Arial,sans-serif',display:'inline-flex',alignItems:'center',gap:4}}>
               <i className="ti ti-trash"></i> Limpiar todo

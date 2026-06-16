@@ -1050,17 +1050,20 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
               );
             })()}
 
-            {/* 2. ENTRADAS PENDIENTES DE COBRO — facturas con fecha prevista, meses cerrados */}
+            {/* 2. ENTRADAS PENDIENTES DE COBRO — facturas con fecha prevista, TODOS los meses */}
             <tr style={{background:'#f0fbf4'}}>
               <td className="sticky" style={{fontWeight:600,paddingLeft:16,color:'#1a6a3a',fontSize:12}}>
                 Entradas pendientes de cobro
-                <div style={{fontSize:9,color:'#888',fontWeight:400}}>facturas del Excel con fecha prevista de cobro</div>
+                <div style={{fontSize:9,color:'#888',fontWeight:400}}>facturas del Excel · todos los meses según fecha prevista de cobro</div>
               </td>
-              {MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a6a3a',fontWeight:500,background:m>cierreFact?'#fafafa':undefined}}>
-                {m<=cierreFact?fmt(cobrosPendM(m)):'—'}
+              {MESES.map((_,m)=><td key={m} className="num" style={{
+                color:'#1a6a3a',fontWeight:500,
+                background:m<=cierreFact?'#f0fbf4':'#e8f8f0'
+              }}>
+                {fmt(cobrosPendM(m))}
               </td>)}
               <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a6a3a'}}>
-                {fmt(cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+cobrosPendM(m),0):0)}
+                {fmt(MESES.reduce((_,__,m)=>_+cobrosPendM(m),0))}
               </td>
             </tr>
 
@@ -1068,7 +1071,7 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
             <tr style={{background:'#f4f7fd'}}>
               <td className="sticky" style={{fontWeight:600,paddingLeft:16,color:'#1a2b4a',fontSize:12}}>
                 Entradas por forecast (facturación prevista)
-                <div style={{fontSize:9,color:'#888',fontWeight:400}}>meses no cerrados · sin facturas generadas aún</div>
+                <div style={{fontSize:9,color:'#888',fontWeight:400}}>forecast de facturación × (1+IVA) + plazo cobro · para meses no cerrados</div>
               </td>
               {MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a2b4a',fontWeight:500,background:m<=cierreFact?'#fafafa':undefined}}>
                 {m>cierreFact?fmt(cobrosFcstM(m)):'—'}
@@ -1084,13 +1087,13 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
               {MESES.map((_,m)=>{
                 const v=m<=cierreFact
                   ?(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m))
-                  :cobrosFcstM(m);
+                  :(cobrosPendM(m)+cobrosFcstM(m));
                 return<td key={m} className="num green" style={{fontWeight:700}}>{fmt(v)}</td>;
               })}
               <td className="num green" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>
                 {fmt(
                   (cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m)),0):0)
-                  +MESES.slice(cierreFact+1).reduce((_,__,i)=>_+cobrosFcstM(cierreFact+1+i),0)
+                  +MESES.slice(cierreFact+1).reduce((_,__,i)=>_+(cobrosPendM(cierreFact+1+i)+cobrosFcstM(cierreFact+1+i)),0)
                 )}
               </td>
             </tr>

@@ -245,9 +245,10 @@ function App(){
   const ingFcstM=m=>clientes.reduce((s,c)=>(factFcst[c.id]?.[m]||0)+s,0);
   // Cobros forecast por mes destino: suma base*IVA de cada cliente desplazado por su plazo
   const cobrosFcstM=m=>clientes.reduce((s,c)=>{
-    const plazoMeses=Math.round((c.plazo||60)/30); // plazo en meses (60d≈2, 30d≈1, 90d≈3)
-    const mOrigen=m-plazoMeses; // mes de facturación que cobra en mes m
-    if(mOrigen<0||mOrigen>11)return s;
+    const plazoMeses=Math.round((c.plazo||60)/30);
+    const mOrigen=m-plazoMeses; // mes de facturación que genera este cobro
+    // Solo usar forecast si el mes ORIGEN también está sin cerrar
+    if(mOrigen<0||mOrigen>11||mOrigen<=cierreFact)return s;
     const base=factFcst[c.id]?.[mOrigen]||0;
     return s+base*(1+(c.iva||0));
   },0);

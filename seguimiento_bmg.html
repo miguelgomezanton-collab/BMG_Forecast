@@ -377,7 +377,7 @@ function App(){
       {sub==='facturas'&&<TabFacturas facturas={facturas} setFacturas={setFacturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} save={save} cierreFact={cierreFact}/>}
       {sub==='pyg'&&<TabPyG ingM={ingM} gCombM={gCombM} gastosReal={gastosReal} gastosFcst={gastosFcst} cierreFact={cierreFact} cierreGastos={cierreGastos}/>}
       {sub==='caja'&&<TabCaja facturas={facturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} pagosExtM={pagosExtM} cobrosExtM={cobrosExtM} cobrosFcstM={cobrosFcstM} flujoCajaM={flujoCajaM} cierreFact={cierreFact} cierreGastos={cierreGastos} cierreExtracto={cierreExtracto} saldo0={saldo0} setSaldo0={setSaldoApp} gastosReal={gastosReal} gastosFcst={gastosFcst} cajaPagosReal={cajaPagosReal} setCajaPagoReal={setCajaPagoReal} ingFcstM={ingFcstM} ingIVARealM={ingIVARealM} movs={movs} cajaSeg={cajaSeg} setCajaSeg={setCajaSeg} setCajaSegRow={setCajaSegRow} addCajaSegRow={addCajaSegRow} delCajaSegRow={delCajaSegRow} save={save}/>}
-      {sub==='extracto'&&<TabExtracto movs={movs} setMovs={setMovs} save={save} gastosReal={gastosReal} gastosFcst={gastosFcst} reglas={reglas} setReglas={setReglas}/>}
+      {sub==='extracto'&&<TabExtracto movs={movs} setMovs={setMovs} save={save} gastosReal={gastosReal} gastosFcst={gastosFcst} reglas={reglas} setReglas={setReglas} cajaSeg={cajaSeg}/>}
     </div>
   );
 }
@@ -1300,7 +1300,7 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
 // ══════════════════════════════════════════════════════════════════
 // EXTRACTO BANCARIO
 // ══════════════════════════════════════════════════════════════════
-function TabExtracto({movs,setMovs,save,gastosReal,gastosFcst,reglas,setReglas}){
+function TabExtracto({movs,setMovs,save,gastosReal,gastosFcst,reglas,setReglas,cajaSeg}){
   const [banco,setBanco]=useState('CAIXABANK');
   const [filtroMes,setFiltroMes]=useState('todos');
   const [filtroBanco,setFiltroBanco]=useState('todos');
@@ -1310,8 +1310,9 @@ function TabExtracto({movs,setMovs,save,gastosReal,gastosFcst,reglas,setReglas})
 
   // Categorías = partidas de gastos + fijas de caja + traspaso
   const gastosUnicos=[...new Map((gastosReal||[]).map(g=>[g.id,g])).values()];
+  const cajaCats=(cajaSeg||[]).map(r=>r.concepto).filter(Boolean);
   const CATS_FIJAS=['Traspaso entre cuentas','Cobro de cliente','Sin categorizar'];
-  const CATS=[...gastosUnicos.map(g=>g.concepto),...CATS_FIJAS];
+  const CATS=[...gastosUnicos.map(g=>g.concepto),...cajaCats,...CATS_FIJAS];
 
   // Extraer clave normalizada del concepto para matching
   const extractClave=(concepto)=>{

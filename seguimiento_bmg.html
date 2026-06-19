@@ -1000,7 +1000,16 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
       return(gastosFcst||[]).reduce((s,g)=>{const b=Math.abs(g.imp[m]||0);return s+b*(1+(g.iva||0)-(g.irpf||0));},0);
     }
   };
-  const saldoM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=cobrosRealesM(i)+pagosExtM(i);return s;};
+  const cobrosM=m=>m<=cierreFact?(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m)):((cierreExtracto>=0&&m<=cierreExtracto)?(cobrosExtM(m)+cobrosPendM(m)):(cobrosPendM(m)+cobrosFcstM(m)));
+  const pagosFiscM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
+  const finEntM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='financiacion'&&r.tipo==='cobro').reduce((s,r)=>s+(r.imp[m]||0),0);
+  const finSalM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='financiacion'&&r.tipo==='pago').reduce((s,r)=>s+(r.imp[m]||0),0);
+  // SALDO EXPLOTACION mes = cobros - pagos explot - pagos fiscales (sin financiacion)
+  const saldoExplotM=m=>cobrosM(m)-pagosExplM(m)-pagosFiscM(m);
+  // SALDO PERIODO mes = saldo explot + financiacion
+  const saldoPeriodoM=m=>saldoExplotM(m)+finEntM(m)-finSalM(m);
+  // SALDO ACUMULADO = saldo0 + suma acumulada de SALDO PERIODO
+  const saldoM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=saldoPeriodoM(i);return s;};
   const TC=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+cobrosRealesM(m)+cobrosExtM(m),0):0;
   const TP=cierreGastos>=0?MESES.slice(0,cierreGastos+1).reduce((_,__,m)=>_+pagosExtM(m),0):0;
   const SF=saldoM(Math.max(cierreFact,cierreGastos,0));
@@ -1207,9 +1216,7 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
 
             {/* SALDO EXPLOTACION */}
             {(()=>{
-              const pagosFiscM=m=>cajaSeg.filter(r=>r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
-              const cobrosM=m=>m<=cierreFact?(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m)):((cierreExtracto>=0&&m<=cierreExtracto)?(cobrosExtM(m)+cobrosPendM(m)):(cobrosPendM(m)+cobrosFcstM(m)));
-              const saldoExplM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=cobrosM(i)-pagosExplM(i)-pagosFiscM(i);return s;};
+              const saldoExplM=m=>saldoExplotM(m);
               return(<tr className="result-row">
                 <td className="sticky">SALDO EXPLOTACION</td>
                 {MESES.map((_,m)=>{const s=saldoExplM(m);return<td key={m} className="num" style={{fontWeight:700,background:s<20000?'#8b2020':undefined,color:s<20000?'#fff':undefined}}>{fmt(s)}</td>;})}
@@ -1264,33 +1271,21 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
 
             {/* SALDO FINAL */}
             {(()=>{
-              const pagosFiscM=m=>cajaSeg.filter(r=>r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
-              const finEntM=m=>cajaSeg.filter(r=>r.subtipo==='financiacion'&&r.tipo==='cobro').reduce((s,r)=>s+(r.imp[m]||0),0);
-              const finSalM=m=>cajaSeg.filter(r=>r.subtipo==='financiacion'&&r.tipo==='pago').reduce((s,r)=>s+(r.imp[m]||0),0);
-              const cobrosM=m=>m<=cierreFact?(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m)):((cierreExtracto>=0&&m<=cierreExtracto)?(cobrosExtM(m)+cobrosPendM(m)):(cobrosPendM(m)+cobrosFcstM(m)));
-              const saldoFinM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=cobrosM(i)-pagosExplM(i)-pagosFiscM(i)+finEntM(i)-finSalM(i);return s;};
+              const saldoFinM=m=>saldoM(m);
               return(<tr style={{background:'#243d6a'}}>
-                <td className="sticky" style={{background:'#243d6a',color:'#fff',fontWeight:700,fontSize:12}}>SALDO FINAL (Explotacion + Financiacion)</td>
-                {MESES.map((_,m)=>{const s=saldoFinM(m);return<td key={m} className="num" style={{fontWeight:700,color:'#fff',background:s<20000?'#8b2020':undefined}}>{fmt(s)}</td>;})}
-                <td className="num" style={{fontWeight:700,color:'#fff',borderLeft:'2px solid rgba(255,255,255,.3)'}}>{fmt(saldoFinM(11))}</td>
+                <td className="sticky" style={{background:'#243d6a',color:'#fff',fontWeight:700,fontSize:12}}>SALDO PERIODO</td>
+                {MESES.map((_,m)=>{const v=saldoPeriodoM(m);return<td key={m} className="num" style={{fontWeight:700,color:'#fff'}}>{fmt(v)}</td>;})}
+                <td className="num" style={{fontWeight:700,color:'#fff',borderLeft:'2px solid rgba(255,255,255,.3)'}}>{fmt(MESES.reduce((_,__,m)=>_+saldoPeriodoM(m),0))}</td>
               </tr>);
             })()}
 
             {/* TOTALES */}
-            <tr style={{background:'#e4ecf4'}}>
-              <td className="sticky" style={{fontWeight:700}}>FLUJO NETO</td>
-              {MESES.map((_,m)=>{
-                const f=flujoCajaM(m);
-                return<td key={m} className={`num ${f>=0?'green':'red'}`} style={{fontWeight:700,background:m>Math.max(cierreFact,cierreGastos)?'#f4f6f9':undefined}}>{m<=Math.max(cierreFact,cierreGastos)?fmt(f):'—'}</td>;
-              })}
-              <td className={`num ${TC+TP>=0?'green':'red'}`} style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(TC+TP)}</td>
-            </tr>
             <tr className="result-row">
               <td className="sticky">SALDO ACUMULADO</td>
               {MESES.map((_,m)=>{
                 const s=saldoM(m);
-                const vis=m<=Math.max(cierreFact,cierreGastos);
-                return<td key={m} className="num" style={{fontWeight:700,background:vis&&s<20000?'#8b2020':!vis?'rgba(0,0,0,.2)':undefined,color:!vis?'rgba(255,255,255,.3)':undefined}}>{vis?fmt(s):'—'}</td>;
+                const vis=true;
+                return<td key={m} className="num" style={{fontWeight:700,background:s<20000?'#8b2020':undefined}}>{fmt(s)}</td>;
               })}
               <td className="num" style={{fontWeight:700,borderLeft:'2px solid rgba(255,255,255,.3)'}}>{fmt(SF)}</td>
             </tr>

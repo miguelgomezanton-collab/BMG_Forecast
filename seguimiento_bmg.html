@@ -1004,8 +1004,14 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
   };
   const cobrosM=m=>m<=cierreFact?(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m)):((cierreExtracto>=0&&m<=cierreExtracto)?(cobrosExtM(m)+cobrosPendM(m)):(cobrosPendM(m)+cobrosFcstM(m)));
   const pagosFiscM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
-  const finEntM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='financiacion'&&r.tipo==='cobro').reduce((s,r)=>s+(r.imp[m]||0),0);
-  const finSalM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='financiacion'&&r.tipo==='pago').reduce((s,r)=>s+(r.imp[m]||0),0);
+  const finEntM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='financiacion'&&r.tipo==='cobro').reduce((s,r)=>{
+    const ev=(movs||[]).filter(mv=>mv.mes===m&&mv.etiqueta===r.concepto&&mv.importe>0).reduce((a,mv)=>a+mv.importe,0);
+    return s+(cierreExtracto>=0&&m<=cierreExtracto&&ev>0?ev:(r.imp[m]||0));
+  },0);
+  const finSalM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='financiacion'&&r.tipo==='pago').reduce((s,r)=>{
+    const ev=Math.abs((movs||[]).filter(mv=>mv.mes===m&&mv.etiqueta===r.concepto&&mv.importe<0).reduce((a,mv)=>a+mv.importe,0));
+    return s+(cierreExtracto>=0&&m<=cierreExtracto&&ev>0?ev:(r.imp[m]||0));
+  },0);
   // SALDO EXPLOTACION mes = cobros - pagos explot - pagos fiscales (sin financiacion)
   const saldoExplotM=m=>cobrosM(m)-pagosExplM(m)-pagosFiscM(m);
   // SALDO PERIODO mes = saldo explot + financiacion
@@ -1235,10 +1241,18 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
                   <input defaultValue={r.concepto} onBlur={e=>{const n=cajaSeg.map(x=>x.id===r.id?{...x,concepto:e.target.value}:x);setCajaSeg(n);save({cajaSeg:n});}} style={{border:'none',background:'transparent',fontSize:12,color:'#1a6a3a',fontFamily:'Arial,sans-serif',width:180}}/>
                   <button onClick={()=>delCajaSegRow(r.id)} style={{border:'none',background:'transparent',color:'#ccc',cursor:'pointer',fontSize:10}}>x</button>
                 </td>
-                {MESES.map((_,m)=>(<td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}>
-                  <input type="number" className="cell-edit" defaultValue={r.imp[m]||0} onChange={e=>setCajaSegRow(r.id,m,e.target.value)} min={0} style={{color:'#1a6a3a',borderBottomColor:'#a0d4b0'}}/>
-                </td>))}
-                <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#1a6a3a'}}>{fmt(r.imp.reduce((s,v)=>s+v,0))}</td>
+                {MESES.map((_,m)=>{
+                  const extVal=(movs||[]).filter(mv=>mv.mes===m&&mv.etiqueta===r.concepto&&mv.importe>0).reduce((s,mv)=>s+mv.importe,0);
+                  const esCerrado=cierreExtracto>=0&&m<=cierreExtracto;
+                  const val=esCerrado&&extVal>0?extVal:(r.imp[m]||0);
+                  return(<td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0',background:esCerrado?'#f4fbf6':undefined}}>
+                    {esCerrado&&extVal>0
+                      ?<span style={{display:'block',textAlign:'right',fontSize:11,fontFamily:'monospace',color:'#1a6a3a',fontWeight:700,padding:'2px 0'}}>{fmt(extVal)}<span style={{fontSize:8,color:'#aaa',display:'block'}}>extracto</span></span>
+                      :<input type="number" className="cell-edit" key={`finent-${r.id}-${m}`} defaultValue={r.imp[m]||0} onChange={e=>setCajaSegRow(r.id,m,e.target.value)} min={0} style={{color:'#1a6a3a',borderBottomColor:'#a0d4b0'}}/>
+                    }
+                  </td>);
+                })}
+                <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#1a6a3a'}}>{fmt(MESES.reduce((_,__,m)=>{const ev=(movs||[]).filter(mv=>mv.mes===m&&mv.etiqueta===r.concepto&&mv.importe>0).reduce((s,mv)=>s+mv.importe,0);return _+(cierreExtracto>=0&&m<=cierreExtracto&&ev>0?ev:(r.imp[m]||0));},0))}</td>
               </tr>
             ))}
             <tr><td colSpan={14} style={{padding:'4px 8px',background:'#f4fbf6'}}>
@@ -1256,10 +1270,17 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
                   <input defaultValue={r.concepto} onBlur={e=>{const n=cajaSeg.map(x=>x.id===r.id?{...x,concepto:e.target.value}:x);setCajaSeg(n);save({cajaSeg:n});}} style={{border:'none',background:'transparent',fontSize:12,color:'#6a1a1a',fontFamily:'Arial,sans-serif',width:180}}/>
                   <button onClick={()=>delCajaSegRow(r.id)} style={{border:'none',background:'transparent',color:'#ccc',cursor:'pointer',fontSize:10}}>x</button>
                 </td>
-                {MESES.map((_,m)=>(<td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}>
-                  <input type="number" className="cell-edit" defaultValue={r.imp[m]||0} onChange={e=>setCajaSegRow(r.id,m,e.target.value)} min={0} style={{color:'#6a1a1a',borderBottomColor:'#d4a0a0'}}/>
-                </td>))}
-                <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#6a1a1a'}}>{fmt(r.imp.reduce((s,v)=>s+v,0))}</td>
+                {MESES.map((_,m)=>{
+                  const extVal=Math.abs((movs||[]).filter(mv=>mv.mes===m&&mv.etiqueta===r.concepto&&mv.importe<0).reduce((s,mv)=>s+mv.importe,0));
+                  const esCerrado=cierreExtracto>=0&&m<=cierreExtracto;
+                  return(<td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0',background:esCerrado?'#fff8f8':undefined}}>
+                    {esCerrado&&extVal>0
+                      ?<span style={{display:'block',textAlign:'right',fontSize:11,fontFamily:'monospace',color:'#b83232',fontWeight:700,padding:'2px 0'}}>{fmt(extVal)}<span style={{fontSize:8,color:'#aaa',display:'block'}}>extracto</span></span>
+                      :<input type="number" className="cell-edit" key={`finsal-${r.id}-${m}`} defaultValue={r.imp[m]||0} onChange={e=>setCajaSegRow(r.id,m,e.target.value)} min={0} style={{color:'#6a1a1a',borderBottomColor:'#d4a0a0'}}/>
+                    }
+                  </td>);
+                })}
+                <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#6a1a1a'}}>{fmt(MESES.reduce((_,__,m)=>{const ev=Math.abs((movs||[]).filter(mv=>mv.mes===m&&mv.etiqueta===r.concepto&&mv.importe<0).reduce((s,mv)=>s+mv.importe,0));return _+(cierreExtracto>=0&&m<=cierreExtracto&&ev>0?ev:(r.imp[m]||0));},0))}</td>
               </tr>
             ))}
             <tr><td colSpan={14} style={{padding:'4px 8px',background:'#fdf4f4'}}>

@@ -273,8 +273,10 @@ function App(){
 
   // Pagos del extracto
   const ETIQ_EXCLUIR=['Traspaso entre cuentas','Cobro de cliente'];
+  // Pagos del extracto: salidas que NO son traspasos ni cobros de cliente
   const pagosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.importe<0&&!ETIQ_EXCLUIR.includes(mv.etiqueta)).reduce((s,mv)=>s+mv.importe,0);
-  const cobrosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.importe>0&&!ETIQ_EXCLUIR.includes(mv.etiqueta)).reduce((s,mv)=>s+mv.importe,0);
+  // Cobros del extracto: entradas etiquetadas como "Cobro de cliente"
+  const cobrosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.importe>0&&mv.etiqueta==='Cobro de cliente').reduce((s,mv)=>s+mv.importe,0);
   const flujoCajaM=m=>cobrosRealesM(m)+pagosExtM(m);
 
   const totRealYTD=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+ingRealM(m),0):0;
@@ -1072,7 +1074,7 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
             {/* 1b. COBROS EXTRACTO — movimientos etiquetados "Cobro de cliente" */}
             {(()=>{
               const TCext=cierreExtracto>=0?MESES.slice(0,cierreExtracto+1).reduce((_,__,m)=>_+cobrosExtM(m),0):0;
-              if(TCext===0&&MESES.every((_,m)=>cobrosExtM(m)===0))return null;
+              // Always show cobros extracto row when extracto has data
               return(
                 <tr style={{background:'#edfaf2'}}>
                   <td className="sticky" style={{fontWeight:600,paddingLeft:16,color:'#1a7a45',fontSize:12}}>

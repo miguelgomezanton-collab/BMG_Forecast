@@ -172,10 +172,24 @@ function App(){
   const movs=seg.movs||[];
   const cierreExtracto=seg.cierreExtracto??-1;
 
-  // Cobros ppto — lee de ppto.caja (cobros de clientes + financiacion entradas)
+  // ── PPTO tesorería — lee directamente de ppto.caja ────────────
   const pptoCajaRows=ppto.caja||[];
-  const pptoCobrosM=m=>pptoCajaRows.filter(r=>r.tipo==='cobro').reduce((s,r)=>s+(r.imp[m]||0),0);
-  // Cobros real
+  // flujoM ppto = cobros - pagosExpl - pagosFisc (explotación)
+  const pptoCobrosExplM=m=>pptoCajaRows.filter(r=>r.tipo==='cobro'&&r.subtipo!=='financiacion').reduce((s,r)=>s+(r.imp[m]||0),0);
+  const pptoPagosExplM=m=>Object.entries(cajaPagosPpto).reduce((s,[gid,arr])=>{
+    const g=(ppto.gastos||[]).find(x=>x.id===gid);if(!g)return s;
+    return s+(arr[m]||0)*(1+(g.iva||0)-(g.irpf||0));
+  },0);
+  const pptoPagosFiscM=m=>pptoCajaRows.filter(r=>r.tipo==='pago'&&r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
+  const pptoFlujoExplM=m=>pptoCobrosExplM(m)-pptoPagosExplM(m)-pptoPagosFiscM(m);
+  // financiación ppto
+  const pptoFinFlujM=m=>pptoCajaRows.filter(r=>r.subtipo==='financiacion').reduce((s,r)=>s+(r.tipo==='cobro'?1:-1)*(r.imp[m]||0),0);
+  // SALDO PERIODO ppto = explotación + financiación
+  const pptoSaldoPeriodoM=m=>pptoFlujoExplM(m)+pptoFinFlujM(m);
+  const pptoSaldo0=ppto.saldo0??0;
+  const pptoSaldoAcumM=m=>{let s=pptoSaldo0;for(let i=0;i<=m;i++)s+=pptoSaldoPeriodoM(i);return s;};
+
+  // ── REAL tesorería ──────────────────────────────────────────────
   const cobrosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.importe>0&&mv.etiqueta==='Cobro de cliente').reduce((s,mv)=>s+mv.importe,0);
   const cobrosPendM=m=>(seg.facturas||[]).filter(f=>!['Cobrada','Cancelada','Incobrable'].includes(f.estado)&&f.mesCobro===m).reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
   const cobrosFcstM=m=>todosClientes.reduce((s,c)=>{
@@ -184,38 +198,24 @@ function App(){
     return s+(seg.factFcst?.[c.id]?.[mOrigen]||0)*(1+(c.iva||0));
   },0);
   const realCobrosM=m=>m<=cierreFact?(cobrosExtM(m)+cobrosPendM(m)):((cierreExtracto>=0&&m<=cierreExtracto)?(cobrosExtM(m)+cobrosPendM(m)):(cobrosPendM(m)+cobrosFcstM(m)));
-
-  // Pagos ppto
-  const pptoPagosExplM=m=>{
-    // En presupuesto: cajaPagos tiene BASE, multiplicamos por (1+iva-irpf)
-    return Object.entries(cajaPagosPpto).reduce((s,[gid,arr])=>{
-      const g=(ppto.gastos||[]).find(x=>x.id===gid);if(!g)return s;
-      return s+(arr[m]||0)*(1+(g.iva||0)-(g.irpf||0));
-    },0);
-  };
-  // Pagos real
   const realPagosExplM=m=>{
-    if(cierreExtracto>=0&&m<=cierreExtracto)
-      return gastosReal.reduce((s,g)=>{
-        const ev=Math.abs(movs.filter(mv=>mv.mes===m&&mv.etiqueta===g.concepto&&mv.importe<0).reduce((a,mv)=>a+mv.importe,0));
-        if(ev>0)return s+ev;
-        const b=(cajaPagosReal[g.id]||Array(12).fill(0))[m]||0;
-        return s+b*(1+(g.iva||0)-(g.irpf||0));
-      },0);
+    if(cierreExtracto>=0&&m<=cierreExtracto)return gastosReal.reduce((s,g)=>{
+      const ev=Math.abs(movs.filter(mv=>mv.mes===m&&mv.etiqueta===g.concepto&&mv.importe<0).reduce((a,mv)=>a+mv.importe,0));
+      if(ev>0)return s+ev;
+      const b=(cajaPagosReal[g.id]||Array(12).fill(0))[m]||0;
+      return s+b*(1+(g.iva||0)-(g.irpf||0));
+    },0);
     if(m<=cierreGastos)return gastosReal.reduce((s,g)=>{const b=(cajaPagosReal[g.id]||Array(12).fill(0))[m]||0;return s+b*(1+(g.iva||0)-(g.irpf||0));},0);
     return(seg.gastosFcst||[]).reduce((s,g)=>{const b=Math.abs(g.imp[m]||0);return s+b*(1+(g.iva||0)-(g.irpf||0));},0);
   };
-
-  const pptoPagosFiscM=m=>pptoCajaRows.filter(r=>r.tipo==='pago'&&r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
   const realPagosFiscM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
-
-  const pptoSaldoPeriodoM=m=>pptoCobrosM(m)-pptoPagosExplM(m)-pptoPagosFiscM(m);
-  const realSaldoPeriodoM=m=>realCobrosM(m)-realPagosExplM(m)-realPagosFiscM(m);
-
+  const realFinFlujM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='financiacion').reduce((s,r)=>s+(r.tipo==='cobro'?1:-1)*(r.imp[m]||0),0);
+  // SALDO PERIODO real = explotación + financiación
+  const realSaldoPeriodoM=m=>realCobrosM(m)-realPagosExplM(m)-realPagosFiscM(m)+realFinFlujM(m);
   const saldo0=seg.saldo0??45000;
-  const pptoSaldo0=ppto.saldo0??0;
-  const pptoSaldoAcumM=m=>{let s=pptoSaldo0;for(let i=0;i<=m;i++)s+=pptoSaldoPeriodoM(i);return s;};
   const realSaldoAcumM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=realSaldoPeriodoM(i);return s;};
+  // Alias para tabla
+  const pptoCobrosM=pptoCobrosExplM;
 
   const mesLabel=cierreFact>=0?`Ene–${MESES[Math.max(cierreFact,cierreGastos)]}`:'Sin datos';
 
@@ -229,8 +229,8 @@ function App(){
       </div>
 
       <div className="main-nav">
-        <button style={{color:'#bbb',cursor:'default'}}>Presupuesto</button>
-        <button style={{color:'#bbb',cursor:'default'}}>Seguimiento</button>
+        <a href="presupuesto_bmg.html" style={{textDecoration:'none'}}><button style={{color:'#555'}}>Presupuesto</button></a>
+        <a href="seguimiento_bmg.html" style={{textDecoration:'none'}}><button style={{color:'#555'}}>Seguimiento</button></a>
         <button className="active">Dashboard</button>
       </div>
 

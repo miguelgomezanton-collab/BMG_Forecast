@@ -331,7 +331,7 @@ function App(){
               <tbody>
               {todosClientes.map(c=>{
                 const pv=vista==='ytd'?MESES.slice(0,Math.max(cierreFact,0)+1).reduce((_,__,m)=>_+(ppto.fact?.[c.id]?.[m]||0),0):MESES.reduce((_,__,m)=>_+(ppto.fact?.[c.id]?.[m]||0),0);
-                const rv=vista==='ytd'?MESES.slice(0,Math.max(cierreFact,0)+1).reduce((_,__,m)=>_+(seg.factReal?.[c.id]?.[m]||0),0):MESES.reduce((_,__,m)=>_+realVentasM(m),0);
+                const rv=vista==='ytd'?MESES.slice(0,Math.max(cierreFact,0)+1).reduce((_,__,m)=>_+(seg.factReal?.[c.id]?.[m]||0),0):MESES.reduce((_,__,m)=>_+(m<=cierreFact?(seg.factReal?.[c.id]?.[m]||0):(seg.factFcst?.[c.id]?.[m]||0)),0);
                 if(!pv&&!rv)return null;
                 const ejec=pv?Math.round(rv/pv*100):null;
                 return<tr key={c.id}>

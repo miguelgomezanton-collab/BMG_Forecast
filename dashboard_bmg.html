@@ -64,6 +64,21 @@ const fmtPct=(n)=>n===null||isNaN(n)?'—':(n>=0?'+':'')+Math.round(n)+'%';
 const pct=(a,b)=>b?((a-b)/Math.abs(b))*100:null;
 const load=k=>{try{const r=localStorage.getItem(k);return r?JSON.parse(r):null;}catch{return null;}};
 
+function LineChart({labels,datasets,height=260}){
+  const ref=useRef();const chartRef=useRef();
+  useEffect(()=>{
+    if(!ref.current)return;
+    if(chartRef.current)chartRef.current.destroy();
+    chartRef.current=new Chart(ref.current,{type:'line',data:{labels,datasets},options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:12}},tooltip:{callbacks:{label:ctx=>' '+fmt(ctx.parsed.y)}}},
+      scales:{x:{ticks:{font:{size:10}},grid:{display:false}},y:{ticks:{callback:v=>fmt(v),font:{size:10}},grid:{color:'#f0f0f0'}}}
+    }});
+    return()=>{if(chartRef.current)chartRef.current.destroy();};
+  },[labels,JSON.stringify(datasets)]);
+  return <canvas ref={ref} style={{height}}/>;
+}
+
 function BarChart({labels,datasets,height=260}){
   const ref=useRef();const chartRef=useRef();
   useEffect(()=>{
@@ -520,12 +535,12 @@ function App(){
           </div>
 
           <div className="card">
-            <div className="card-header"><h2>Saldo acumulado · Ppto vs Real</h2></div>
+            <div className="card-header"><h2>Evolución saldo acumulado · Ppto vs Real</h2></div>
             <div className="card-body">
               <div className="chart-wrap">
-                <BarChart labels={mesesVis} datasets={[
-                  {label:'Ppto saldo acum.',data:mesesVis.map((_,i)=>pptoSaldoAcumM(i)),backgroundColor:'#c8d4e4',borderRadius:3},
-                  {label:'Real saldo acum.',data:mesesVis.map((_,i)=>realSaldoAcumM(i)),backgroundColor:'#1a7a45',borderRadius:3},
+                <LineChart labels={MESES} datasets={[
+                  {label:'Presupuesto',data:MESES.map((_,i)=>pptoSaldoAcumM(i)),borderColor:'#90b4d8',backgroundColor:'rgba(144,180,216,0.1)',tension:.3,pointRadius:3,fill:false},
+                  {label:'Real / Forecast',data:MESES.map((_,i)=>realSaldoAcumM(i)),borderColor:'#1a7a45',backgroundColor:'rgba(26,122,69,0.1)',tension:.3,pointRadius:3,pointBackgroundColor:MESES.map((_,i)=>i<=Math.max(cierreFact,cierreGastos,cierreExtracto)?'#1a7a45':'#90b4d8'),fill:false},
                 ]}/>
               </div>
             </div>

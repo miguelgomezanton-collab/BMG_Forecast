@@ -148,15 +148,16 @@ function App(){
   const pptoGrupoM=(gr,m)=>(ppto.gastos||[]).filter(g=>g.grupo===gr).reduce((s,g)=>s+(g.imp[m]||0),0);
   const realGrupoM=(gr,m)=>gastosReal.filter(g=>g.grupo===gr).reduce((s,g)=>s+realGastoM(g.id,m),0);
 
-  const pptoCVTotalM=m=>(ppto.gastos||[]).filter(g=>g.grupo==='Personal'||g.grupo==='Colaboradores').reduce((s,g)=>s+(g.imp[m]||0),0);
-  const realCVTotalM=m=>gastosReal.filter(g=>g.grupo==='Personal'||g.grupo==='Colaboradores').reduce((s,g)=>s+realGastoM(g.id,m),0);
-  const pptoEstrM=m=>(ppto.gastos||[]).filter(g=>g.grupo==='Estructura').reduce((s,g)=>s+(g.imp[m]||0),0);
-  const realEstrM=m=>gastosReal.filter(g=>g.grupo==='Estructura').reduce((s,g)=>s+realGastoM(g.id,m),0);
+  // Gastos almacenados como positivos en imp[] — usar Math.abs por seguridad
+  const pptoCVTotalM=m=>(ppto.gastos||[]).filter(g=>g.grupo==='Personal'||g.grupo==='Colaboradores').reduce((s,g)=>s+Math.abs(g.imp[m]||0),0);
+  const realCVTotalM=m=>gastosReal.filter(g=>g.grupo==='Personal'||g.grupo==='Colaboradores').reduce((s,g)=>s+Math.abs(realGastoM(g.id,m)),0);
+  const pptoEstrM=m=>(ppto.gastos||[]).filter(g=>g.grupo==='Estructura').reduce((s,g)=>s+Math.abs(g.imp[m]||0),0);
+  const realEstrM=m=>gastosReal.filter(g=>g.grupo==='Estructura').reduce((s,g)=>s+Math.abs(realGastoM(g.id,m)),0);
 
   const pptoMBM=m=>pptoVentasM(m)-pptoCVTotalM(m);
   const realMBM=m=>realVentasM(m)-realCVTotalM(m);
-  const pptoEBITDAM=m=>pptoMBM(m)-Math.abs(pptoEstrM(m));
-  const realEBITDAM=m=>realMBM(m)-Math.abs(realEstrM(m));
+  const pptoEBITDAM=m=>pptoMBM(m)-pptoEstrM(m);
+  const realEBITDAM=m=>realMBM(m)-realEstrM(m);
 
   // YTD sums
   const ytdSum=(fn)=>cierreFact>=0?MESES.slice(0,Math.max(cierreFact,cierreGastos)+1).reduce((_,__,m)=>_+fn(m),0):0;

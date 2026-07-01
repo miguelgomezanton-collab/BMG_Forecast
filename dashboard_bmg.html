@@ -173,26 +173,22 @@ function App(){
   const movs=seg.movs||[];
   const cierreExtracto=seg.cierreExtracto??-1;
 
-  // ── PPTO tesorería — replica exactamente flujoM del presupuesto ──
+  // ── PPTO tesorería — replica EXACTA de TabTes del presupuesto ──
+  // flujoM = cobrosM - pagosExplM - pagosFiscM (igual que presupuesto línea 680)
   const pptoCajaRows=(ppto.caja||[]).filter(r=>r&&r.tipo&&Array.isArray(r.imp));
+  const pptoCobrosM=m=>pptoCajaRows.filter(r=>r.tipo==='cobro').reduce((s,r)=>s+(r.imp[m]||0),0);
   const pptoPagosExplM=m=>Object.entries(cajaPagosPpto||{}).reduce((s,[gid,arr])=>{
     const g=(ppto.gastos||[]).find(x=>x.id===gid);if(!g)return s;
     return s+(arr[m]||0)*(1+(g.iva||0)-(g.irpf||0));
   },0);
-  const pptoCobrosAllM=m=>pptoCajaRows.filter(r=>r.tipo==='cobro').reduce((s,r)=>s+(r.imp[m]||0),0);
-  const pptoPagosAllM=m=>pptoCajaRows.filter(r=>r.tipo==='pago').reduce((s,r)=>s+(r.imp[m]||0),0);
-  // flujoM del presupuesto = cobros - pagosExpl - pagosOtros (replica exacta)
-  const pptoFlujoM=m=>pptoCobrosAllM(m)-pptoPagosExplM(m)-pptoPagosAllM(m);
-  // Para gráfico explotación
-  const pptoCobrosExplM=m=>pptoCajaRows.filter(r=>r.tipo==='cobro'&&r.subtipo!=='financiacion').reduce((s,r)=>s+(r.imp[m]||0),0);
   const pptoPagosFiscM=m=>pptoCajaRows.filter(r=>r.tipo==='pago'&&r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
-  const pptoFinFlujM=m=>pptoCajaRows.filter(r=>r.subtipo==='financiacion').reduce((s,r)=>s+(r.tipo==='cobro'?1:-1)*(r.imp[m]||0),0);
-  const pptoFlujoExplM=m=>pptoCobrosExplM(m)-pptoPagosExplM(m)-pptoPagosFiscM(m);
-  const pptoSaldoPeriodoM=m=>pptoFlujoExplM(m)+pptoFinFlujM(m);
+  // SALDO EXPLOTACIÓN = flujoM (igual que presupuesto)
+  const pptoFlujoExplM=m=>pptoCobrosM(m)-pptoPagosExplM(m)-pptoPagosFiscM(m);
   const pptoSaldo0=ppto.saldo0??45000;
-  const pptoCobrosM=pptoCobrosExplM;
-  // SALDO ACUMULADO = saldo0 + suma de flujoM (igual que presupuesto)
-  const pptoSaldoAcumM=m=>{let s=pptoSaldo0;for(let i=0;i<=m;i++)s+=pptoFlujoM(i);return s;};
+  // SALDO ACUMULADO = saldo0 + Σ flujoM (igual que saldoM en presupuesto línea 681)
+  const pptoSaldoAcumM=m=>{let s=pptoSaldo0;for(let i=0;i<=m;i++)s+=pptoFlujoExplM(i);return s;};
+  // Para tabla y cards
+  const pptoSaldoPeriodoM=pptoFlujoExplM;
 
   // ── REAL tesorería ──
   const cobrosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.importe>0&&mv.etiqueta==='Cobro de cliente').reduce((s,mv)=>s+mv.importe,0);
@@ -509,7 +505,7 @@ function App(){
             ))}
           </div>
 
-          {/* Tabla resumen Ppto vs Real */}
+{/* Tabla resumen Ppto vs Real */}
           <div className="card">
             <div className="card-header">
               <h2>Tesorería · Ppto vs Real/Fcst</h2>

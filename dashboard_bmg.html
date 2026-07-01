@@ -503,6 +503,11 @@ function App(){
             ))}
           </div>
 
+          <div style={{padding:'8px',background:'#fff8e6',borderRadius:6,marginBottom:10,fontSize:11,lineHeight:1.8}}>
+            <strong>Mayo (m=4):</strong><br/>
+            Ppto cobros:{fmt(pptoCobrosM(4))} pagosExpl:{fmt(pptoPagosExplM(4))} pagosFisc:{fmt(pptoPagosFiscM(4))} flujo:{fmt(pptoFlujoExplM(4))} acum:{fmt(pptoSaldoAcumM(4))}<br/>
+            Real cobros:{fmt(realCobrosM(4))} pagosExpl:{fmt(realPagosExplM(4))} pagosFisc:{fmt(realPagosFiscM(4))} flujo:{fmt(realFlujoExplM(4))} acum:{fmt(realSaldoAcumM(4))}
+          </div>
 {/* Tabla resumen Ppto vs Real */}
           <div className="card">
             <div className="card-header">

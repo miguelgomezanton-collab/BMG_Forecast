@@ -177,10 +177,8 @@ function App(){
   // flujoM = cobrosM - pagosExplM - pagosFiscM (igual que presupuesto línea 680)
   const pptoCajaRows=(ppto.caja||[]).filter(r=>r&&r.tipo&&Array.isArray(r.imp));
   const pptoCobrosM=m=>pptoCajaRows.filter(r=>r.tipo==='cobro').reduce((s,r)=>s+(r.imp[m]||0),0);
-  const pptoPagosExplM=m=>Object.entries(cajaPagosPpto||{}).reduce((s,[gid,arr])=>{
-    const g=(ppto.gastos||[]).find(x=>x.id===gid);if(!g)return s;
-    return s+(arr[m]||0)*(1+(g.iva||0)-(g.irpf||0));
-  },0);
+  // pagosExplM en presupuesto = suma directa de cajaPagos sin aplicar IVA/IRPF
+  const pptoPagosExplM=m=>Object.entries(cajaPagosPpto||{}).reduce((s,[gid,arr])=>s+(arr[m]||0),0);
   const pptoPagosFiscM=m=>pptoCajaRows.filter(r=>r.tipo==='pago'&&r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
   // SALDO EXPLOTACIÓN = flujoM (igual que presupuesto)
   const pptoFlujoExplM=m=>pptoCobrosM(m)-pptoPagosExplM(m)-pptoPagosFiscM(m);

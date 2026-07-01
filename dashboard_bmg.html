@@ -182,11 +182,12 @@ function App(){
   const pptoPagosFiscM=m=>pptoCajaRows.filter(r=>r.tipo==='pago'&&r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
   // SALDO EXPLOTACIÓN = flujoM (igual que presupuesto)
   const pptoFlujoExplM=m=>pptoCobrosM(m)-pptoPagosExplM(m)-pptoPagosFiscM(m);
-  const pptoSaldo0=ppto.saldo0??45000;
-  // SALDO ACUMULADO = saldo0 + Σ flujoM (igual que saldoM en presupuesto línea 681)
-  const pptoSaldoAcumM=m=>{let s=pptoSaldo0;for(let i=0;i<=m;i++)s+=pptoFlujoExplM(i);return s;};
-  // Para tabla y cards
-  const pptoSaldoPeriodoM=pptoFlujoExplM;
+  // Leer saldos exportados desde el presupuesto
+  const pptoSaldoExplotArr=ppto._saldoExplotM||null;
+  const pptoSaldoAcumArr=ppto._saldoAcumM||null;
+  const pptoFlujoExplM2=m=>pptoSaldoExplotArr?pptoSaldoExplotArr[m]:pptoFlujoExplM(m);
+  const pptoSaldoAcumM=m=>pptoSaldoAcumArr?pptoSaldoAcumArr[m]:(()=>{let s=ppto.saldo0??0;for(let i=0;i<=m;i++)s+=pptoFlujoExplM(i);return s;})();
+  const pptoSaldoPeriodoM=pptoFlujoExplM2;
 
   // ── REAL tesorería ──
   const cobrosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.importe>0&&mv.etiqueta==='Cobro de cliente').reduce((s,mv)=>s+mv.importe,0);
@@ -210,9 +211,12 @@ function App(){
   const realPagosFiscM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
   const realFinFlujM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='financiacion').reduce((s,r)=>s+(r.tipo==='cobro'?1:-1)*(r.imp[m]||0),0);
   const realFlujoExplM=m=>realCobrosM(m)-realPagosExplM(m)-realPagosFiscM(m);
-  const realSaldoPeriodoM=m=>realFlujoExplM(m)+realFinFlujM(m);
   const saldo0=seg.saldo0??45000;
-  const realSaldoAcumM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=realSaldoPeriodoM(i);return s;};
+  // Leer saldos exportados desde el seguimiento
+  const realSaldoExplotArr=seg._saldoExplotM||null;
+  const realSaldoAcumArr=seg._saldoAcumM||null;
+  const realSaldoPeriodoM=m=>realSaldoExplotArr?realSaldoExplotArr[m]:realFlujoExplM(m);
+  const realSaldoAcumM=m=>realSaldoAcumArr?realSaldoAcumArr[m]:(()=>{let s=saldo0;for(let i=0;i<=m;i++)s+=realFlujoExplM(i);return s;})();
 
   const mesLabel=cierreFact>=0?`Ene–${MESES[Math.max(cierreFact,cierreGastos)]}`:'Sin datos';
 
@@ -503,11 +507,6 @@ function App(){
             ))}
           </div>
 
-          <div style={{padding:'8px',background:'#fff8e6',borderRadius:6,marginBottom:10,fontSize:11,lineHeight:1.8}}>
-            <strong>Mayo (m=4):</strong><br/>
-            Ppto cobros:{fmt(pptoCobrosM(4))} pagosExpl:{fmt(pptoPagosExplM(4))} pagosFisc:{fmt(pptoPagosFiscM(4))} flujo:{fmt(pptoFlujoExplM(4))} acum:{fmt(pptoSaldoAcumM(4))}<br/>
-            Real cobros:{fmt(realCobrosM(4))} pagosExpl:{fmt(realPagosExplM(4))} pagosFisc:{fmt(realPagosFiscM(4))} flujo:{fmt(realFlujoExplM(4))} acum:{fmt(realSaldoAcumM(4))}
-          </div>
 {/* Tabla resumen Ppto vs Real */}
           <div className="card">
             <div className="card-header">
@@ -546,7 +545,7 @@ function App(){
             <div className="card-body">
               <div className="chart-wrap">
                 <BarChart labels={MESES} datasets={[
-                  {label:'Ppto',data:MESES.map((_,i)=>pptoFlujoExplM(i)),backgroundColor:'#c8d4e4',borderRadius:3},
+                  {label:'Ppto',data:MESES.map((_,i)=>pptoFlujoExplM2(i)),backgroundColor:'#c8d4e4',borderRadius:3},
                   {label:'Real/Fcst',data:MESES.map((_,i)=>realFlujoExplM(i)),backgroundColor:MESES.map((_,i)=>i<=Math.max(cierreFact,cierreGastos,cierreExtracto)?'#1a7a45':'#90b4d8'),borderRadius:3},
                 ]}/>
               </div>

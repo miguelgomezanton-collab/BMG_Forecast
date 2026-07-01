@@ -1044,7 +1044,19 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
       </div>
 
       <div className="card">
-        <div className="card-header"><h2>Plan de caja real · 2026</h2><span style={{fontSize:10,color:'#888'}}>Verde = cerrado · Azul = forecast/previsto</span></div>
+        <div className="card-header">
+          <h2>Plan de caja real · 2026</h2>
+          <span style={{fontSize:10,color:'#888'}}>Verde = cerrado · Azul = forecast/previsto</span>
+          <button onClick={()=>{
+            const saldoExplotArr=MESES.map((_,m)=>saldoExplotM(m));
+            const saldoAcumArr=MESES.map((_,m)=>saldoM(m));
+            const saved=JSON.parse(localStorage.getItem('bmg_seguimiento_2026_v1')||'{}');
+            localStorage.setItem('bmg_seguimiento_2026_v1',JSON.stringify({...saved,_saldoExplotM:saldoExplotArr,_saldoAcumM:saldoAcumArr}));
+            alert('Saldos exportados al Dashboard');
+          }} style={{padding:'5px 12px',borderRadius:5,border:'1px solid #a0d4b0',background:'#e4f4ec',color:'#1a7a45',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:'Arial,sans-serif'}}>
+            Exportar al Dashboard
+          </button>
+        </div>
         <div className="overflow-x">
         <table style={{minWidth:1220}}>
           <thead><tr>

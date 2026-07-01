@@ -173,38 +173,29 @@ function App(){
   const movs=seg.movs||[];
   const cierreExtracto=seg.cierreExtracto??-1;
 
-  // ── PPTO tesorería — replica exactamente el cálculo del presupuesto ──
+  // ── PPTO tesorería — leer directamente los valores pre-calculados ──
+  const pptoSaldoExplotArr=ppto._saldoExplotM||Array(12).fill(0);
+  const pptoSaldoPeriodoArr=ppto._saldoPeriodoM||Array(12).fill(0);
+  const pptoSaldoAcumArr=ppto._saldoAcumM||Array(12).fill(0);
+  const pptoFlujoExplM=m=>pptoSaldoExplotArr[m]||0;
+  const pptoSaldoPeriodoM=m=>pptoSaldoPeriodoArr[m]||0;
+  const pptoSaldoAcumM=m=>pptoSaldoAcumArr[m]||0;
+  // Para tabla: cobros y pagos del ppto
   const pptoCajaRows=ppto.caja||[];
-  // Cobros totales del ppto (incluye cobros de clientes + entradas financiacion)
-  const pptoCobrosM2=m=>pptoCajaRows.filter(r=>r.tipo==='cobro').reduce((s,r)=>s+(r.imp[m]||0),0);
-  // Pagos explotación ppto
   const pptoPagosExplM=m=>Object.entries(cajaPagosPpto).reduce((s,[gid,arr])=>{
     const g=(ppto.gastos||[]).find(x=>x.id===gid);if(!g)return s;
     return s+(arr[m]||0)*(1+(g.iva||0)-(g.irpf||0));
   },0);
-  // Pagos totales ppto (impuestos + financiacion salidas)
-  const pptoPagosOtrosM=m=>pptoCajaRows.filter(r=>r.tipo==='pago').reduce((s,r)=>s+(r.imp[m]||0),0);
-  // flujoM ppto = cobros - pagosExpl - pagosOtros (replica flujoM del presupuesto)
-  const pptoFlujoM=m=>pptoCobrosM2(m)-pptoPagosExplM(m)-pptoPagosOtrosM(m);
-  // Para el gráfico de explotación: solo cobros no-financiacion - pagosExpl - pagosFisc
-  const pptoCobrosExplM=m=>pptoCajaRows.filter(r=>r.tipo==='cobro'&&r.subtipo!=='financiacion').reduce((s,r)=>s+(r.imp[m]||0),0);
   const pptoPagosFiscM=m=>pptoCajaRows.filter(r=>r.tipo==='pago'&&r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
-  const pptoFlujoExplM=m=>pptoCobrosExplM(m)-pptoPagosExplM(m)-pptoPagosFiscM(m);
-  const pptoFinFlujM=m=>pptoCajaRows.filter(r=>r.subtipo==='financiacion').reduce((s,r)=>s+(r.tipo==='cobro'?1:-1)*(r.imp[m]||0),0);
-  const pptoSaldoPeriodoM=m=>pptoFlujoExplM(m)+pptoFinFlujM(m);
-  const pptoSaldo0=ppto.saldo0??45000;
-  // SALDO ACUMULADO ppto = replica saldoAcumM del presupuesto (flujoM acumulado)
-  const pptoSaldoAcumM=m=>{let s=pptoSaldo0;for(let i=0;i<=m;i++)s+=pptoFlujoM(i);return s;};
 
-  // ── REAL tesorería ──────────────────────────────────────────────
-  const cobrosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.importe>0&&mv.etiqueta==='Cobro de cliente').reduce((s,mv)=>s+mv.importe,0);
-  const cobrosPendM=m=>(seg.facturas||[]).filter(f=>!['Cobrada','Cancelada','Incobrable'].includes(f.estado)&&f.mesCobro===m).reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
-  const cobrosFcstM=m=>todosClientes.reduce((s,c)=>{
-    const plazoMeses=Math.round((c.plazo||60)/30);const mOrigen=m-plazoMeses;
-    if(mOrigen<0||mOrigen>11||mOrigen<=cierreFact)return s;
-    return s+(seg.factFcst?.[c.id]?.[mOrigen]||0)*(1+(c.iva||0));
-  },0);
-  const realCobrosM=m=>m<=cierreFact?(cobrosExtM(m)+cobrosPendM(m)):((cierreExtracto>=0&&m<=cierreExtracto)?(cobrosExtM(m)+cobrosPendM(m)):(cobrosPendM(m)+cobrosFcstM(m)));
+  // ── REAL tesorería — leer directamente los valores pre-calculados ──
+  const realSaldoExplotArr=seg._saldoExplotM||Array(12).fill(0);
+  const realSaldoPeriodoArr=seg._saldoPeriodoM||Array(12).fill(0);
+  const realSaldoAcumArr=seg._saldoAcumM||Array(12).fill(0);
+  const realSaldoPeriodoM=m=>realSaldoPeriodoArr[m]||0;
+  const realSaldoAcumM=m=>realSaldoAcumArr[m]||0;
+  const realFlujoExplM=m=>realSaldoExplotArr[m]||0;
+  // Para tabla
   const realPagosExplM=m=>{
     if(cierreExtracto>=0&&m<=cierreExtracto)return gastosReal.reduce((s,g)=>{
       const ev=Math.abs(movs.filter(mv=>mv.mes===m&&mv.etiqueta===g.concepto&&mv.importe<0).reduce((a,mv)=>a+mv.importe,0));
@@ -216,13 +207,9 @@ function App(){
     return(seg.gastosFcst||[]).reduce((s,g)=>{const b=Math.abs(g.imp[m]||0);return s+b*(1+(g.iva||0)-(g.irpf||0));},0);
   };
   const realPagosFiscM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
-  const realFinFlujM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='financiacion').reduce((s,r)=>s+(r.tipo==='cobro'?1:-1)*(r.imp[m]||0),0);
-  // SALDO PERIODO real = explotación + financiación
-  const realSaldoPeriodoM=m=>realCobrosM(m)-realPagosExplM(m)-realPagosFiscM(m)+realFinFlujM(m);
-  const saldo0=seg.saldo0??45000;
-  const realSaldoAcumM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=realSaldoPeriodoM(i);return s;};
-  // Alias para tabla
-  const pptoCobrosM=pptoCobrosExplM;
+  const cobrosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.importe>0&&mv.etiqueta==='Cobro de cliente').reduce((s,mv)=>s+mv.importe,0);
+  const cobrosPendM=m=>(seg.facturas||[]).filter(f=>!['Cobrada','Cancelada','Incobrable'].includes(f.estado)&&f.mesCobro===m).reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
+  const realCobrosM=m=>cobrosExtM(m)+cobrosPendM(m);
 
   const mesLabel=cierreFact>=0?`Ene–${MESES[Math.max(cierreFact,cierreGastos)]}`:'Sin datos';
 
@@ -552,7 +539,7 @@ function App(){
               <div className="chart-wrap">
                 <BarChart labels={MESES} datasets={[
                   {label:'Ppto',data:MESES.map((_,i)=>pptoFlujoExplM(i)),backgroundColor:'#c8d4e4',borderRadius:3},
-                  {label:'Real/Fcst',data:MESES.map((_,i)=>realCobrosM(i)-realPagosExplM(i)-realPagosFiscM(i)),backgroundColor:MESES.map((_,i)=>i<=Math.max(cierreFact,cierreGastos,cierreExtracto)?'#1a7a45':'#90b4d8'),borderRadius:3},
+                  {label:'Real/Fcst',data:MESES.map((_,i)=>realFlujoExplM(i)),backgroundColor:MESES.map((_,i)=>i<=Math.max(cierreFact,cierreGastos,cierreExtracto)?'#1a7a45':'#90b4d8'),borderRadius:3},
                 ]}/>
               </div>
             </div>

@@ -274,6 +274,30 @@ function App(){
 
   const save=useCallback((p)=>{persist({clientes,fact,gastos,imptos,caja,cajaPagos,saldo0,locked,lockedAt,...p});},[clientes,fact,gastos,imptos,caja,cajaPagos,saldo0,locked,lockedAt]);
 
+  // Guardar saldos calculados para el dashboard
+  useEffect(()=>{
+    const cobrosM=m=>caja.filter(r=>r.tipo==='cobro').reduce((s,r)=>s+(r.imp[m]||0),0);
+    const pagosExplM=m=>Object.entries(cajaPagos).reduce((s,[gid,arr])=>{
+      const g=gastos.find(x=>x.id===gid);if(!g)return s;
+      return s+(arr[m]||0)*(1+(g.iva||0)-(g.irpf||0));
+    },0);
+    const pagosOtrosM=m=>caja.filter(r=>r.tipo==='pago').reduce((s,r)=>s+(r.imp[m]||0),0);
+    const flujoM=m=>cobrosM(m)-pagosExplM(m)-pagosOtrosM(m);
+    const cobrosExplM=m=>caja.filter(r=>r.tipo==='cobro'&&r.subtipo!=='financiacion').reduce((s,r)=>s+(r.imp[m]||0),0);
+    const pagosFiscM=m=>caja.filter(r=>r.tipo==='pago'&&r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
+    const finFlujM=m=>caja.filter(r=>r.subtipo==='financiacion').reduce((s,r)=>s+(r.tipo==='cobro'?1:-1)*(r.imp[m]||0),0);
+    const saldoExplotM=m=>cobrosExplM(m)-pagosExplM(m)-pagosFiscM(m);
+    const saldoPeriodoM=m=>saldoExplotM(m)+finFlujM(m);
+    const saldoAcumArr=MESES.map((_,m)=>{let s=saldo0;for(let i=0;i<=m;i++)s+=flujoM(i);return s;});
+    const saldoExplotArr=MESES.map((_,m)=>saldoExplotM(m));
+    const saldoPeriodoArr=MESES.map((_,m)=>saldoPeriodoM(m));
+    persist({clientes,fact,gastos,imptos,caja,cajaPagos,saldo0,locked,lockedAt,
+      _saldoAcumM:saldoAcumArr,
+      _saldoExplotM:saldoExplotArr,
+      _saldoPeriodoM:saldoPeriodoArr,
+    });
+  },[clientes,fact,gastos,imptos,caja,cajaPagos,saldo0]);
+
   // Edición celdas
   const setF=(cid,m,v)=>{if(locked)return;const arr=(fact[cid]||Array(12).fill(0)).slice();arr[m]=pn(v);const n={...fact,[cid]:arr};setFact(n);save({fact:n});};
   const setG=(gid,m,v)=>{if(locked)return;let val=pn(v);if(val>0)val=-val;const n=gastos.map(g=>g.id!==gid?g:{...g,imp:g.imp.map((x,i)=>i===m?val:x)});setGastos(n);save({gastos:n});};

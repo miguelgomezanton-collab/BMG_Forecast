@@ -216,39 +216,7 @@ function App(){
   const stateRef=React.useRef({});
   stateRef.current={clientes,factReal,factFcst,gastosReal,gastosFcst,facturas,movs,saldo0,cierreFact,cierreGastos,cierreExtracto,cajaPagosReal,cajaSeg,reglas};
 
-  // Guardar saldos calculados para el dashboard
-  useEffect(()=>{
-    const cobrosExtFn=m=>movs.filter(mv=>mv.mes===m&&mv.importe>0&&mv.etiqueta==='Cobro de cliente').reduce((s,mv)=>s+mv.importe,0);
-    const cobrosPendFn=m=>(facturas||[]).filter(f=>!['Cobrada','Cancelada','Incobrable'].includes(f.estado)&&f.mesCobro===m).reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
-    const cobrosFcstFn=m=>clientes.reduce((s,c)=>{
-      const pm=Math.round((c.plazo||60)/30);const mo=m-pm;
-      if(mo<0||mo>11||mo<=cierreFact)return s;
-      return s+(factFcst[c.id]?.[mo]||0)*(1+(c.iva||0));
-    },0);
-    const cobrosM=m=>m<=cierreFact?(cobrosExtFn(m)+cobrosPendFn(m)):((cierreExtracto>=0&&m<=cierreExtracto)?(cobrosExtFn(m)+cobrosPendFn(m)):(cobrosPendFn(m)+cobrosFcstFn(m)));
-    const pagosExplFn=m=>{
-      if(cierreExtracto>=0&&m<=cierreExtracto)return(gastosReal||[]).reduce((s,g)=>{
-        const ev=Math.abs(movs.filter(mv=>mv.mes===m&&mv.etiqueta===g.concepto&&mv.importe<0).reduce((a,mv)=>a+mv.importe,0));
-        if(ev>0)return s+ev;
-        const b=(cajaPagosReal[g.id]||Array(12).fill(0))[m]||0;
-        return s+b*(1+(g.iva||0)-(g.irpf||0));
-      },0);
-      if(m<=cierreGastos)return(gastosReal||[]).reduce((s,g)=>{const b=(cajaPagosReal[g.id]||Array(12).fill(0))[m]||0;return s+b*(1+(g.iva||0)-(g.irpf||0));},0);
-      return(gastosFcst||[]).reduce((s,g)=>{const b=Math.abs(g.imp[m]||0);return s+b*(1+(g.iva||0)-(g.irpf||0));},0);
-    };
-    const pagosFiscFn=m=>(cajaSeg||[]).filter(r=>r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
-    const finFlujFn=m=>(cajaSeg||[]).filter(r=>r.subtipo==='financiacion').reduce((s,r)=>s+(r.tipo==='cobro'?1:-1)*(r.imp[m]||0),0);
-    const saldoExplotFn=m=>cobrosM(m)-pagosExplFn(m)-pagosFiscFn(m);
-    const saldoPeriodoFn=m=>saldoExplotFn(m)+finFlujFn(m);
-    const saldoAcumArr=MESES.map((_,m)=>{let s=saldo0;for(let i=0;i<=m;i++)s+=saldoPeriodoFn(i);return s;});
-    const _patch={
-      _saldoAcumM:saldoAcumArr,
-      _saldoExplotM:MESES.map((_,m)=>saldoExplotFn(m)),
-      _saldoPeriodoM:MESES.map((_,m)=>saldoPeriodoFn(m)),
-    };
-    const current=stateRef.current;
-    persist({...current,..._patch});
-  },[movs,cajaSeg,cajaPagosReal,gastosReal,gastosFcst,factReal,factFcst,facturas,saldo0,cierreFact,cierreGastos,cierreExtracto,clientes]);
+
 
   // save() siempre usa el estado más reciente via stateRef + el parche
   const save=(patch={})=>{

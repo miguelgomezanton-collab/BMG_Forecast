@@ -318,7 +318,10 @@ function App(){
 
           {/* Por cliente */}
           <div className="card">
-            <div className="card-header"><h2>Ventas por cliente</h2></div>
+            <div className="card-header">
+              <h2>Ventas por cliente</h2>
+              <span style={{fontSize:10,color:'#888'}}>{vista==='ytd'?`YTD · meses cerrados Ene–${MESES[cierreFact>=0?cierreFact:0]} · solo facturación real`:'Proyección año completo · real + forecast'}</span>
+            </div>
             <div className="overflow-x">
             <table>
               <thead><tr>

@@ -507,34 +507,48 @@ function App(){
             ))}
           </div>
 
+          {/* Tabla resumen Ppto vs Real */}
           <div className="card">
-            <div className="card-header"><h2>Tesorería · Ppto vs Real</h2></div>
+            <div className="card-header">
+              <h2>Tesorería · Ppto vs Real/Fcst</h2>
+              <span style={{fontSize:10,color:'#888'}}>{vista==='ytd'?`YTD Ene–${MESES[Math.max(cierreFact,cierreGastos,cierreExtracto,0)]}`:'Proyección año completo'}</span>
+            </div>
             <div className="overflow-x">
             <table>
               <thead><tr>
                 <th style={{minWidth:200}}>Concepto</th>
-                {mesesVis.map((m,i)=><th key={i} className="num" style={{minWidth:70}}>{m}</th>)}
-                <th className="num" style={{minWidth:80}}>Total</th>
-                <th className="num" style={{minWidth:80}}>Ppto</th>
-                <th className="num" style={{minWidth:80}}>Desv.</th>
+                <th className="num" style={{minWidth:110}}>Presupuesto</th>
+                <th className="num" style={{minWidth:110}}>Real / Fcst</th>
+                <th className="num" style={{minWidth:110}}>Desviación</th>
+                <th className="num" style={{minWidth:70}}>%</th>
               </tr></thead>
               <tbody>
-              {filasT.map(({label,ppto:pFn,real:rFn,bold,color,neg,section})=>{
+              {filasT.map(({label,ppto:pFn,real:rFn,bold,color,section})=>{
                 const rTotal=sum(rFn);const pTotal=sum(pFn);
+                const d=rTotal-pTotal;const p=pTotal?Math.round(d/Math.abs(pTotal)*100):null;
                 return<tr key={label} style={{background:section?'#e4ecf4':undefined}}>
                   <td style={{fontWeight:bold?700:400,color:color||undefined,fontSize:section?12:11,paddingLeft:10}}>{label}</td>
-                  {mesesVis.map((_,i)=>{
-                    const rv=rFn(i);
-                    const isClosed=i<=Math.max(cierreFact,cierreGastos,cierreExtracto);
-                    return<td key={i} className="num" style={{color:isClosed?(rv>=0?'#1a7a45':'#b83232'):'#888',fontWeight:isClosed&&bold?600:400}}>{fmt(rv)}</td>;
-                  })}
-                  <td className="num" style={{fontWeight:700,borderLeft:'2px solid #e0e4ea',color:rTotal>=0?'#1a7a45':'#b83232'}}>{fmt(rTotal)}</td>
                   <td className="num" style={{color:'#888'}}>{fmt(pTotal)}</td>
-                  <DesvCell real={rTotal} ppto={pTotal}/>
+                  <td className="num" style={{fontWeight:bold?700:500,color:rTotal>=0?'#1a2b4a':'#b83232'}}>{fmt(rTotal)}</td>
+                  <td className={`num ${d>=0?'desv-pos':'desv-neg'}`}>{d>=0?'+':''}{fmt(d)}</td>
+                  <td className={`num ${d>=0?'desv-pos':'desv-neg'}`} style={{fontSize:10}}>{p!==null?(d>=0?'+':'')+p+'%':'—'}</td>
                 </tr>;
               })}
               </tbody>
             </table>
+            </div>
+          </div>
+
+          {/* Gráfico 1: Saldo Explotación por periodo */}
+          <div className="card">
+            <div className="card-header"><h2>Saldo explotación por periodo · Ppto vs Real</h2></div>
+            <div className="card-body">
+              <div className="chart-wrap">
+                <BarChart labels={MESES} datasets={[
+                  {label:'Ppto',data:MESES.map((_,i)=>pptoSaldoPeriodoM(i)-pptoFinFlujM(i)),backgroundColor:'#c8d4e4',borderRadius:3},
+                  {label:'Real/Fcst',data:MESES.map((_,i)=>realSaldoPeriodoM(i)-realFinFlujM(i)),backgroundColor:MESES.map((_,i)=>i<=Math.max(cierreFact,cierreGastos,cierreExtracto)?'#1a7a45':'#90b4d8'),borderRadius:3},
+                ]}/>
+              </div>
             </div>
           </div>
 

@@ -174,8 +174,8 @@ function App(){
   const cierreExtracto=seg.cierreExtracto??-1;
 
   // ── PPTO tesorería — replica exactamente flujoM del presupuesto ──
-  const pptoCajaRows=ppto.caja||[];
-  const pptoPagosExplM=m=>Object.entries(cajaPagosPpto).reduce((s,[gid,arr])=>{
+  const pptoCajaRows=(ppto.caja||[]).filter(r=>r&&r.tipo&&Array.isArray(r.imp));
+  const pptoPagosExplM=m=>Object.entries(cajaPagosPpto||{}).reduce((s,[gid,arr])=>{
     const g=(ppto.gastos||[]).find(x=>x.id===gid);if(!g)return s;
     return s+(arr[m]||0)*(1+(g.iva||0)-(g.irpf||0));
   },0);

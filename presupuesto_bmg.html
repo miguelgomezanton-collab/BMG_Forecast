@@ -385,8 +385,8 @@ function App(){
 
       <div className="main-nav">
         <button className="active"><i className="ti ti-target"></i>Presupuesto</button>
-        <button style={{color:'#bbb',cursor:'default'}}><i className="ti ti-chart-arrows-vertical"></i>Seguimiento</button>
-        <button style={{color:'#bbb',cursor:'default'}}><i className="ti ti-dashboard"></i>Dashboard</button>
+        <button onClick={()=>window.location.href='seguimiento_bmg.html'} style={{color:'#555'}}><i className="ti ti-chart-arrows-vertical"></i>Seguimiento</button>
+        <button onClick={()=>window.location.href='dashboard_bmg.html'} style={{color:'#555'}}><i className="ti ti-dashboard"></i>Dashboard</button>
       </div>
 
       {locked

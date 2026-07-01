@@ -155,8 +155,8 @@ function App(){
 
   const pptoMBM=m=>pptoVentasM(m)-pptoCVTotalM(m);
   const realMBM=m=>realVentasM(m)-realCVTotalM(m);
-  const pptoEBITDAM=m=>pptoMBM(m)-pptoEstrM(m);
-  const realEBITDAM=m=>realMBM(m)-realEstrM(m);
+  const pptoEBITDAM=m=>pptoMBM(m)-Math.abs(pptoEstrM(m));
+  const realEBITDAM=m=>realMBM(m)-Math.abs(realEstrM(m));
 
   // YTD sums
   const ytdSum=(fn)=>cierreFact>=0?MESES.slice(0,Math.max(cierreFact,cierreGastos)+1).reduce((_,__,m)=>_+fn(m),0):0;
@@ -394,29 +394,29 @@ function App(){
           </div>
 
           <div className="card">
-            <div className="card-header"><h2>Cuenta de explotación · Ppto vs Real</h2></div>
+            <div className="card-header">
+              <h2>Cuenta de explotación · Ppto vs Real/Fcst</h2>
+              <span style={{fontSize:10,color:'#888'}}>{vista==='ytd'?`YTD Ene–${MESES[Math.max(cierreFact,cierreGastos)>=0?Math.max(cierreFact,cierreGastos):0]}`:'Proyección año completo'}</span>
+            </div>
             <div className="overflow-x">
             <table>
               <thead><tr>
                 <th style={{minWidth:200}}>Concepto</th>
-                {mesesVis.map((m,i)=><th key={i} className="num" style={{minWidth:70}}>{m}</th>)}
-                <th className="num" style={{minWidth:80}}>Total</th>
-                <th className="num" style={{minWidth:80}}>Ppto</th>
-                <th className="num" style={{minWidth:80}}>Desv.</th>
+                <th className="num" style={{minWidth:110}}>Presupuesto</th>
+                <th className="num" style={{minWidth:110}}>Real / Fcst</th>
+                <th className="num" style={{minWidth:110}}>Desviación</th>
+                <th className="num" style={{minWidth:70}}>%</th>
               </tr></thead>
               <tbody>
               {filas.map(({label,ppto:pFn,real:rFn,bold,color,indent,section})=>{
                 const rTotal=sum(rFn);const pTotal=sum(pFn);
+                const d=rTotal-pTotal;const p=pTotal?Math.round(d/Math.abs(pTotal)*100):null;
                 return<tr key={label} style={{background:section?'#e4ecf4':undefined}}>
                   <td style={{fontWeight:bold?700:400,paddingLeft:indent?24:10,color:color||undefined,fontSize:section?12:11}}>{label}</td>
-                  {mesesVis.map((_,i)=>{
-                    const rv=rFn(i);const pv=pFn(i);
-                    const isClosed=i<=Math.max(cierreFact,cierreGastos);
-                    return<td key={i} className="num" style={{color:isClosed?(rv>=0?'#1a7a45':'#b83232'):'#888',fontWeight:isClosed&&bold?600:400}}>{fmt(rv)}</td>;
-                  })}
-                  <td className="num" style={{fontWeight:700,borderLeft:'2px solid #e0e4ea',color:rTotal>=0?'#1a7a45':'#b83232'}}>{fmt(rTotal)}</td>
                   <td className="num" style={{color:'#888'}}>{fmt(pTotal)}</td>
-                  <DesvCell real={rTotal} ppto={pTotal}/>
+                  <td className="num" style={{fontWeight:bold?700:500,color:rTotal>=0?'#1a2b4a':'#b83232'}}>{fmt(rTotal)}</td>
+                  <td className={`num ${d>=0?'desv-pos':'desv-neg'}`}>{d>=0?'+':''}{fmt(d)}</td>
+                  <td className={`num ${d>=0?'desv-pos':'desv-neg'}`} style={{fontSize:10}}>{p!==null?(d>=0?'+':'')+p+'%':'—'}</td>
                 </tr>;
               })}
               </tbody>

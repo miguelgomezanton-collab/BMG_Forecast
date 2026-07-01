@@ -879,15 +879,9 @@ function TabTes({caja,cajaPagos,gastos,locked,saldo0,setS,setCajaRow,addCajaRow,
               {!locked&&<td></td>}
             </tr>
             <tr style={{background:'#e4ecf4'}}>
-              <td className="sticky" style={{fontWeight:700}}>FLUJO NETO EXPLOTACIÓN</td>
+              <td className="sticky" style={{fontWeight:700}}>SALDO EXPLOTACIÓN</td>
               {MESES.map((_,m)=><td key={m} className={`num ${flujoM(m)>=0?'green':'red'}`} style={{fontWeight:700}}>{fmt(flujoM(m))}</td>)}
               <td className={`num ${(TC-TP)>=0?'green':'red'}`} style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(TC-TP)}</td>
-              {!locked&&<td></td>}
-            </tr>
-            <tr className="result-row">
-              <td className="sticky">SALDO ACUMULADO EXPLOTACIÓN</td>
-              {MESES.map((_,m)=>{const s=saldoM(m);return<td key={m} className="num" style={{fontWeight:700,background:s<20000?'#8b2020':undefined}}>{fmt(s)}</td>;})}
-              <td className="num" style={{borderLeft:'2px solid rgba(255,255,255,.3)',fontWeight:700}}>{fmt(SF)}</td>
               {!locked&&<td></td>}
             </tr>
 
@@ -932,19 +926,25 @@ function TabTes({caja,cajaPagos,gastos,locked,saldo0,setS,setCajaRow,addCajaRow,
               {!locked&&<td></td>}
             </tr>
 
-            {/* SALDO FINAL TOTAL */}
+            {/* SALDO PERIODO + SALDO ACUMULADO */}
             {(()=>{
               const finFlujM=m=>caja.filter(r=>r.subtipo==='financiacion').reduce((s,r)=>s+(r.tipo==='cobro'?1:-1)*(r.imp[m]||0),0);
-              const saldoFinM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=flujoM(i)+finFlujM(i);return s;};
-              const SFtot=saldoFinM(11);
-              return(
+              const saldoPeriodoM=m=>flujoM(m)+finFlujM(m);
+              const saldoAcumM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=saldoPeriodoM(i);return s;};
+              return(<>
                 <tr style={{background:'#243d6a'}}>
-                  <td className="sticky" style={{background:'#243d6a',color:'#fff',fontWeight:700,fontSize:12}}>SALDO FINAL (Explotación + Financiación)</td>
-                  {MESES.map((_,m)=>{const s=saldoFinM(m);return<td key={m} className="num" style={{fontWeight:700,color:'#fff',background:s<20000?'#8b2020':undefined}}>{fmt(s)}</td>;})}
-                  <td className="num" style={{fontWeight:700,color:'#fff',borderLeft:'2px solid rgba(255,255,255,.3)'}}>{fmt(SFtot)}</td>
+                  <td className="sticky" style={{background:'#243d6a',color:'#fff',fontWeight:700,fontSize:12}}>SALDO PERIODO</td>
+                  {MESES.map((_,m)=>{const v=saldoPeriodoM(m);return<td key={m} className="num" style={{fontWeight:700,color:'#fff'}}>{fmt(v)}</td>;})}
+                  <td className="num" style={{fontWeight:700,color:'#fff',borderLeft:'2px solid rgba(255,255,255,.3)'}}>{fmt(MESES.reduce((_,__,m)=>_+saldoPeriodoM(m),0))}</td>
                   {!locked&&<td></td>}
                 </tr>
-              );
+                <tr style={{background:'#1a2b4a'}}>
+                  <td className="sticky" style={{background:'#1a2b4a',color:'#fff',fontWeight:700,fontSize:12}}>SALDO ACUMULADO</td>
+                  {MESES.map((_,m)=>{const s=saldoAcumM(m);return<td key={m} className="num" style={{fontWeight:700,color:'#fff',background:s<20000?'#8b2020':undefined}}>{fmt(s)}</td>;})}
+                  <td className="num" style={{fontWeight:700,color:'#fff',borderLeft:'2px solid rgba(255,255,255,.3)'}}>{fmt(saldoAcumM(11))}</td>
+                  {!locked&&<td></td>}
+                </tr>
+              </>);
             })()}
 
           </tbody>

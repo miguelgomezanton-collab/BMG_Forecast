@@ -1129,7 +1129,7 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
                 </td>;
               })}
               <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a6a3a'}}>
-                {fmt(MESES.reduce((_,__,m)=>_(cierreExtracto>=0&&m<=cierreExtracto?0:cobrosPendM(m)),0))}
+                {fmt(MESES.reduce((_,__,m)=>_+(cierreExtracto>=0&&m<=cierreExtracto?0:cobrosPendM(m)),0))}
               </td>
             </tr>
 

@@ -800,8 +800,15 @@ function TabTes({caja,cajaPagos,gastos,locked,saldo0,setS,setCajaRow,addCajaRow,
         <div className="card-header">
           <h2>Plan de caja mensual · 2026</h2>
           <button onClick={()=>{
-            const saldoExplotArr=MESES.map((_,m)=>flujoM(m));
-            const saldoAcumArr=MESES.map((_,m)=>saldoM(m));
+            // flujoM = cobrosM - pagosExplM - pagosFiscM (replicado inline)
+            const _cobrosM=m=>(caja||[]).filter(r=>r.tipo==='cobro').reduce((s,r)=>s+(r.imp[m]||0),0);
+            const _pagosExplM=m=>Object.entries(cajaPagos||{}).reduce((s,[gid,arr])=>{const g=(gastos||[]).find(x=>x.id===gid);if(!g)return s;return s+(arr[m]||0);},0);
+            const _pagosFiscM=m=>(caja||[]).filter(r=>r.tipo==='pago'&&r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
+            const _flujoM=m=>_cobrosM(m)-_pagosExplM(m)-_pagosFiscM(m);
+            const _finFlujM=m=>(caja||[]).filter(r=>r.subtipo==='financiacion').reduce((s,r)=>s+(r.tipo==='cobro'?1:-1)*(r.imp[m]||0),0);
+            const _saldoPeriodoM=m=>_flujoM(m)+_finFlujM(m);
+            const saldoExplotArr=MESES.map((_,m)=>_flujoM(m));
+            const saldoAcumArr=MESES.map((_,m)=>{let s=saldo0;for(let i=0;i<=m;i++)s+=_saldoPeriodoM(i);return s;});
             const saved=JSON.parse(localStorage.getItem('bmg_presupuesto_2026_v1')||'{}');
             localStorage.setItem('bmg_presupuesto_2026_v1',JSON.stringify({...saved,_saldoExplotM:saldoExplotArr,_saldoAcumM:saldoAcumArr}));
             alert('Saldos exportados al Dashboard');

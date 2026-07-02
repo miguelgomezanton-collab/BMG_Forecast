@@ -425,6 +425,44 @@ function App(){
             </div>
           </div>
 
+          {/* Tabla mensual PyG */}
+          <div className="card">
+            <div className="card-header">
+              <h2>PyG mensual · Real vs Presupuesto</h2>
+              <span style={{fontSize:10,color:'#888'}}>Meses cerrados en verde · Forecast en gris</span>
+            </div>
+            <div className="overflow-x">
+            <table>
+              <thead><tr>
+                <th style={{minWidth:180}}>Concepto</th>
+                {MESES.map((m,i)=><th key={i} className="num" style={{minWidth:72,background:i<=Math.max(cierreFact,cierreGastos)?'#e4f4ec':'#e8f0fb',color:i<=Math.max(cierreFact,cierreGastos)?'#1a7a45':'#1a2b4a',borderTop:i<=Math.max(cierreFact,cierreGastos)?'2px solid #a0d4b0':'2px solid #90b0d8'}}>
+                  {m}<div style={{fontSize:8,fontWeight:400}}>{i<=Math.max(cierreFact,cierreGastos)?'real':'fcst'}</div>
+                </th>)}
+                <th className="num" style={{minWidth:80,borderLeft:'2px solid #1a2b4a'}}>Total</th>
+              </tr></thead>
+              <tbody>
+              {filas.map(({label,real:rFn,ppto:pFn,bold,color,indent,section})=>{
+                const rTotal=sum(rFn);const pTotal=sum(pFn);const d=rTotal-pTotal;
+                return<tr key={label} style={{background:section?'#e4ecf4':undefined}}>
+                  <td style={{fontWeight:bold?700:400,paddingLeft:indent?20:8,color:color||undefined,fontSize:section?12:11}}>{label}</td>
+                  {MESES.map((_,i)=>{
+                    const rv=rFn(i);const pv=pFn(i);const isClosed=i<=Math.max(cierreFact,cierreGastos);
+                    return<td key={i} className="num" style={{color:isClosed?(rv>=0?'#1a7a45':'#b83232'):'#888',fontWeight:isClosed&&bold?600:400,fontSize:11}}>
+                      {fmt(rv)}
+                      {isClosed&&<div style={{fontSize:8,color:rv-pv>=0?'#1a7a45':'#b83232'}}>{rv-pv>=0?'+':''}{fmt(rv-pv)}</div>}
+                    </td>;
+                  })}
+                  <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:rTotal>=0?'#1a7a45':'#b83232'}}>
+                    {fmt(rTotal)}
+                    <div style={{fontSize:9,color:d>=0?'#1a7a45':'#b83232',fontWeight:600}}>{d>=0?'+':''}{fmt(d)}</div>
+                  </td>
+                </tr>;
+              })}
+              </tbody>
+            </table>
+            </div>
+          </div>
+
           <div className="card">
             <div className="card-header"><h2>EBITDA mensual · Ppto vs Real</h2></div>
             <div className="card-body">

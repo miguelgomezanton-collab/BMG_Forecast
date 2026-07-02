@@ -103,6 +103,49 @@ body{font-family:Arial,sans-serif;background:#f0f2f5;color:#1a1a1a;min-height:10
   </div>
 </div>
 
+<div class="backup-bar">
+  <span style="font-size:12px;color:#555;font-weight:600">Datos seguros:</span>
+  <button onclick="exportBackup()" class="btn-backup">⬇ Exportar backup</button>
+  <label class="btn-backup" style="cursor:pointer">⬆ Importar backup<input type="file" accept=".json" style="display:none" onchange="importBackup(event)"/></label>
+  <span id="backup-msg" style="font-size:11px;color:#1a7a45;margin-left:8px"></span>
+</div>
+
+<script>
+function exportBackup(){
+  const keys=['bmg_presupuesto_2026_v1','bmg_seguimiento_2026_v1'];
+  const data={};
+  keys.forEach(k=>{const v=localStorage.getItem(k);if(v)data[k]=JSON.parse(v);});
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='BMG_backup_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  document.getElementById('backup-msg').textContent='Backup exportado correctamente';
+  setTimeout(()=>document.getElementById('backup-msg').textContent='',3000);
+}
+function importBackup(e){
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      let count=0;
+      Object.entries(data).forEach(([k,v])=>{localStorage.setItem(k,JSON.stringify(v));count++;});
+      document.getElementById('backup-msg').textContent=count+' módulos restaurados correctamente';
+      setTimeout(()=>document.getElementById('backup-msg').textContent='',4000);
+    }catch(err){alert('Error al importar: '+err.message);}
+  };
+  r.readAsText(file);
+  e.target.value='';
+}
+</script>
+
+<style>
+.backup-bar{background:#fff;border-top:1px solid #e0e0e0;padding:12px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.btn-backup{padding:6px 14px;border-radius:5px;border:1px solid #c0cad8;background:#f4f6f9;color:#1a2b4a;cursor:pointer;font-size:11px;font-weight:600;font-family:Arial,sans-serif;text-decoration:none}
+.btn-backup:hover{background:#e4ecf4}
+</style>
+
 <div class="footer">BMG Law Services · Plataforma financiera interna · 2026</div>
 </body>
 </html>

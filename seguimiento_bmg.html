@@ -1004,7 +1004,7 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
       return(gastosFcst||[]).reduce((s,g)=>{const b=Math.abs(g.imp[m]||0);return s+b*(1+(g.iva||0)-(g.irpf||0));},0);
     }
   };
-  const cobrosM=m=>m<=cierreFact?(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m)):((cierreExtracto>=0&&m<=cierreExtracto)?(cobrosExtM(m)+cobrosPendM(m)):(cobrosPendM(m)+cobrosFcstM(m)));
+  const cobrosM=m=>m<=cierreFact?(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m)):((cierreExtracto>=0&&m<=cierreExtracto)?cobrosExtM(m):(cobrosPendM(m)+cobrosFcstM(m)));
   const pagosFiscM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
   const finEntM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='financiacion'&&r.tipo==='cobro').reduce((s,r)=>{
     const ev=(movs||[]).filter(mv=>mv.mes===m&&mv.etiqueta===r.concepto&&mv.importe>0).reduce((a,mv)=>a+mv.importe,0);
@@ -1119,14 +1119,17 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
                 Entradas pendientes de cobro
                 <div style={{fontSize:9,color:'#888',fontWeight:400}}>facturas del Excel · todos los meses según fecha prevista de cobro</div>
               </td>
-              {MESES.map((_,m)=><td key={m} className="num" style={{
-                color:'#1a6a3a',fontWeight:500,
-                background:m<=cierreFact?'#f0fbf4':'#e8f8f0'
-              }}>
-                {fmt(cobrosPendM(m))}
-              </td>)}
+              {MESES.map((_,m)=>{
+                const cerradoExtracto=cierreExtracto>=0&&m<=cierreExtracto;
+                return<td key={m} className="num" style={{
+                  color:'#1a6a3a',fontWeight:500,
+                  background:m<=cierreFact?'#f0fbf4':'#e8f8f0'
+                }}>
+                  {cerradoExtracto?'—':fmt(cobrosPendM(m))}
+                </td>;
+              })}
               <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a6a3a'}}>
-                {fmt(MESES.reduce((_,__,m)=>_+cobrosPendM(m),0))}
+                {fmt(MESES.reduce((_,__,m)=>_(cierreExtracto>=0&&m<=cierreExtracto?0:cobrosPendM(m)),0))}
               </td>
             </tr>
 

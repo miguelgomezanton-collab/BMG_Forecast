@@ -1119,17 +1119,11 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
                 Entradas pendientes de cobro
                 <div style={{fontSize:9,color:'#888',fontWeight:400}}>facturas del Excel · todos los meses según fecha prevista de cobro</div>
               </td>
-              {MESES.map((_,m)=>{
-                const cerradoExtracto=cierreExtracto>=0&&m<=cierreExtracto;
-                return<td key={m} className="num" style={{
-                  color:'#1a6a3a',fontWeight:500,
-                  background:m<=cierreFact?'#f0fbf4':'#e8f8f0'
-                }}>
-                  {cerradoExtracto?'—':fmt(cobrosPendM(m))}
-                </td>;
-              })}
+              {MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a6a3a',fontWeight:500,background:m<=cierreFact?'#f0fbf4':'#e8f8f0'}}>
+                {(cierreExtracto>=0&&m<=cierreExtracto)?'—':fmt(cobrosPendM(m))}
+              </td>)}
               <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a6a3a'}}>
-                {fmt(MESES.reduce((_,__,m)=>_+(cierreExtracto>=0&&m<=cierreExtracto?0:cobrosPendM(m)),0))}
+                {fmt(MESES.reduce((s,_,m)=>s+(cierreExtracto>=0&&m<=cierreExtracto?0:cobrosPendM(m)),0))}
               </td>
             </tr>
 
@@ -1150,17 +1144,9 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
             {/* TOTAL COBROS */}
             <tr style={{background:'#e4f4ec'}}>
               <td className="sticky" style={{fontWeight:700,color:'#1a7a45',paddingLeft:8}}>TOTAL COBROS</td>
-              {MESES.map((_,m)=>{
-                const v=m<=cierreFact
-                  ?(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m))
-                  :(cobrosPendM(m)+cobrosFcstM(m));
-                return<td key={m} className="num green" style={{fontWeight:700}}>{fmt(v)}</td>;
-              })}
+              {MESES.map((_,m)=><td key={m} className="num green" style={{fontWeight:700}}>{fmt(cobrosM(m))}</td>)}
               <td className="num green" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>
-                {fmt(
-                  (cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m)),0):0)
-                  +MESES.slice(cierreFact+1).reduce((_,__,i)=>_+(cobrosPendM(cierreFact+1+i)+cobrosFcstM(cierreFact+1+i)),0)
-                )}
+                {fmt(MESES.reduce((s,_,m)=>s+cobrosM(m),0))}
               </td>
             </tr>
 

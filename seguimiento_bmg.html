@@ -1130,6 +1130,7 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
               <td className="num green" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>
                 {fmt(MESES.reduce((s,_,m)=>s+cobrosM(m),0))}
               </td>
+            </tr>
 
             {/* PAGOS EXPLOTACIÓN — partidas de gastosReal, editable */}
             <tr className="section-row"><td className="sticky" colSpan={14}>

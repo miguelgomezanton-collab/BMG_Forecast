@@ -1263,8 +1263,14 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
             </td></tr>
             <tr style={{background:'#e4f0e4'}}>
               <td className="sticky" style={{fontWeight:700,color:'#1a6a3a',paddingLeft:8,fontSize:11}}>Total entradas financiacion</td>
-              {MESES.map((_,m)=>{const t=cajaSeg.filter(r=>r.subtipo==='financiacion'&&r.tipo==='cobro').reduce((s,r)=>s+(r.imp[m]||0),0);return<td key={m} className="num" style={{fontWeight:600,color:'#1a6a3a'}}>{fmt(t)}</td>;})}
-              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a6a3a'}}>{fmt(cajaSeg.filter(r=>r.subtipo==='financiacion'&&r.tipo==='cobro').reduce((s,r)=>s+r.imp.reduce((a,v)=>a+v,0),0))}</td>
+              {MESES.map((_,m)=>{
+                const t=cajaSeg.filter(r=>r.subtipo==='financiacion'&&r.tipo==='cobro').reduce((s,r)=>{
+                  const ev=(movs||[]).filter(mv=>mv.mes===m&&mv.etiqueta===r.concepto&&mv.importe>0).reduce((a,mv)=>a+mv.importe,0);
+                  return s+(cierreExtracto>=0&&m<=cierreExtracto&&ev>0?ev:(r.imp[m]||0));
+                },0);
+                return<td key={m} className="num" style={{fontWeight:600,color:'#1a6a3a'}}>{fmt(t)}</td>;
+              })}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a6a3a'}}>{fmt(MESES.reduce((s,_,m)=>s+cajaSeg.filter(r=>r.subtipo==='financiacion'&&r.tipo==='cobro').reduce((s2,r)=>{const ev=(movs||[]).filter(mv=>mv.mes===m&&mv.etiqueta===r.concepto&&mv.importe>0).reduce((a,mv)=>a+mv.importe,0);return s2+(cierreExtracto>=0&&m<=cierreExtracto&&ev>0?ev:(r.imp[m]||0));},0),0))}</td>
             </tr>
             <tr className="section-row"><td className="sticky" colSpan={14}>Salidas de financiacion</td></tr>
             {cajaSeg.filter(r=>r.subtipo==='financiacion'&&r.tipo==='pago').map(r=>(
@@ -1291,8 +1297,14 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
             </td></tr>
             <tr style={{background:'#f4e4e4'}}>
               <td className="sticky" style={{fontWeight:700,color:'#6a1a1a',paddingLeft:8,fontSize:11}}>Total salidas financiacion</td>
-              {MESES.map((_,m)=>{const t=cajaSeg.filter(r=>r.subtipo==='financiacion'&&r.tipo==='pago').reduce((s,r)=>s+(r.imp[m]||0),0);return<td key={m} className="num" style={{fontWeight:600,color:'#6a1a1a'}}>{fmt(t)}</td>;})}
-              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#6a1a1a'}}>{fmt(cajaSeg.filter(r=>r.subtipo==='financiacion'&&r.tipo==='pago').reduce((s,r)=>s+r.imp.reduce((a,v)=>a+v,0),0))}</td>
+              {MESES.map((_,m)=>{
+                const t=cajaSeg.filter(r=>r.subtipo==='financiacion'&&r.tipo==='pago').reduce((s,r)=>{
+                  const ev=Math.abs((movs||[]).filter(mv=>mv.mes===m&&mv.etiqueta===r.concepto&&mv.importe<0).reduce((a,mv)=>a+mv.importe,0));
+                  return s+(cierreExtracto>=0&&m<=cierreExtracto&&ev>0?ev:(r.imp[m]||0));
+                },0);
+                return<td key={m} className="num" style={{fontWeight:600,color:'#6a1a1a'}}>{fmt(t)}</td>;
+              })}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#6a1a1a'}}>{fmt(MESES.reduce((s,_,m)=>s+cajaSeg.filter(r=>r.subtipo==='financiacion'&&r.tipo==='pago').reduce((s2,r)=>{const ev=Math.abs((movs||[]).filter(mv=>mv.mes===m&&mv.etiqueta===r.concepto&&mv.importe<0).reduce((a,mv)=>a+mv.importe,0));return s2+(cierreExtracto>=0&&m<=cierreExtracto&&ev>0?ev:(r.imp[m]||0));},0),0))}</td>
             </tr>
 
             {/* SALDO FINAL */}

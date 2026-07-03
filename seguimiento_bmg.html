@@ -184,17 +184,8 @@ function App(){
   const [facturas,setFacturas]=useState(()=>sv?.facturas||[]);
   const [movs,setMovs]=useState(()=>sv?.movs||[]);
   const [saldo0,setSaldo0]=useState(()=>sv?.saldo0??45000);
-  const CAJASEG0=[
-    {id:'pag_iva',  concepto:'IVA (mod. 303)',                tipo:'pago',  subtipo:'impuestos',   imp:Array(12).fill(0)},
-    {id:'pag_irpf', concepto:'IRPF (mod. 111)',               tipo:'pago',  subtipo:'impuestos',   imp:Array(12).fill(0)},
-    {id:'pag_is',   concepto:'IS (mod. 202)',                 tipo:'pago',  subtipo:'impuestos',   imp:Array(12).fill(0)},
-    {id:'fin_ent1', concepto:'Entrada financiacion',          tipo:'cobro', subtipo:'financiacion',imp:Array(12).fill(0)},
-    {id:'fin_sal1', concepto:'Devolucion amortizacion',       tipo:'pago',  subtipo:'financiacion',imp:Array(12).fill(0)},
-  ];
+  const CAJASEG0=[{id:'pag_iva',concepto:'IVA',tipo:'pago',subtipo:'impuestos',imp:Array(12).fill(0)}];
   const [cajaSeg,setCajaSeg]=useState(()=>sv?.cajaSeg||JSON.parse(JSON.stringify(CAJASEG0)));
-  const setCajaSegRow=(id,m,v)=>{const n=cajaSeg.map(r=>r.id!==id?{...r}:{...r,imp:r.imp.map((x,i)=>i===m?(parseFloat(v)||0):x)});setCajaSeg(n);save({cajaSeg:n});};
-  const addCajaSegRow=(tipo,subtipo)=>{const id='cs'+Date.now();const n=[...cajaSeg,{id,concepto:tipo==='cobro'?'Nueva entrada':'Nueva salida',tipo,subtipo,imp:Array(12).fill(0)}];setCajaSeg(n);save({cajaSeg:n});};
-  const delCajaSegRow=(id)=>{if(!confirm('Eliminar?'))return;const n=cajaSeg.filter(r=>r.id!==id);setCajaSeg(n);save({cajaSeg:n});};
   // cajaPagosReal: importes de caja por partida de gasto en seguimiento {gastoId: [12 meses]}
   const [cajaPagosReal,setCajaPagosReal]=useState(()=>{
     const saved=sv?.cajaPagosReal||{};
@@ -214,7 +205,7 @@ function App(){
 
   // Ref siempre actualizado — evita el problema de closures stale en handlers
   const stateRef=React.useRef({});
-  stateRef.current={clientes,factReal,factFcst,gastosReal,gastosFcst,facturas,movs,saldo0,cierreFact,cierreGastos,cierreExtracto,cajaPagosReal,cajaSeg,reglas};
+  stateRef.current={clientes,factReal,factFcst,gastosReal,gastosFcst,facturas,movs,saldo0,cierreFact,cierreGastos,cierreExtracto,cajaPagosReal,reglas};
 
   // save() siempre usa el estado más reciente via stateRef + el parche
   const save=(patch={})=>{
@@ -274,7 +265,7 @@ function App(){
   // Pagos del extracto
   const ETIQ_EXCLUIR=['Traspaso entre cuentas','Cobro de cliente'];
   const pagosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.importe<0&&!ETIQ_EXCLUIR.includes(mv.etiqueta)).reduce((s,mv)=>s+mv.importe,0);
-  const cobrosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.importe>0&&mv.etiqueta==='Cobro de cliente').reduce((s,mv)=>s+mv.importe,0);
+  const cobrosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.importe>0&&!ETIQ_EXCLUIR.includes(mv.etiqueta)).reduce((s,mv)=>s+mv.importe,0);
   const flujoCajaM=m=>cobrosRealesM(m)+pagosExtM(m);
 
   const totRealYTD=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+ingRealM(m),0):0;
@@ -350,9 +341,9 @@ function App(){
       </div>
 
       <div className="main-nav">
-        <button onClick={()=>window.location.href='presupuesto_bmg.html'} style={{color:'#555'}}><i className="ti ti-target"></i>Presupuesto</button>
+        <button style={{color:'#bbb',cursor:'default'}}><i className="ti ti-target"></i>Presupuesto</button>
         <button className="active"><i className="ti ti-chart-arrows-vertical"></i>Seguimiento</button>
-        <button onClick={()=>window.location.href='dashboard_bmg.html'} style={{color:'#555'}}><i className="ti ti-dashboard"></i>Dashboard</button>
+        <button style={{color:'#bbb',cursor:'default'}}><i className="ti ti-dashboard"></i>Dashboard</button>
       </div>
 
       <div className="metrics">
@@ -376,8 +367,8 @@ function App(){
       {sub==='gastos'&&<TabGastos gastosReal={gastosReal} gastosFcst={gastosFcst} gCombM={gCombM} setGR={setGR} setGF={setGF} setGMeta={setGMeta} delGasto={delGasto} setModal={setModal} cierreGastos={cierreGastos}/> }
       {sub==='facturas'&&<TabFacturas facturas={facturas} setFacturas={setFacturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} save={save} cierreFact={cierreFact}/>}
       {sub==='pyg'&&<TabPyG ingM={ingM} gCombM={gCombM} gastosReal={gastosReal} gastosFcst={gastosFcst} cierreFact={cierreFact} cierreGastos={cierreGastos}/>}
-      {sub==='caja'&&<TabCaja facturas={facturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} pagosExtM={pagosExtM} cobrosExtM={cobrosExtM} cobrosFcstM={cobrosFcstM} flujoCajaM={flujoCajaM} cierreFact={cierreFact} cierreGastos={cierreGastos} cierreExtracto={cierreExtracto} saldo0={saldo0} setSaldo0={setSaldoApp} gastosReal={gastosReal} gastosFcst={gastosFcst} cajaPagosReal={cajaPagosReal} setCajaPagoReal={setCajaPagoReal} ingFcstM={ingFcstM} ingIVARealM={ingIVARealM} movs={movs} cajaSeg={cajaSeg} setCajaSeg={setCajaSeg} setCajaSegRow={setCajaSegRow} addCajaSegRow={addCajaSegRow} delCajaSegRow={delCajaSegRow} save={save}/>}
-      {sub==='extracto'&&<TabExtracto movs={movs} setMovs={setMovs} save={save} gastosReal={gastosReal} gastosFcst={gastosFcst} reglas={reglas} setReglas={setReglas} cajaSeg={cajaSeg}/>}
+      {sub==='caja'&&<TabCaja facturas={facturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} pagosExtM={pagosExtM} cobrosExtM={cobrosExtM} cobrosFcstM={cobrosFcstM} flujoCajaM={flujoCajaM} cierreFact={cierreFact} cierreGastos={cierreGastos} cierreExtracto={cierreExtracto} saldo0={saldo0} setSaldo0={setSaldoApp} gastosReal={gastosReal} gastosFcst={gastosFcst} cajaPagosReal={cajaPagosReal} setCajaPagoReal={setCajaPagoReal} ingFcstM={ingFcstM} ingIVARealM={ingIVARealM} movs={movs}/>}
+      {sub==='extracto'&&<TabExtracto movs={movs} setMovs={setMovs} save={save} gastosReal={gastosReal} gastosFcst={gastosFcst} reglas={reglas} setReglas={setReglas}/>}
     </div>
   );
 }
@@ -977,21 +968,10 @@ function CajaGastoRowReal({g,cajaPagosReal,cierreGastos,setCajaPagoReal}){
   );
 }
 
-function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobrosFcstM,flujoCajaM,cierreFact,cierreGastos,cierreExtracto,saldo0,setSaldo0,gastosReal,gastosFcst,cajaPagosReal,setCajaPagoReal,ingFcstM,ingIVARealM,movs,cajaSeg,setCajaSeg,setCajaSegRow,addCajaSegRow,delCajaSegRow,save}){
-  const cobrosM=m=>m<=cierreFact?(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m)):((cierreExtracto>=0&&m<=cierreExtracto)?cobrosExtM(m):(cobrosPendM(m)+cobrosFcstM(m)));
-  const pagosExplM=m=>{
-    if(cierreExtracto>=0&&m<=cierreExtracto)return(gastosReal||[]).reduce((s,g)=>{const ev=Math.abs((movs||[]).filter(mv=>mv.mes===m&&mv.etiqueta===g.concepto&&mv.importe<0).reduce((a,mv)=>a+mv.importe,0));return ev>0?s+ev:s+((cajaPagosReal[g.id]||Array(12).fill(0))[m]||0)*(1+(g.iva||0)-(g.irpf||0));},0);
-    if(m<=cierreGastos)return(gastosReal||[]).reduce((s,g)=>s+((cajaPagosReal[g.id]||Array(12).fill(0))[m]||0)*(1+(g.iva||0)-(g.irpf||0)),0);
-    return(gastosFcst||[]).reduce((s,g)=>s+Math.abs(g.imp[m]||0)*(1+(g.iva||0)-(g.irpf||0)),0);
-  };
-  const pagosFiscM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
-  const finEntM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='financiacion'&&r.tipo==='cobro').reduce((s,r)=>{const ev=(movs||[]).filter(mv=>mv.mes===m&&mv.etiqueta===r.concepto&&mv.importe>0).reduce((a,mv)=>a+mv.importe,0);return s+(cierreExtracto>=0&&m<=cierreExtracto&&ev>0?ev:(r.imp[m]||0));},0);
-  const finSalM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='financiacion'&&r.tipo==='pago').reduce((s,r)=>{const ev=Math.abs((movs||[]).filter(mv=>mv.mes===m&&mv.etiqueta===r.concepto&&mv.importe<0).reduce((a,mv)=>a+mv.importe,0));return s+(cierreExtracto>=0&&m<=cierreExtracto&&ev>0?ev:(r.imp[m]||0));},0);
-  const saldoExplotM=m=>cobrosM(m)-pagosExplM(m)-pagosFiscM(m);
-  const saldoPeriodoM=m=>saldoExplotM(m)+finEntM(m)-finSalM(m);
-  const saldoM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=saldoPeriodoM(i);return s;};
+function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobrosFcstM,flujoCajaM,cierreFact,cierreGastos,cierreExtracto,saldo0,setSaldo0,gastosReal,gastosFcst,cajaPagosReal,setCajaPagoReal,ingFcstM,ingIVARealM,movs}){
   // Pagos de explotación = cajaPagosReal (editable por partida)
-  const saldoM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=saldoPeriodoM(i);return s;};
+  const pagosExplM=m=>(gastosReal||[]).reduce((s,g)=>s+((cajaPagosReal[g.id]||Array(12).fill(0))[m]||0),0);
+  const saldoM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=cobrosRealesM(i)+pagosExtM(i);return s;};
   const TC=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+cobrosRealesM(m)+cobrosExtM(m),0):0;
   const TP=cierreGastos>=0?MESES.slice(0,cierreGastos+1).reduce((_,__,m)=>_+pagosExtM(m),0):0;
   const SF=saldoM(Math.max(cierreFact,cierreGastos,0));
@@ -1016,11 +996,7 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
       </div>
 
       <div className="card">
-        <div className="card-header">
-          <h2>Plan de caja real · 2026</h2>
-          <span style={{fontSize:10,color:'#888'}}>Verde = cerrado · Azul = forecast/previsto</span>
-          <button onClick={()=>{const saved=JSON.parse(localStorage.getItem('bmg_seguimiento_2026_v1')||'{}');localStorage.setItem('bmg_seguimiento_2026_v1',JSON.stringify({...saved,_saldoExplotM:MESES.map((_,m)=>saldoExplotM(m)),_saldoAcumM:MESES.map((_,m)=>saldoM(m))}));alert('Exportado al Dashboard');}} style={{padding:'5px 12px',borderRadius:5,border:'1px solid #a0d4b0',background:'#e4f4ec',color:'#1a7a45',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:'Arial,sans-serif'}}>Exportar al Dashboard</button>
-        </div>
+        <div className="card-header"><h2>Plan de caja real · 2026</h2><span style={{fontSize:10,color:'#888'}}>Verde = cerrado · Azul = forecast/previsto</span></div>
         <div className="overflow-x">
         <table style={{minWidth:1220}}>
           <thead><tr>
@@ -1083,8 +1059,15 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
                 Entradas pendientes de cobro
                 <div style={{fontSize:9,color:'#888',fontWeight:400}}>facturas del Excel · todos los meses según fecha prevista de cobro</div>
               </td>
-              {MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a6a3a',fontWeight:500}}>{(cierreExtracto>=0&&m<=cierreExtracto)?'—':fmt(cobrosPendM(m))}</td>)}
-              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a6a3a'}}>{fmt(MESES.reduce((s,_,m)=>s+(cierreExtracto>=0&&m<=cierreExtracto?0:cobrosPendM(m)),0))}</td>
+              {MESES.map((_,m)=><td key={m} className="num" style={{
+                color:'#1a6a3a',fontWeight:500,
+                background:m<=cierreFact?'#f0fbf4':'#e8f8f0'
+              }}>
+                {fmt(cobrosPendM(m))}
+              </td>)}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a6a3a'}}>
+                {fmt(MESES.reduce((_,__,m)=>_+cobrosPendM(m),0))}
+              </td>
             </tr>
 
             {/* 3. ENTRADAS POR FORECAST — meses no cerrados en facturación */}
@@ -1104,8 +1087,18 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
             {/* TOTAL COBROS */}
             <tr style={{background:'#e4f4ec'}}>
               <td className="sticky" style={{fontWeight:700,color:'#1a7a45',paddingLeft:8}}>TOTAL COBROS</td>
-              {MESES.map((_,m)=><td key={m} className="num green" style={{fontWeight:700}}>{fmt(cobrosM(m))}</td>)}
-              <td className="num green" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(MESES.reduce((s,_,m)=>s+cobrosM(m),0))}</td>
+              {MESES.map((_,m)=>{
+                const v=m<=cierreFact
+                  ?(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m))
+                  :(cobrosPendM(m)+cobrosFcstM(m));
+                return<td key={m} className="num green" style={{fontWeight:700}}>{fmt(v)}</td>;
+              })}
+              <td className="num green" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>
+                {fmt(
+                  (cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m)),0):0)
+                  +MESES.slice(cierreFact+1).reduce((_,__,i)=>_+(cobrosPendM(cierreFact+1+i)+cobrosFcstM(cierreFact+1+i)),0)
+                )}
+              </td>
             </tr>
 
             {/* PAGOS EXPLOTACIÓN — partidas de gastosReal, editable */}
@@ -1152,55 +1145,25 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
               <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#b83232'}}>{fmt(TP)}</td>
             </tr>
 
-            {/* PAGOS FISCALES */}
-            <tr style={{background:'#1a2b4a'}}><td className="sticky" colSpan={14} style={{background:'#1a2b4a',color:'#a0b4d0',fontWeight:700,fontSize:10,textTransform:'uppercase',letterSpacing:'.04em',padding:'8px 16px'}}>Pagos fiscales</td></tr>
-            {(cajaSeg||[]).filter(r=>r.subtipo==='impuestos').map(r=>(
-              <tr key={r.id} style={{background:'#fffbf0'}}>
-                <td className="sticky" style={{paddingLeft:16,fontSize:12,color:'#7a4000',fontWeight:500}}>{r.concepto}<button onClick={()=>delCajaSegRow(r.id)} style={{marginLeft:8,border:'none',background:'transparent',color:'#ccc',cursor:'pointer',fontSize:10}}>x</button></td>
-                {MESES.map((_,m)=>(<td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}><input type="number" className="cell-edit" defaultValue={r.imp[m]||0} onChange={e=>setCajaSegRow(r.id,m,e.target.value)} min={0} style={{color:'#7a4000',borderBottomColor:'#e8c878'}}/></td>))}
-                <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#7a4000'}}>{fmt(r.imp.reduce((s,v)=>s+v,0))}</td>
-              </tr>
-            ))}
-            <tr><td colSpan={14} style={{padding:'4px 8px',background:'#fffbf0'}}><button className="btn-add" style={{borderColor:'#e8c878',color:'#7a4000'}} onClick={()=>addCajaSegRow('pago','impuestos')}><i className="ti ti-plus"></i>Añadir pago fiscal</button></td></tr>
-
-            {/* SALDO EXPLOTACION */}
-            <tr className="result-row">
-              <td className="sticky">SALDO EXPLOTACION</td>
-              {MESES.map((_,m)=>{const s=saldoExplotM(m);return<td key={m} className="num" style={{fontWeight:700,background:s<20000?'#8b2020':undefined,color:s<20000?'#fff':undefined}}>{fmt(s)}</td>;})}
-              <td className="num" style={{fontWeight:700,borderLeft:'2px solid rgba(255,255,255,.3)'}}>{fmt(saldoExplotM(11))}</td>
+            {/* TOTALES */}
+            <tr style={{background:'#e4ecf4'}}>
+              <td className="sticky" style={{fontWeight:700}}>FLUJO NETO</td>
+              {MESES.map((_,m)=>{
+                const f=flujoCajaM(m);
+                return<td key={m} className={`num ${f>=0?'green':'red'}`} style={{fontWeight:700,background:m>Math.max(cierreFact,cierreGastos)?'#f4f6f9':undefined}}>{m<=Math.max(cierreFact,cierreGastos)?fmt(f):'—'}</td>;
+              })}
+              <td className={`num ${TC+TP>=0?'green':'red'}`} style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(TC+TP)}</td>
             </tr>
-
-            {/* FINANCIACION */}
-            <tr style={{background:'#1a2b4a'}}><td className="sticky" colSpan={14} style={{background:'#1a2b4a',color:'#a0b4d0',fontWeight:700,fontSize:10,textTransform:'uppercase',letterSpacing:'.04em',padding:'8px 16px'}}>Plan de caja — Financiacion</td></tr>
-            <tr className="section-row"><td className="sticky" colSpan={14}>Entradas de financiacion</td></tr>
-            {(cajaSeg||[]).filter(r=>r.subtipo==='financiacion'&&r.tipo==='cobro').map(r=>(
-              <tr key={r.id} style={{background:'#f0faf0'}}>
-                <td className="sticky" style={{paddingLeft:16,fontSize:12,color:'#1a6a3a',fontWeight:500}}><input defaultValue={r.concepto} onBlur={e=>{const n=(cajaSeg||[]).map(x=>x.id===r.id?{...x,concepto:e.target.value}:x);setCajaSeg(n);save({cajaSeg:n});}} style={{border:'none',background:'transparent',fontSize:12,color:'#1a6a3a',fontFamily:'Arial,sans-serif',width:180}}/><button onClick={()=>delCajaSegRow(r.id)} style={{border:'none',background:'transparent',color:'#ccc',cursor:'pointer',fontSize:10}}>x</button></td>
-                {MESES.map((_,m)=>{const ev=(movs||[]).filter(mv=>mv.mes===m&&mv.etiqueta===r.concepto&&mv.importe>0).reduce((s,mv)=>s+mv.importe,0);const ec=cierreExtracto>=0&&m<=cierreExtracto;return(<td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}>{ec&&ev>0?<span style={{display:'block',textAlign:'right',fontSize:11,fontFamily:'monospace',color:'#1a6a3a',fontWeight:700}}>{fmt(ev)}<span style={{fontSize:8,color:'#aaa',display:'block'}}>extracto</span></span>:<input type="number" className="cell-edit" key={`finent-${r.id}-${m}`} defaultValue={r.imp[m]||0} onChange={e=>setCajaSegRow(r.id,m,e.target.value)} min={0} style={{color:'#1a6a3a',borderBottomColor:'#a0d4b0'}}/>}</td>);})}
-                <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#1a6a3a'}}>{fmt(MESES.reduce((s,_,m)=>s+finEntM(m),0))}</td>
-              </tr>
-            ))}
-            <tr><td colSpan={14} style={{padding:'4px 8px',background:'#f4fbf6'}}><button className="btn-add" style={{borderColor:'#a0d4b0',color:'#1a6a3a'}} onClick={()=>addCajaSegRow('cobro','financiacion')}><i className="ti ti-plus"></i>Añadir entrada financiacion</button></td></tr>
-            <tr style={{background:'#e4f0e4'}}><td className="sticky" style={{fontWeight:700,color:'#1a6a3a',paddingLeft:8,fontSize:11}}>Total entradas financiacion</td>{MESES.map((_,m)=><td key={m} className="num" style={{fontWeight:600,color:'#1a6a3a'}}>{fmt(finEntM(m))}</td>)}<td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a6a3a'}}>{fmt(MESES.reduce((s,_,m)=>s+finEntM(m),0))}</td></tr>
-
-            <tr className="section-row"><td className="sticky" colSpan={14}>Salidas de financiacion</td></tr>
-            {(cajaSeg||[]).filter(r=>r.subtipo==='financiacion'&&r.tipo==='pago').map(r=>(
-              <tr key={r.id} style={{background:'#fdf4f4'}}>
-                <td className="sticky" style={{paddingLeft:16,fontSize:12,color:'#6a1a1a',fontWeight:500}}><input defaultValue={r.concepto} onBlur={e=>{const n=(cajaSeg||[]).map(x=>x.id===r.id?{...x,concepto:e.target.value}:x);setCajaSeg(n);save({cajaSeg:n});}} style={{border:'none',background:'transparent',fontSize:12,color:'#6a1a1a',fontFamily:'Arial,sans-serif',width:180}}/><button onClick={()=>delCajaSegRow(r.id)} style={{border:'none',background:'transparent',color:'#ccc',cursor:'pointer',fontSize:10}}>x</button></td>
-                {MESES.map((_,m)=>{const ev=Math.abs((movs||[]).filter(mv=>mv.mes===m&&mv.etiqueta===r.concepto&&mv.importe<0).reduce((s,mv)=>s+mv.importe,0));const ec=cierreExtracto>=0&&m<=cierreExtracto;return(<td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}>{ec&&ev>0?<span style={{display:'block',textAlign:'right',fontSize:11,fontFamily:'monospace',color:'#b83232',fontWeight:700}}>{fmt(ev)}<span style={{fontSize:8,color:'#aaa',display:'block'}}>extracto</span></span>:<input type="number" className="cell-edit" key={`finsal-${r.id}-${m}`} defaultValue={r.imp[m]||0} onChange={e=>setCajaSegRow(r.id,m,e.target.value)} min={0} style={{color:'#6a1a1a',borderBottomColor:'#d4a0a0'}}/>}</td>);})}
-                <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#6a1a1a'}}>{fmt(MESES.reduce((s,_,m)=>s+finSalM(m),0))}</td>
-              </tr>
-            ))}
-            <tr><td colSpan={14} style={{padding:'4px 8px',background:'#fdf4f4'}}><button className="btn-add" style={{borderColor:'#d4a0a0',color:'#6a1a1a'}} onClick={()=>addCajaSegRow('pago','financiacion')}><i className="ti ti-plus"></i>Añadir salida financiacion</button></td></tr>
-            <tr style={{background:'#f4e4e4'}}><td className="sticky" style={{fontWeight:700,color:'#6a1a1a',paddingLeft:8,fontSize:11}}>Total salidas financiacion</td>{MESES.map((_,m)=><td key={m} className="num" style={{fontWeight:600,color:'#6a1a1a'}}>{fmt(finSalM(m))}</td>)}<td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#6a1a1a'}}>{fmt(MESES.reduce((s,_,m)=>s+finSalM(m),0))}</td></tr>
-
-            {/* SALDO PERIODO */}
-            <tr style={{background:'#243d6a'}}><td className="sticky" style={{background:'#243d6a',color:'#fff',fontWeight:700,fontSize:12}}>SALDO PERIODO</td>{MESES.map((_,m)=><td key={m} className="num" style={{fontWeight:700,color:'#fff'}}>{fmt(saldoPeriodoM(m))}</td>)}<td className="num" style={{fontWeight:700,color:'#fff',borderLeft:'2px solid rgba(255,255,255,.3)'}}>{fmt(MESES.reduce((s,_,m)=>s+saldoPeriodoM(m),0))}</td></tr>
-
-            {/* SALDO ACUMULADO */}
-            <tr style={{background:'#1a2b4a'}}><td className="sticky" style={{background:'#1a2b4a',color:'#fff',fontWeight:700,fontSize:12}}>SALDO ACUMULADO</td>{MESES.map((_,m)=>{const s=saldoM(m);return<td key={m} className="num" style={{fontWeight:700,color:'#fff',background:s<20000?'#8b2020':undefined}}>{fmt(s)}</td>;})}
-            <td className="num" style={{fontWeight:700,color:'#fff',borderLeft:'2px solid rgba(255,255,255,.3)'}}>{fmt(saldoM(11))}</td></tr>
-</tbody>
+            <tr className="result-row">
+              <td className="sticky">SALDO ACUMULADO</td>
+              {MESES.map((_,m)=>{
+                const s=saldoM(m);
+                const vis=m<=Math.max(cierreFact,cierreGastos);
+                return<td key={m} className="num" style={{fontWeight:700,background:vis&&s<20000?'#8b2020':!vis?'rgba(0,0,0,.2)':undefined,color:!vis?'rgba(255,255,255,.3)':undefined}}>{vis?fmt(s):'—'}</td>;
+              })}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid rgba(255,255,255,.3)'}}>{fmt(SF)}</td>
+            </tr>
+          </tbody>
         </table>
         </div>
       </div>
@@ -1211,7 +1174,7 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
 // ══════════════════════════════════════════════════════════════════
 // EXTRACTO BANCARIO
 // ══════════════════════════════════════════════════════════════════
-function TabExtracto({movs,setMovs,save,gastosReal,gastosFcst,reglas,setReglas,cajaSeg}){
+function TabExtracto({movs,setMovs,save,gastosReal,gastosFcst,reglas,setReglas}){
   const [banco,setBanco]=useState('CAIXABANK');
   const [filtroMes,setFiltroMes]=useState('todos');
   const [filtroBanco,setFiltroBanco]=useState('todos');
@@ -1222,8 +1185,7 @@ function TabExtracto({movs,setMovs,save,gastosReal,gastosFcst,reglas,setReglas,c
   // Categorías = partidas de gastos + fijas de caja + traspaso
   const gastosUnicos=[...new Map((gastosReal||[]).map(g=>[g.id,g])).values()];
   const CATS_FIJAS=['Traspaso entre cuentas','Cobro de cliente','Sin categorizar'];
-  const cajaCats=(cajaSeg||[]).map(r=>r.concepto).filter(Boolean);
-  const CATS=[...gastosUnicos.map(g=>g.concepto),...cajaCats,...CATS_FIJAS];
+  const CATS=[...gastosUnicos.map(g=>g.concepto),...CATS_FIJAS];
 
   // Extraer clave normalizada del concepto para matching
   const extractClave=(concepto)=>{

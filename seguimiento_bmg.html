@@ -258,22 +258,14 @@ function App(){
   const ingIVARealM=m=>clientes.reduce((s,c)=>{const b=factReal[c.id]?.[m]||0;return s+b*(1+(c.iva||0));},0);
   const gCombM=m=>(m<=cierreGastos?gastosReal:gastosFcst).reduce((s,g)=>s+(g.imp[m]||0),0);
 
-  // Cobros desde facturas (usado en pestaña Facturas, no en Caja)
+  // Cobros desde facturas
   const cobrosRealesM=m=>facturas.filter(f=>f.estado==='Cobrada'&&f.fechaCobro&&new Date(f.fechaCobro).getMonth()===m&&new Date(f.fechaCobro).getFullYear()===2026).reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
   const cobrosPendM=m=>facturas.filter(f=>f.mesCobro===m&&!['Cobrada','Cancelada','Incobrable'].includes(f.estado)).reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
 
-  // ══════ CAJA REAL — fuente única de verdad ══════
-  // Real (mes con extracto cerrado): banco. Forecast (mes sin extracto cerrado): previsión.
-  // Cobros reales = extracto, solo etiqueta "Cobro de cliente"
-  const cobrosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.etiqueta==='Cobro de cliente').reduce((s,mv)=>s+mv.importe,0);
-  // Pagos reales = extracto, todo lo negativo excepto traspasos entre cuentas (total, sin desglose)
+  // Pagos del extracto
   const pagosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.importe<0&&mv.etiqueta!=='Traspaso entre cuentas').reduce((s,mv)=>s+mv.importe,0);
-  // Pagos forecast = gastos previstos del mes, netos de IVA/IRPF
-  const pagosFcstM=m=>(gastosFcst||[]).reduce((s,g)=>s-Math.abs(g.imp[m]||0)*(1+(g.iva||0)-(g.irpf||0)),0);
-  // Cobros/pagos de caja del mes: real si el extracto está cerrado, forecast si no
-  const cobrosCajaM=m=>m<=cierreExtracto?cobrosExtM(m):cobrosFcstM(m);
-  const pagosCajaM=m=>m<=cierreExtracto?pagosExtM(m):pagosFcstM(m);
-  const flujoCajaM=m=>cobrosCajaM(m)+pagosCajaM(m);
+  const cobrosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.etiqueta==='Cobro de cliente').reduce((s,mv)=>s+mv.importe,0);
+  const flujoCajaM=m=>cobrosRealesM(m)+pagosExtM(m);
 
   const totRealYTD=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+ingRealM(m),0):0;
   const totPend=facturas.filter(f=>!['Cobrada','Cancelada','Incobrable'].includes(f.estado)).reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
@@ -374,7 +366,7 @@ function App(){
       {sub==='gastos'&&<TabGastos gastosReal={gastosReal} gastosFcst={gastosFcst} gCombM={gCombM} setGR={setGR} setGF={setGF} setGMeta={setGMeta} delGasto={delGasto} setModal={setModal} cierreGastos={cierreGastos}/> }
       {sub==='facturas'&&<TabFacturas facturas={facturas} setFacturas={setFacturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} save={save} cierreFact={cierreFact}/>}
       {sub==='pyg'&&<TabPyG ingM={ingM} gCombM={gCombM} gastosReal={gastosReal} gastosFcst={gastosFcst} cierreFact={cierreFact} cierreGastos={cierreGastos}/>}
-      {sub==='caja'&&<TabCaja cobrosExtM={cobrosExtM} pagosExtM={pagosExtM} cobrosFcstM={cobrosFcstM} pagosFcstM={pagosFcstM} cobrosCajaM={cobrosCajaM} pagosCajaM={pagosCajaM} flujoCajaM={flujoCajaM} cierreExtracto={cierreExtracto} saldo0={saldo0} setSaldo0={setSaldoApp}/>}
+      {sub==='caja'&&<TabCaja facturas={facturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} pagosExtM={pagosExtM} cobrosExtM={cobrosExtM} cobrosFcstM={cobrosFcstM} flujoCajaM={flujoCajaM} cierreFact={cierreFact} cierreGastos={cierreGastos} cierreExtracto={cierreExtracto} saldo0={saldo0} setSaldo0={setSaldoApp} gastosReal={gastosReal} gastosFcst={gastosFcst} cajaPagosReal={cajaPagosReal} setCajaPagoReal={setCajaPagoReal} ingFcstM={ingFcstM} ingIVARealM={ingIVARealM} movs={movs}/>}
       {sub==='extracto'&&<TabExtracto movs={movs} setMovs={setMovs} save={save} gastosReal={gastosReal} gastosFcst={gastosFcst} reglas={reglas} setReglas={setReglas}/>}
     </div>
   );
@@ -946,17 +938,95 @@ function TabPyG({ingM,gCombM,gastosReal,gastosFcst,cierreFact,cierreGastos}){
 
 // ── CAJA REAL ────────────────────────────────────────────────────
 // ── FILA GASTO EN CAJA REAL ──────────────────────────────────────
-function TabCaja({cobrosExtM,pagosExtM,cobrosFcstM,pagosFcstM,cobrosCajaM,pagosCajaM,flujoCajaM,cierreExtracto,saldo0,setSaldo0}){
-  const saldoM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=flujoCajaM(i);return s;};
-  const TC=MESES.reduce((_,__,m)=>_+cobrosCajaM(m),0);
-  const TP=MESES.reduce((_,__,m)=>_+pagosCajaM(m),0);
-  const SF=saldoM(11);
-  const mesActual=Math.max(cierreExtracto,0);
+function CajaGastoRowReal({g,cajaPagosReal,cierreGastos,setCajaPagoReal,gastosFcst,movs,cierreExtracto}){
+  const imp=cajaPagosReal[g.id]||Array(12).fill(0);
+  const neto=v=>v*(1+(g.iva||0)-(g.irpf||0));
+  const fcstG=(gastosFcst||[]).find(x=>x.id===g.id);
+  // Valor real del extracto para este mes y partida (etiqueta = concepto de la partida)
+  const extractoVal=m=>Math.abs((movs||[]).filter(mv=>mv.mes===m&&mv.etiqueta===g.concepto&&mv.importe<0).reduce((s,mv)=>s+mv.importe,0));
+  const esExtracto=m=>cierreExtracto>=0&&m<=cierreExtracto;
+  // Prioridad: 1) extracto cerrado (real del banco) 2) manual editable 3) forecast automático
+  const cajaVal=m=>{
+    if(esExtracto(m)){
+      const ev=extractoVal(m);
+      return ev>0?ev:neto(imp[m]||0);
+    }
+    if(m<=cierreGastos) return neto(imp[m]||0);
+    return neto(Math.abs(fcstG?.imp[m]||0));
+  };
+  const tot=MESES.reduce((s,_,m)=>s+cajaVal(m),0);
+  return(
+    <tr>
+      <td className="sticky" style={{paddingLeft:20,fontSize:12,color:'#444'}}>
+        {g.concepto}
+        {g.iva>0&&<span style={{fontSize:9,background:'#e8f0fb',color:'#1a2b4a',padding:'0 4px',borderRadius:3,marginLeft:4}}>+{Math.round(g.iva*100)}%IVA</span>}
+        {g.irpf>0&&<span style={{fontSize:9,background:'#fff4e0',color:'#7a4000',padding:'0 4px',borderRadius:3,marginLeft:3}}>-{Math.round(g.irpf*100)}%IRPF</span>}
+      </td>
+      {MESES.map((_,m)=>{
+        const esCerrado=m<=cierreGastos;
+        if(esExtracto(m)){
+          return(
+            <td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0',background:'#edfaf2'}}>
+              <span style={{display:'block',textAlign:'right',fontSize:11,fontFamily:'monospace',color:'#1a7a45',fontWeight:700,padding:'2px 0'}}>
+                {fmt(cajaVal(m))}
+                <span style={{fontSize:8,color:'#8ab89a',display:'block',fontWeight:400}}>extracto</span>
+              </span>
+            </td>
+          );
+        }
+        if(esCerrado){
+          return(
+            <td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0',background:'#f4fbf6'}}>
+              <input type="number" className="cell-edit"
+                key={`cpr-${g.id}-${m}-1`}
+                defaultValue={imp[m]||0}
+                onChange={e=>setCajaPagoReal(g.id,m,e.target.value)}
+                min={0}
+                style={{color:'#1a7a45',borderBottomColor:'#a0d4b0',fontWeight:600}}
+              />
+              {(g.iva>0||g.irpf>0)&&(imp[m]||0)>0&&<span style={{fontSize:8,color:'#aaa',display:'block',fontFamily:'monospace',marginTop:1}}>{'='+fmt(neto(imp[m]||0))}</span>}
+            </td>
+          );
+        }
+        return(
+          <td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0',background:'#f4f7fd'}}>
+            <span style={{display:'block',textAlign:'right',fontSize:11,fontFamily:'monospace',color:'#1a2b4a',padding:'2px 0'}}>
+              {fmt(cajaVal(m))}
+            </span>
+          </td>
+        );
+      })}
+      <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#fdf8f0',color:'#b83232'}}>{fmt(tot)}</td>
+    </tr>
+  );
+}
+
+function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobrosFcstM,flujoCajaM,cierreFact,cierreGastos,cierreExtracto,saldo0,setSaldo0,gastosReal,gastosFcst,cajaPagosReal,setCajaPagoReal,ingFcstM,ingIVARealM,movs}){
+  // Valor de caja real de una partida en un mes: extracto cerrado > manual > forecast
+  const cajaValPartida=(g,m)=>{
+    const imp=cajaPagosReal[g.id]||Array(12).fill(0);
+    const neto=v=>v*(1+(g.iva||0)-(g.irpf||0));
+    if(cierreExtracto>=0&&m<=cierreExtracto){
+      const ev=Math.abs((movs||[]).filter(mv=>mv.mes===m&&mv.etiqueta===g.concepto&&mv.importe<0).reduce((s,mv)=>s+mv.importe,0));
+      if(ev>0)return ev;
+      return neto(imp[m]||0);
+    }
+    if(m<=cierreGastos)return neto(imp[m]||0);
+    const fcstG=(gastosFcst||[]).find(x=>x.id===g.id);
+    return neto(Math.abs(fcstG?.imp[m]||0));
+  };
+  // Pagos de explotación = extracto real (si cerrado) · manual · forecast, por partida
+  const pagosExplM=m=>(gastosReal||[]).reduce((s,g)=>s+cajaValPartida(g,m),0);
+  const saldoM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=cobrosRealesM(i)+pagosExtM(i);return s;};
+  const TC=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+cobrosRealesM(m)+cobrosExtM(m),0):0;
+  const TP=cierreGastos>=0?MESES.slice(0,cierreGastos+1).reduce((_,__,m)=>_+pagosExtM(m),0):0;
+  const SF=saldoM(Math.max(cierreFact,cierreGastos,0));
+  const grupos=['Personal','Colaboradores','Estructura'];
 
   return(
     <div>
       <div className="alert alert-info"><i className="ti ti-info-circle"></i>
-        <span>Fuente única: si el extracto del mes está cerrado, los cobros y pagos son los reales del banco (etiqueta "Cobro de cliente" para cobros, total de salidas para pagos). Si el mes aún no tiene extracto cerrado, se muestra la previsión (facturación y gastos previstos). Verde = real del banco · Azul = forecast.</span>
+        <span>Las partidas de gasto aparecen automáticamente. Si el extracto de un mes está cerrado, el importe se coge solo del banco (etiqueta = concepto de la partida). Si no, puedes introducirlo a mano. En meses futuros se muestra el forecast. Los meses verdes = cerrados.</span>
       </div>
 
       <div className="card" style={{marginBottom:14}}>
@@ -967,24 +1037,23 @@ function TabCaja({cobrosExtM,pagosExtM,cobrosFcstM,pagosFcstM,cobrosCajaM,pagosC
             <input type="number" style={{width:150,padding:'6px 10px',border:'1px solid #dde0e6',borderRadius:5,fontSize:15,fontWeight:700,fontFamily:'monospace',color:'#1a2b4a'}}
               value={saldo0} onChange={e=>setSaldo0(e.target.value)}/>
           </div>
-          <div style={{fontSize:11}}>Saldo actual ({MESES[mesActual]}): <strong style={{color:saldoM(mesActual)>=0?'#1a7a45':'#b83232',fontSize:14}}>{fmt(saldoM(mesActual))}</strong></div>
-          <div style={{fontSize:11}}>Proyección cierre año (Dic): <strong style={{color:SF>=0?'#1a7a45':'#b83232',fontSize:14}}>{fmt(SF)}</strong></div>
+          <div style={{fontSize:11}}>Saldo actual ({MESES[Math.max(cierreFact,cierreGastos,0)]}): <strong style={{color:SF>=0?'#1a7a45':'#b83232',fontSize:14}}>{fmt(SF)}</strong></div>
         </div>
       </div>
 
       <div className="card">
-        <div className="card-header"><h2>Plan de caja · 2026</h2><span style={{fontSize:10,color:'#888'}}>Verde = real del extracto bancario · Azul = forecast/previsto</span></div>
+        <div className="card-header"><h2>Plan de caja real · 2026</h2><span style={{fontSize:10,color:'#888'}}>Verde = cerrado · Azul = forecast/previsto</span></div>
         <div className="overflow-x">
         <table style={{minWidth:1220}}>
           <thead><tr>
             <th className="sticky" style={{minWidth:230}}>Concepto</th>
             {MESES.map((m,i)=>{
-              const esReal=i<=cierreExtracto;
+              const esCF=i<=cierreFact;const esCG=i<=cierreGastos;
               return(<th key={i} className="mh" style={{minWidth:72,
-                background:esReal?'#e4f4ec':'#e8f0fb',
-                color:esReal?'#1a7a45':'#1a2b4a',
-                borderTop:esReal?'2px solid #a0d4b0':'2px solid #90b0d8'}}>
-                {m}<div style={{fontSize:8,fontWeight:400,marginTop:1}}>{esReal?'real':'fcst'}</div>
+                background:esCF||esCG?'#e4f4ec':'#e8f0fb',
+                color:esCF||esCG?'#1a7a45':'#1a2b4a',
+                borderTop:esCF||esCG?'2px solid #a0d4b0':'2px solid #90b0d8'}}>
+                {m}<div style={{fontSize:8,fontWeight:400,marginTop:1}}>{esCF||esCG?'real':'fcst'}</div>
               </th>);
             })}
             <th className="mh mh-total" style={{minWidth:82}}>Total</th>
@@ -992,49 +1061,151 @@ function TabCaja({cobrosExtM,pagosExtM,cobrosFcstM,pagosFcstM,cobrosCajaM,pagosC
           <tbody>
 
             {/* COBROS */}
+            <tr className="section-row"><td className="sticky" colSpan={14}>Cobros</td></tr>
+
+            {/* 1. COBROS REALES — facturas cobradas, meses cerrados */}
             <tr style={{background:'#f4fbf6'}}>
-              <td className="sticky" style={{fontWeight:700,paddingLeft:8,color:'#1a7a45',fontSize:12}}>
-                Cobros
-                <div style={{fontSize:9,color:'#888',fontWeight:400}}>real: extracto "Cobro de cliente" · forecast: facturación prevista × plazo de cobro</div>
+              <td className="sticky" style={{fontWeight:600,paddingLeft:16,color:'#1a7a45',fontSize:12}}>
+                Cobros de facturas
+                <div style={{fontSize:9,color:'#888',fontWeight:400}}>facturas marcadas como cobradas · meses cerrados</div>
               </td>
-              {MESES.map((_,m)=>{
-                const esReal=m<=cierreExtracto;
-                const v=esReal?cobrosExtM(m):cobrosFcstM(m);
-                return<td key={m} className="num" style={{color:'#1a7a45',fontWeight:600,background:esReal?undefined:'#fafafa'}}>{fmt(v)}</td>;
-              })}
-              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a7a45'}}>{fmt(TC)}</td>
+              {MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a7a45',fontWeight:600,background:m>cierreFact?'#fafafa':undefined}}>
+                {m<=cierreFact?fmt(cobrosRealesM(m)):'—'}
+              </td>)}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a7a45'}}>
+                {fmt(cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+cobrosRealesM(m),0):0)}
+              </td>
             </tr>
 
-            {/* PAGOS */}
-            <tr style={{background:'#f4e8e8'}}>
-              <td className="sticky" style={{fontWeight:700,paddingLeft:8,color:'#b83232',fontSize:12}}>
-                Pagos
-                <div style={{fontSize:9,color:'#888',fontWeight:400}}>real: total de salidas del extracto (sin traspasos) · forecast: gastos previstos netos de IVA/IRPF</div>
+            {/* 1b. COBROS EXTRACTO — movimientos etiquetados "Cobro de cliente" */}
+            {(()=>{
+              const TCext=cierreExtracto>=0?MESES.slice(0,cierreExtracto+1).reduce((_,__,m)=>_+cobrosExtM(m),0):0;
+              if(TCext===0&&MESES.every((_,m)=>cobrosExtM(m)===0))return null;
+              return(
+                <tr style={{background:'#edfaf2'}}>
+                  <td className="sticky" style={{fontWeight:600,paddingLeft:16,color:'#1a7a45',fontSize:12}}>
+                    Cobros del extracto
+                    <div style={{fontSize:9,color:'#888',fontWeight:400}}>etiqueta "Cobro de cliente" en el extracto bancario</div>
+                  </td>
+                  {MESES.map((_,m)=>{
+                    const cerrado=cierreExtracto>=0&&m<=cierreExtracto;
+                    const v=cobrosExtM(m);
+                    return<td key={m} className="num" style={{color:'#1a7a45',fontWeight:cerrado?600:400,background:cerrado?'#edfaf2':'#fafafa'}}>
+                      {v>0?fmt(v):'—'}
+                    </td>;
+                  })}
+                  <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a7a45'}}>{fmt(TCext)}</td>
+                </tr>
+              );
+            })()}
+
+            {/* 2. ENTRADAS PENDIENTES DE COBRO — facturas con fecha prevista, TODOS los meses */}
+            <tr style={{background:'#f0fbf4'}}>
+              <td className="sticky" style={{fontWeight:600,paddingLeft:16,color:'#1a6a3a',fontSize:12}}>
+                Entradas pendientes de cobro
+                <div style={{fontSize:9,color:'#888',fontWeight:400}}>facturas del Excel · todos los meses según fecha prevista de cobro</div>
               </td>
+              {MESES.map((_,m)=><td key={m} className="num" style={{
+                color:'#1a6a3a',fontWeight:500,
+                background:m<=cierreFact?'#f0fbf4':'#e8f8f0'
+              }}>
+                {fmt(cobrosPendM(m))}
+              </td>)}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a6a3a'}}>
+                {fmt(MESES.reduce((_,__,m)=>_+cobrosPendM(m),0))}
+              </td>
+            </tr>
+
+            {/* 3. ENTRADAS POR FORECAST — meses no cerrados en facturación */}
+            <tr style={{background:'#f4f7fd'}}>
+              <td className="sticky" style={{fontWeight:600,paddingLeft:16,color:'#1a2b4a',fontSize:12}}>
+                Entradas por forecast (facturación prevista)
+                <div style={{fontSize:9,color:'#888',fontWeight:400}}>forecast de facturación × (1+IVA) + plazo cobro · para meses no cerrados</div>
+              </td>
+              {MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a2b4a',fontWeight:500,background:m<=cierreFact?'#fafafa':undefined}}>
+                {m>cierreFact?fmt(cobrosFcstM(m)):'—'}
+              </td>)}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a2b4a'}}>
+                {fmt(MESES.slice(cierreFact+1).reduce((_,__,i)=>_+cobrosFcstM(cierreFact+1+i),0))}
+              </td>
+            </tr>
+
+            {/* TOTAL COBROS */}
+            <tr style={{background:'#e4f4ec'}}>
+              <td className="sticky" style={{fontWeight:700,color:'#1a7a45',paddingLeft:8}}>TOTAL COBROS</td>
               {MESES.map((_,m)=>{
-                const esReal=m<=cierreExtracto;
-                const v=esReal?pagosExtM(m):pagosFcstM(m);
-                return<td key={m} className="num" style={{color:'#b83232',fontWeight:600,background:esReal?undefined:'#fafafa'}}>{fmt(v)}</td>;
+                const v=m<=cierreFact
+                  ?(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m))
+                  :(cobrosPendM(m)+cobrosFcstM(m));
+                return<td key={m} className="num green" style={{fontWeight:700}}>{fmt(v)}</td>;
+              })}
+              <td className="num green" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>
+                {fmt(
+                  (cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m)),0):0)
+                  +MESES.slice(cierreFact+1).reduce((_,__,i)=>_+(cobrosPendM(cierreFact+1+i)+cobrosFcstM(cierreFact+1+i)),0)
+                )}
+              </td>
+            </tr>
+
+            {/* PAGOS EXPLOTACIÓN — partidas de gastosReal, editable */}
+            <tr className="section-row"><td className="sticky" colSpan={14}>
+              Pagos de explotación
+              <span style={{fontSize:9,background:'#dce8f8',color:'#1a2b4a',padding:'1px 7px',borderRadius:10,fontWeight:600,marginLeft:8}}>extracto (verde) · manual · forecast (azul)</span>
+            </td></tr>
+            {grupos.map(gr=>{
+              const gg=(gastosReal||[]).filter(g=>g.grupo===gr);
+              if(!gg.length)return null;
+              const tGrM=m=>gg.reduce((s,g)=>s+cajaValPartida(g,m),0);
+              const tGrA=MESES.reduce((_,__,m)=>_+tGrM(m),0);
+              return[
+                <tr key={`hdr${gr}`} style={{background:'#f4f6f9'}}>
+                  <td className="sticky" colSpan={14} style={{paddingLeft:12,fontWeight:700,fontSize:10,color:'#1a2b4a',textTransform:'uppercase',letterSpacing:'.04em'}}>{gr}</td>
+                </tr>,
+                ...gg.map(g=><CajaGastoRowReal key={g.id} g={g} cajaPagosReal={cajaPagosReal} cierreGastos={cierreGastos} setCajaPagoReal={setCajaPagoReal} gastosFcst={gastosFcst} movs={movs} cierreExtracto={cierreExtracto}/>),
+                <tr key={`tot${gr}`} style={{background:'#f0f2f6'}}>
+                  <td className="sticky" style={{paddingLeft:12,fontWeight:700,fontSize:11,color:'#b83232'}}>Subtotal {gr}</td>
+                  {MESES.map((_,m)=><td key={m} className="num red" style={{fontWeight:600}}>{fmt(tGrM(m))}</td>)}
+                  <td className="num red" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(tGrA)}</td>
+                </tr>
+              ];
+            })}
+            <tr style={{background:'#f4e8e8'}}>
+              <td className="sticky" style={{fontWeight:700,color:'#b83232',paddingLeft:8,fontSize:11}}>Subtotal explotación</td>
+              {MESES.map((_,m)=><td key={m} className="num red" style={{fontWeight:600}}>{fmt(pagosExplM(m))}</td>)}
+              <td className="num red" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a'}}>{fmt(MESES.reduce((_,__,m)=>_+pagosExplM(m),0))}</td>
+            </tr>
+
+            {/* PAGOS EXTRACTO */}
+            <tr className="section-row"><td className="sticky" colSpan={14}>
+              Pagos del extracto bancario
+              {cierreExtracto>=0&&<span style={{fontSize:9,background:'#e4f4ec',color:'#1a7a45',padding:'1px 7px',borderRadius:10,fontWeight:600,marginLeft:8}}>Cerrado hasta {MESES[cierreExtracto]}</span>}
+            </td></tr>
+            <tr>
+              <td className="sticky" style={{fontWeight:700,paddingLeft:16,color:'#b83232'}}>Total pagos extracto</td>
+              {MESES.map((_,m)=>{
+                const cerrado=cierreExtracto>=0&&m<=cierreExtracto;
+                return<td key={m} className="num" style={{color:'#b83232',fontWeight:cerrado?700:500,background:cerrado?'#f4fbf6':'#fafafa'}}>
+                  {cerrado?fmt(pagosExtM(m)):'—'}
+                </td>;
               })}
               <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#b83232'}}>{fmt(TP)}</td>
             </tr>
 
-            {/* FLUJO NETO */}
+            {/* TOTALES */}
             <tr style={{background:'#e4ecf4'}}>
               <td className="sticky" style={{fontWeight:700}}>FLUJO NETO</td>
               {MESES.map((_,m)=>{
                 const f=flujoCajaM(m);
-                return<td key={m} className={`num ${f>=0?'green':'red'}`} style={{fontWeight:700}}>{fmt(f)}</td>;
+                return<td key={m} className={`num ${f>=0?'green':'red'}`} style={{fontWeight:700,background:m>Math.max(cierreFact,cierreGastos)?'#f4f6f9':undefined}}>{m<=Math.max(cierreFact,cierreGastos)?fmt(f):'—'}</td>;
               })}
               <td className={`num ${TC+TP>=0?'green':'red'}`} style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(TC+TP)}</td>
             </tr>
-
-            {/* SALDO ACUMULADO */}
             <tr className="result-row">
               <td className="sticky">SALDO ACUMULADO</td>
               {MESES.map((_,m)=>{
                 const s=saldoM(m);
-                return<td key={m} className="num" style={{fontWeight:700,background:s<20000?'#8b2020':undefined}}>{fmt(s)}</td>;
+                const vis=m<=Math.max(cierreFact,cierreGastos);
+                return<td key={m} className="num" style={{fontWeight:700,background:vis&&s<20000?'#8b2020':!vis?'rgba(0,0,0,.2)':undefined,color:!vis?'rgba(255,255,255,.3)':undefined}}>{vis?fmt(s):'—'}</td>;
               })}
               <td className="num" style={{fontWeight:700,borderLeft:'2px solid rgba(255,255,255,.3)'}}>{fmt(SF)}</td>
             </tr>

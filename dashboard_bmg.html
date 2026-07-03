@@ -4,18 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard · BMG Law Services</title>
-<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
-<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,sans-serif;font-size:13px;background:#f0f2f5;color:#1a1a1a}
 .app{max-width:1400px;margin:0 auto;padding:16px}
 .header{background:#1a2b4a;color:#fff;padding:14px 20px;border-radius:8px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
 .header h1{font-size:15px;font-weight:700}
+.header-sub{font-size:11px;color:#a0b4d0;margin-top:2px}
 .main-nav{display:flex;gap:2px;background:#fff;border-radius:8px;padding:4px;margin-bottom:14px;border:1px solid #e0e0e0;flex-wrap:wrap}
-.main-nav button{padding:7px 16px;border:none;background:transparent;border-radius:5px;cursor:pointer;font-size:12px;color:#555;font-weight:500;display:flex;align-items:center;gap:5px;transition:.12s}
+.main-nav button{padding:7px 16px;border:none;background:transparent;border-radius:5px;cursor:pointer;font-size:12px;color:#555;font-weight:500;display:flex;align-items:center;gap:5px;transition:.12s;white-space:nowrap}
 .main-nav button.active{background:#1a2b4a;color:#fff}
 .main-nav button:hover:not(.active){background:#f0f2f5}
 .card{background:#fff;border-radius:8px;border:1px solid #e0e0e0;margin-bottom:14px;overflow:hidden}
@@ -37,18 +39,22 @@ tr:last-child td{border-bottom:none}
 tr:hover td{background:#fafbfc}
 .num{text-align:right;font-variant-numeric:tabular-nums;font-family:monospace;font-size:11px}
 .total-row td{background:#e4ecf4;font-weight:700;font-size:12px;border-top:2px solid #1a2b4a}
-.section-row td{background:#f4f6f9;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#1a2b4a;padding:5px 10px}
 .overflow-x{overflow-x:auto}
 .desv-pos{color:#1a7a45;font-weight:600}
 .desv-neg{color:#b83232;font-weight:600}
-.chart-wrap{position:relative;height:260px;margin-top:8px}
+.desv-neu{color:#888}
+.chart-wrap{position:relative;height:280px;margin-top:8px}
 .tabs{display:flex;gap:0;border-bottom:2px solid #e4e8ee;margin-bottom:16px}
-.tab-btn{padding:7px 18px;border:none;background:transparent;cursor:pointer;font-size:12px;font-weight:600;color:#888;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:Arial,sans-serif}
+.tab-btn{padding:7px 18px;border:none;background:transparent;cursor:pointer;font-size:12px;font-weight:600;color:#888;border-bottom:2px solid transparent;margin-bottom:-2px;display:flex;align-items:center;gap:5px;font-family:Arial,sans-serif}
 .tab-btn.active{color:#1a2b4a;border-bottom-color:#1a2b4a}
-.pct-bar{height:6px;background:#e8e8e8;border-radius:3px;overflow:hidden;margin-top:5px}
-.pct-fill{height:100%;border-radius:3px;transition:.3s}
+.tab-btn:hover:not(.active){color:#333}
 .alert{padding:10px 14px;border-radius:6px;font-size:11px;margin-bottom:14px;display:flex;align-items:flex-start;gap:8px}
 .alert-warn{background:#fff8e6;color:#b06000;border:1px solid #f0d070}
+.pct-bar{height:6px;background:#e8e8e8;border-radius:3px;overflow:hidden;margin-top:5px}
+.pct-fill{height:100%;border-radius:3px;transition:.3s}
+.legend{display:flex;gap:16px;margin-bottom:10px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:#555}
+.legend-dot{width:12px;height:12px;border-radius:2px;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -59,592 +65,315 @@ const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','
 const SK_PPTO='bmg_presupuesto_2026_v1';
 const SK_SEG='bmg_seguimiento_2026_v1';
 
-const fmt=(n,dec=0)=>{if(n===null||n===undefined||isNaN(n))return'—';const s=Math.abs(n).toLocaleString('es-ES',{minimumFractionDigits:dec,maximumFractionDigits:dec});return(n<0?'-':'')+'€\u202f'+s;};
+const fmt=(n,dec=0)=>{
+  if(n===null||n===undefined||isNaN(n))return'—';
+  const s=Math.abs(n).toLocaleString('es-ES',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+  return(n<0?'-':'')+'€\u202f'+s;
+};
 const fmtPct=(n)=>n===null||isNaN(n)?'—':(n>=0?'+':'')+Math.round(n)+'%';
 const pct=(a,b)=>b?((a-b)/Math.abs(b))*100:null;
 const load=k=>{try{const r=localStorage.getItem(k);return r?JSON.parse(r):null;}catch{return null;}};
 
-function LineChart({labels,datasets,height=260}){
-  const ref=useRef();const chartRef=useRef();
+// ── CHART COMPONENT ──────────────────────────────────────────────
+function BarChart({labels,datasets,height=280}){
+  const ref=useRef();
+  const chartRef=useRef();
   useEffect(()=>{
     if(!ref.current)return;
     if(chartRef.current)chartRef.current.destroy();
-    chartRef.current=new Chart(ref.current,{type:'line',data:{labels,datasets},options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:12}},tooltip:{callbacks:{label:ctx=>' '+fmt(ctx.parsed.y)}}},
-      scales:{x:{ticks:{font:{size:10}},grid:{display:false}},y:{ticks:{callback:v=>fmt(v),font:{size:10}},grid:{color:'#f0f0f0'}}}
-    }});
+    chartRef.current=new Chart(ref.current,{
+      type:'bar',
+      data:{labels,datasets},
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmt(ctx.parsed.y)}}},
+        scales:{
+          x:{ticks:{font:{size:10}},grid:{display:false}},
+          y:{ticks:{callback:v=>fmt(v),font:{size:10}},grid:{color:'#f0f0f0'}}
+        }
+      }
+    });
     return()=>{if(chartRef.current)chartRef.current.destroy();};
   },[labels,JSON.stringify(datasets)]);
   return <canvas ref={ref} style={{height}}/>;
 }
 
-function BarChart({labels,datasets,height=260}){
-  const ref=useRef();const chartRef=useRef();
-  useEffect(()=>{
-    if(!ref.current)return;
-    if(chartRef.current)chartRef.current.destroy();
-    chartRef.current=new Chart(ref.current,{type:'bar',data:{labels,datasets},options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:12}},tooltip:{callbacks:{label:ctx=>' '+fmt(ctx.parsed.y)}}},
-      scales:{x:{ticks:{font:{size:10}},grid:{display:false}},y:{ticks:{callback:v=>fmt(v),font:{size:10}},grid:{color:'#f0f0f0'}}}
-    }});
-    return()=>{if(chartRef.current)chartRef.current.destroy();};
-  },[labels,JSON.stringify(datasets)]);
-  return <canvas ref={ref} style={{height}}/>;
-}
-
-function DesvCell({real,ppto}){
-  const d=real-ppto;
-  const p=pct(real,ppto);
-  if(!ppto&&!real)return<td className="num gray">—</td>;
-  return<td className={`num ${d>=0?'desv-pos':'desv-neg'}`}>{d>=0?'+':''}{fmt(d)}<br/><span style={{fontSize:9}}>{fmtPct(p)}</span></td>;
-}
-
+// ── APP ──────────────────────────────────────────────────────────
 function App(){
   const [ppto,setPpto]=useState(null);
   const [seg,setSeg]=useState(null);
-  const [tab,setTab]=useState('ventas');
-  const [vista,setVista]=useState('ytd');
+  const [vista,setVista]=useState('ytd'); // 'ytd' | 'cierre'
+  const [detalle,setDetalle]=useState(false);
 
-  useEffect(()=>{setPpto(load(SK_PPTO));setSeg(load(SK_SEG));const t=setInterval(()=>{setPpto(load(SK_PPTO));setSeg(load(SK_SEG));},5000);return()=>clearInterval(t);},[]);
+  useEffect(()=>{
+    setPpto(load(SK_PPTO));
+    setSeg(load(SK_SEG));
+  },[]);
 
   const noData=!ppto||!seg;
-  if(noData)return(
+
+  if(noData) return(
     <div className="app">
-      <div className="header"><h1>BMG Law Services · Dashboard 2026</h1></div>
-      <div className="alert alert-warn">No se encuentran datos. Abre primero el Presupuesto y el Seguimiento en este navegador.</div>
+      <div className="header">
+        <div><h1><i className="ti ti-dashboard" style={{marginRight:7}}></i>BMG Law Services · Dashboard 2026</h1></div>
+      </div>
+      <div className="alert alert-warn">
+        <i className="ti ti-alert-triangle" style={{fontSize:18}}></i>
+        <div>
+          <strong>No se encuentran datos.</strong> Abre primero el <strong>Presupuesto</strong> (con datos fijados) y el <strong>Seguimiento</strong> (con datos reales introducidos) en este mismo navegador. Los datos deben estar en el mismo navegador y dominio que este fichero.
+        </div>
+      </div>
     </div>
   );
 
-  const cierreFact=seg.cierreFact??-1;
-  const cierreGastos=seg.cierreGastos??-1;
-  const clientes_seg=seg.clientes||[];
+  // ── Leer datos ──────────────────────────────────────────────────
   const clientes_ppto=ppto.clientes||[];
+  const clientes_seg=seg.clientes||[];
+  const fact_ppto=ppto.fact||{};
+  const factReal=seg.factReal||{};
+  const factFcst=seg.factFcst||{};
+  const cierreFact=seg.cierreFact??-1;
+
+  // Combinar lista de clientes (union de ambos)
   const todosClientes=[...new Map([...clientes_ppto,...clientes_seg].map(c=>[c.id,c])).values()];
 
-  // ── VENTAS ──────────────────────────────────────────────────────
-  const pptoVentasM=m=>todosClientes.reduce((s,c)=>(ppto.fact?.[c.id]?.[m]||0)+s,0);
-  const realVentasM=m=>m<=cierreFact?todosClientes.reduce((s,c)=>(seg.factReal?.[c.id]?.[m]||0)+s,0):todosClientes.reduce((s,c)=>(seg.factFcst?.[c.id]?.[m]||0)+s,0);
-  const realVentasYTD=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+todosClientes.reduce((s,c)=>(seg.factReal?.[c.id]?.[m]||0)+s,0),0):0;
-  const pptoVentasYTD=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+pptoVentasM(m),0):0;
-  const pptoVentasAnual=MESES.reduce((_,__,m)=>_+pptoVentasM(m),0);
-  const realVentasAnual=MESES.reduce((_,__,m)=>_+realVentasM(m),0);
+  // Presupuesto: facturación anual por cliente
+  const pptoClienteM=(cid,m)=>fact_ppto[cid]?.[m]||0;
+  const pptoTotalM=m=>todosClientes.reduce((s,c)=>s+pptoClienteM(c.id,m),0);
+  const pptoClienteAnual=cid=>MESES.reduce((_,__,m)=>_+pptoClienteM(cid,m),0);
+  const pptoTotalAnual=MESES.reduce((_,__,m)=>_+pptoTotalM(m),0);
 
-  // ── PyG ─────────────────────────────────────────────────────────
-  const gastosReal=seg.gastosReal||[];
-  const gastosFcst=seg.gastosFcst||[];
-  const gastosPpto=ppto.gastos||[];
+  // Real: factReal para meses cerrados, factFcst para el resto
+  const realClienteM=(cid,m)=>m<=cierreFact?(factReal[cid]?.[m]||0):(factFcst[cid]?.[m]||0);
+  const realTotalM=m=>todosClientes.reduce((s,c)=>s+realClienteM(c.id,m),0);
+  const realClienteAnual=cid=>MESES.reduce((_,__,m)=>_+realClienteM(cid,m),0);
+  const realTotalAnual=MESES.reduce((_,__,m)=>_+realTotalM(m),0);
 
-  const pptoGastoM=(gid,m)=>(ppto.gastos||[]).find(g=>g.id===gid)?.imp[m]||0;
-  const realGastoM=(gid,m)=>{
-    const gr=(gastosReal||[]).find(g=>g.id===gid);
-    const gf=(gastosFcst||[]).find(g=>g.id===gid);
-    return m<=cierreGastos?(gr?.imp[m]||0):(gf?.imp[m]||0);
-  };
+  // YTD: solo meses cerrados
+  const pptoYTDCliente=cid=>cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+pptoClienteM(cid,m),0):0;
+  const realYTDCliente=cid=>cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+(factReal[cid]?.[m]||0),0):0;
+  const pptoYTDTotal=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+pptoTotalM(m),0):0;
+  const realYTDTotal=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+MESES.slice(0,cierreFact+1).reduce(()=>0,0)+todosClientes.reduce((s,c)=>s+(factReal[c.id]?.[m]||0),0),0):0;
 
-  // Totales por grupo
-  const grupos=['Personal','Colaboradores','Estructura'];
-  const pptoGrupoM=(gr,m)=>(ppto.gastos||[]).filter(g=>g.grupo===gr).reduce((s,g)=>s+(g.imp[m]||0),0);
-  const realGrupoM=(gr,m)=>gastosReal.filter(g=>g.grupo===gr).reduce((s,g)=>s+realGastoM(g.id,m),0);
+  // Simplified YTD
+  const pptoYTD=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+pptoTotalM(m),0):0;
+  const realYTD=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+todosClientes.reduce((s,c)=>s+(factReal[c.id]?.[m]||0),0),0):0;
+  const desvYTD=realYTD-pptoYTD;
+  const desvYTDpct=pct(realYTD,pptoYTD);
+  const desvAnual=realTotalAnual-pptoTotalAnual;
+  const desvAnualPct=pct(realTotalAnual,pptoTotalAnual);
 
-  // Gastos almacenados como positivos en imp[] — usar Math.abs por seguridad
-  const pptoCVTotalM=m=>(ppto.gastos||[]).filter(g=>g.grupo==='Personal'||g.grupo==='Colaboradores').reduce((s,g)=>s+Math.abs(g.imp[m]||0),0);
-  const realCVTotalM=m=>gastosReal.filter(g=>g.grupo==='Personal'||g.grupo==='Colaboradores').reduce((s,g)=>s+Math.abs(realGastoM(g.id,m)),0);
-  const pptoEstrM=m=>(ppto.gastos||[]).filter(g=>g.grupo==='Estructura').reduce((s,g)=>s+Math.abs(g.imp[m]||0),0);
-  const realEstrM=m=>gastosReal.filter(g=>g.grupo==='Estructura').reduce((s,g)=>s+Math.abs(realGastoM(g.id,m)),0);
-
-  const pptoMBM=m=>pptoVentasM(m)-pptoCVTotalM(m);
-  const realMBM=m=>realVentasM(m)-realCVTotalM(m);
-  const pptoEBITDAM=m=>pptoMBM(m)-pptoEstrM(m);
-  const realEBITDAM=m=>realMBM(m)-realEstrM(m);
-
-  // YTD sums
-  const ytdSum=(fn)=>cierreFact>=0?MESES.slice(0,Math.max(cierreFact,cierreGastos)+1).reduce((_,__,m)=>_+fn(m),0):0;
-  const annualSum=(fn)=>MESES.reduce((_,__,m)=>_+fn(m),0);
-  const sum=(fn)=>vista==='ytd'?ytdSum(fn):annualSum(fn);
-  const mesesVis=vista==='ytd'?MESES.slice(0,Math.max(cierreFact,cierreGastos)+1):MESES;
-
-  // ── TESORERÍA ───────────────────────────────────────────────────
-  const cajaSeg=seg.cajaSeg||[];
-  const cajaPpto=ppto.caja||[];
-  const cajaPagosReal=seg.cajaPagosReal||{};
-  const cajaPagosPpto=ppto.cajaPagos||{};
-  const movs=seg.movs||[];
-  const cierreExtracto=seg.cierreExtracto??-1;
-
-  // ── PPTO tesorería — replica EXACTA de TabTes del presupuesto ──
-  // flujoM = cobrosM - pagosExplM - pagosFiscM (igual que presupuesto línea 680)
-  const pptoCajaRows=(ppto.caja||[]).filter(r=>r&&r.tipo&&Array.isArray(r.imp));
-  const pptoCobrosM=m=>pptoCajaRows.filter(r=>r.tipo==='cobro').reduce((s,r)=>s+(r.imp[m]||0),0);
-  // pagosExplM en presupuesto = suma directa de cajaPagos sin aplicar IVA/IRPF
-  const pptoPagosExplM=m=>Object.entries(cajaPagosPpto||{}).reduce((s,[gid,arr])=>s+(arr[m]||0),0);
-  const pptoPagosFiscM=m=>pptoCajaRows.filter(r=>r.tipo==='pago'&&r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
-  // SALDO EXPLOTACIÓN = flujoM (igual que presupuesto)
-  const pptoFlujoExplM=m=>pptoCobrosM(m)-pptoPagosExplM(m)-pptoPagosFiscM(m);
-  // Leer saldos exportados desde el presupuesto
-  const pptoSaldoExplotArr=ppto._saldoExplotM||null;
-  const pptoSaldoAcumArr=ppto._saldoAcumM||null;
-  const pptoFlujoExplM2=m=>pptoSaldoExplotArr?pptoSaldoExplotArr[m]:pptoFlujoExplM(m);
-  const pptoSaldoAcumM=m=>pptoSaldoAcumArr?pptoSaldoAcumArr[m]:(()=>{let s=ppto.saldo0??0;for(let i=0;i<=m;i++)s+=pptoFlujoExplM(i);return s;})();
-  const pptoSaldoPeriodoM=pptoFlujoExplM2;
-
-  // ── REAL tesorería ──
-  const cobrosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.importe>0&&mv.etiqueta==='Cobro de cliente').reduce((s,mv)=>s+mv.importe,0);
-  const cobrosPendM=m=>(seg.facturas||[]).filter(f=>!['Cobrada','Cancelada','Incobrable'].includes(f.estado)&&f.mesCobro===m).reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
-  const cobrosFcstM=m=>todosClientes.reduce((s,c)=>{
-    const pm=Math.round((c.plazo||60)/30);const mo=m-pm;
-    if(mo<0||mo>11||mo<=cierreFact)return s;
-    return s+(seg.factFcst?.[c.id]?.[mo]||0)*(1+(c.iva||0));
-  },0);
-  const realCobrosM=m=>m<=cierreFact?(cobrosExtM(m)+cobrosPendM(m)):((cierreExtracto>=0&&m<=cierreExtracto)?(cobrosExtM(m)+cobrosPendM(m)):(cobrosPendM(m)+cobrosFcstM(m)));
-  const realPagosExplM=m=>{
-    if(cierreExtracto>=0&&m<=cierreExtracto)return gastosReal.reduce((s,g)=>{
-      const ev=Math.abs(movs.filter(mv=>mv.mes===m&&mv.etiqueta===g.concepto&&mv.importe<0).reduce((a,mv)=>a+mv.importe,0));
-      if(ev>0)return s+ev;
-      const b=(cajaPagosReal[g.id]||Array(12).fill(0))[m]||0;
-      return s+b*(1+(g.iva||0)-(g.irpf||0));
-    },0);
-    if(m<=cierreGastos)return gastosReal.reduce((s,g)=>{const b=(cajaPagosReal[g.id]||Array(12).fill(0))[m]||0;return s+b*(1+(g.iva||0)-(g.irpf||0));},0);
-    return(seg.gastosFcst||[]).reduce((s,g)=>{const b=Math.abs(g.imp[m]||0);return s+b*(1+(g.iva||0)-(g.irpf||0));},0);
-  };
-  const realPagosFiscM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='impuestos').reduce((s,r)=>s+(r.imp[m]||0),0);
-  const realFinFlujM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='financiacion').reduce((s,r)=>s+(r.tipo==='cobro'?1:-1)*(r.imp[m]||0),0);
-  const realFlujoExplM=m=>realCobrosM(m)-realPagosExplM(m)-realPagosFiscM(m);
-  const saldo0=seg.saldo0??45000;
-  // Leer saldos exportados desde el seguimiento
-  const realSaldoExplotArr=seg._saldoExplotM||null;
-  const realSaldoAcumArr=seg._saldoAcumM||null;
-  const realSaldoPeriodoM=m=>realSaldoExplotArr?realSaldoExplotArr[m]:realFlujoExplM(m);
-  const realSaldoAcumM=m=>realSaldoAcumArr?realSaldoAcumArr[m]:(()=>{let s=saldo0;for(let i=0;i<=m;i++)s+=realFlujoExplM(i);return s;})();
-
-  const mesLabel=cierreFact>=0?`Ene–${MESES[Math.max(cierreFact,cierreGastos)]}`:'Sin datos';
+  const mesLabel=cierreFact>=0?`Ene–${MESES[cierreFact]}`:'Sin datos cerrados';
 
   return(
     <div className="app">
       <div className="header">
         <div>
-          <h1>BMG Law Services · Dashboard 2026</h1>
-          <div style={{fontSize:11,color:'#a0b4d0',marginTop:2}}>Datos cerrados hasta {cierreFact>=0?MESES[cierreFact]:'—'} · Actualizado automáticamente</div>
+          <h1><i className="ti ti-dashboard" style={{marginRight:7}}></i>BMG Law Services · Dashboard Ventas 2026</h1>
+          <div className="header-sub">Comparativa Presupuesto vs Real · Datos cerrados hasta {cierreFact>=0?MESES[cierreFact]:'—'}</div>
         </div>
       </div>
 
       <div className="main-nav">
-        <button onClick={()=>window.location.href='presupuesto_bmg.html'} style={{color:'#555'}}>Presupuesto</button>
-        <button onClick={()=>window.location.href='seguimiento_bmg.html'} style={{color:'#555'}}>Seguimiento</button>
-        <button className="active">Dashboard</button>
+        <button style={{color:'#bbb',cursor:'default'}}><i className="ti ti-target"></i>Presupuesto</button>
+        <button style={{color:'#bbb',cursor:'default'}}><i className="ti ti-chart-arrows-vertical"></i>Seguimiento</button>
+        <button className="active"><i className="ti ti-dashboard"></i>Dashboard</button>
       </div>
 
-      {/* TABS */}
-      <div className="tabs">
-        <button className={`tab-btn ${tab==='ventas'?'active':''}`} onClick={()=>setTab('ventas')}>Ventas</button>
-        <button className={`tab-btn ${tab==='pyg'?'active':''}`} onClick={()=>setTab('pyg')}>PyG</button>
-        <button className={`tab-btn ${tab==='tesorer'?'active':''}`} onClick={()=>setTab('tesorer')}>Tesorería</button>
+      {cierreFact<0&&<div className="alert alert-warn"><i className="ti ti-alert-triangle"></i><span>No hay meses cerrados en el seguimiento. Cierra al menos un mes para ver la comparativa YTD.</span></div>}
+
+      {/* KPIs globales */}
+      <div className="metrics">
+        <div className={`metric ${desvYTD>=0?'bg-green':desvYTD<0?'bg-red':''}`}>
+          <div className="metric-label">Real YTD ({mesLabel})</div>
+          <div className="metric-val green">{fmt(realYTD)}</div>
+          <div className="metric-sub">Presupuesto: {fmt(pptoYTD)}</div>
+          <div className={`metric-desv ${desvYTD>=0?'green':'red'}`}>{desvYTD>=0?'▲':'▼'} {fmt(Math.abs(desvYTD))} ({fmtPct(desvYTDpct)})</div>
+        </div>
+        <div className={`metric ${desvAnual>=0?'bg-green':desvAnual<0?'bg-red':''}`}>
+          <div className="metric-label">Proyección cierre año</div>
+          <div className="metric-val blue">{fmt(realTotalAnual)}</div>
+          <div className="metric-sub">Presupuesto: {fmt(pptoTotalAnual)}</div>
+          <div className={`metric-desv ${desvAnual>=0?'green':'red'}`}>{desvAnual>=0?'▲':'▼'} {fmt(Math.abs(desvAnual))} ({fmtPct(desvAnualPct)})</div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">% ejecución PPTO ({mesLabel})</div>
+          <div className={`metric-val ${pptoYTD?((realYTD/pptoYTD)>=1?'green':'orange'):'gray'}`}>{pptoYTD?Math.round(realYTD/pptoYTD*100)+'%':'—'}</div>
+          <div className="metric-sub">Sobre presupuesto YTD</div>
+          <div className="pct-bar"><div className="pct-fill" style={{width:Math.min(pptoYTD?realYTD/pptoYTD*100:0,150)+'%',background:pptoYTD&&realYTD>=pptoYTD?'#1a7a45':'#b06000'}}></div></div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">% ejecución PPTO (año)</div>
+          <div className={`metric-val ${pptoTotalAnual?((realTotalAnual/pptoTotalAnual)>=1?'green':'orange'):'gray'}`}>{pptoTotalAnual?Math.round(realTotalAnual/pptoTotalAnual*100)+'%':'—'}</div>
+          <div className="metric-sub">Proyección vs presupuesto</div>
+          <div className="pct-bar"><div className="pct-fill" style={{width:Math.min(pptoTotalAnual?realTotalAnual/pptoTotalAnual*100:0,150)+'%',background:pptoTotalAnual&&realTotalAnual>=pptoTotalAnual?'#1a7a45':'#b06000'}}></div></div>
+        </div>
+        <div className="metric">
+          <div className="metric-label">Meses cerrados</div>
+          <div className="metric-val blue">{cierreFact>=0?cierreFact+1:0}/12</div>
+          <div className="metric-sub">{cierreFact>=0?`Hasta ${MESES[cierreFact]}`:'Ninguno cerrado'}</div>
+        </div>
       </div>
 
-      {/* VISTA SELECTOR */}
-      <div style={{display:'flex',gap:6,marginBottom:14}}>
-        <button onClick={()=>setVista('ytd')} style={{padding:'5px 14px',borderRadius:4,border:'1px solid #dde0e6',background:vista==='ytd'?'#1a2b4a':'#fff',color:vista==='ytd'?'#fff':'#555',cursor:'pointer',fontSize:11,fontFamily:'Arial,sans-serif',fontWeight:600}}>YTD ({mesLabel})</button>
-        <button onClick={()=>setVista('anual')} style={{padding:'5px 14px',borderRadius:4,border:'1px solid #dde0e6',background:vista==='anual'?'#1a2b4a':'#fff',color:vista==='anual'?'#fff':'#555',cursor:'pointer',fontSize:11,fontFamily:'Arial,sans-serif',fontWeight:600}}>Proyección año completo</button>
+      {/* Gráfico mes a mes */}
+      <div className="card">
+        <div className="card-header">
+          <h2>Facturación mensual · Presupuesto vs Real/Forecast</h2>
+          <div className="tabs" style={{margin:0,border:'none'}}>
+            <button className={`tab-btn ${vista==='ytd'?'active':''}`} onClick={()=>setVista('ytd')}>YTD ({mesLabel})</button>
+            <button className={`tab-btn ${vista==='cierre'?'active':''}`} onClick={()=>setVista('cierre')}>Proyección año completo</button>
+          </div>
+        </div>
+        <div className="card-body">
+          <div className="legend">
+            <span className="legend-item"><span className="legend-dot" style={{background:'#1a2b4a'}}></span>Presupuesto</span>
+            <span className="legend-item"><span className="legend-dot" style={{background:'#1a7a45'}}></span>Real (cerrado)</span>
+            <span className="legend-item"><span className="legend-dot" style={{background:'#90b4d8'}}></span>Forecast</span>
+          </div>
+          {vista==='ytd'?(
+            <div className="chart-wrap">
+              <BarChart
+                labels={cierreFact>=0?MESES.slice(0,cierreFact+1):MESES}
+                datasets={[
+                  {label:'Presupuesto',data:cierreFact>=0?MESES.slice(0,cierreFact+1).map((_,m)=>pptoTotalM(m)):MESES.map((_,m)=>pptoTotalM(m)),backgroundColor:'#c8d4e4',borderRadius:3},
+                  {label:'Real',data:cierreFact>=0?MESES.slice(0,cierreFact+1).map((_,m)=>todosClientes.reduce((s,c)=>s+(factReal[c.id]?.[m]||0),0)):MESES.map((_,m)=>todosClientes.reduce((s,c)=>s+(factReal[c.id]?.[m]||0),0)),backgroundColor:'#1a7a45',borderRadius:3},
+                ]}
+              />
+            </div>
+          ):(
+            <div className="chart-wrap">
+              <BarChart
+                labels={MESES}
+                datasets={[
+                  {label:'Presupuesto',data:MESES.map((_,m)=>pptoTotalM(m)),backgroundColor:'#c8d4e4',borderRadius:3},
+                  {label:'Real',data:MESES.map((_,m)=>m<=cierreFact?todosClientes.reduce((s,c)=>s+(factReal[c.id]?.[m]||0),0):0),backgroundColor:'#1a7a45',borderRadius:3},
+                  {label:'Forecast',data:MESES.map((_,m)=>m>cierreFact?todosClientes.reduce((s,c)=>s+(factFcst[c.id]?.[m]||0),0):0),backgroundColor:'#90b4d8',borderRadius:3},
+                ]}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ── VENTAS ── */}
-      {tab==='ventas'&&(()=>{
-        const pptoYTD=pptoVentasYTD;const realYTD=realVentasYTD;
-        const pptoA=pptoVentasAnual;const realA=realVentasAnual;
-        const p=vista==='ytd';
-        return(<>
-          <div className="metrics">
-            <div className={`metric ${(p?realYTD-pptoYTD:realA-pptoA)>=0?'bg-green':'bg-red'}`}>
-              <div className="metric-label">Ventas {p?'YTD':'proyección año'}</div>
-              <div className="metric-val green">{fmt(p?realYTD:realA)}</div>
-              <div className="metric-sub">Ppto: {fmt(p?pptoYTD:pptoA)}</div>
-              <div className={`metric-desv ${(p?realYTD-pptoYTD:realA-pptoA)>=0?'green':'red'}`}>{fmtPct(pct(p?realYTD:realA,p?pptoYTD:pptoA))}</div>
-            </div>
-            <div className="metric">
-              <div className="metric-label">Ejecución PPTO</div>
-              <div className="metric-val blue">{(p?pptoYTD:pptoA)?Math.round((p?realYTD:realA)/(p?pptoYTD:pptoA)*100)+'%':'—'}</div>
-              <div className="pct-bar"><div className="pct-fill" style={{width:Math.min((p?pptoYTD:pptoA)?(p?realYTD:realA)/(p?pptoYTD:pptoA)*100:0,150)+'%',background:'#1a7a45'}}></div></div>
-            </div>
-            <div className="metric">
-              <div className="metric-label">Meses cerrados</div>
-              <div className="metric-val blue">{cierreFact>=0?cierreFact+1:0}/12</div>
-            </div>
+      {/* Tabla mes a mes */}
+      <div className="card">
+        <div className="card-header">
+          <h2>Tabla mensual · Presupuesto vs Real</h2>
+          <div className="tabs" style={{margin:0,border:'none'}}>
+            <button className={`tab-btn ${vista==='ytd'?'active':''}`} onClick={()=>setVista('ytd')}>YTD</button>
+            <button className={`tab-btn ${vista==='cierre'?'active':''}`} onClick={()=>setVista('cierre')}>Año completo</button>
           </div>
-
-          <div className="card">
-            <div className="card-header"><h2>Ventas mensuales · Ppto vs Real/Forecast</h2></div>
-            <div className="card-body">
-              <div className="chart-wrap">
-                <BarChart labels={mesesVis} datasets={[
-                  {label:'Presupuesto',data:mesesVis.map((_,i)=>{const m=vista==='ytd'?i:i;return pptoVentasM(vista==='ytd'?i:i);}),backgroundColor:'#c8d4e4',borderRadius:3},
-                  {label:'Real',data:mesesVis.map((_,i)=>i<=cierreFact?todosClientes.reduce((s,c)=>(seg.factReal?.[c.id]?.[i]||0)+s,0):0),backgroundColor:'#1a7a45',borderRadius:3},
-                  ...(vista==='anual'?[{label:'Forecast',data:mesesVis.map((_,i)=>i>cierreFact?todosClientes.reduce((s,c)=>(seg.factFcst?.[c.id]?.[i]||0)+s,0):0),backgroundColor:'#90b4d8',borderRadius:3}]:[]),
-                ]}/>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-header"><h2>Tabla ventas · Ppto vs Real</h2></div>
-            <div className="overflow-x">
-            <table>
-              <thead><tr>
-                <th style={{minWidth:80}}>Mes</th>
-                <th className="num">Presupuesto</th>
-                <th className="num">Real / Fcst</th>
-                <th className="num">Desviación</th>
-              </tr></thead>
-              <tbody>
-              {mesesVis.map((mes,i)=>{
-                const m=vista==='ytd'?i:i;
-                const pv=pptoVentasM(m);const rv=realVentasM(m);
-                return<tr key={m}>
-                  <td style={{fontWeight:600}}>{mes} {m<=cierreFact&&<span style={{fontSize:9,background:'#e4f4ec',color:'#1a7a45',padding:'1px 5px',borderRadius:3}}>real</span>}</td>
-                  <td className="num">{fmt(pv)}</td>
-                  <td className="num" style={{color:m<=cierreFact?'#1a7a45':'#1a2b4a',fontWeight:m<=cierreFact?600:400}}>{fmt(rv)}</td>
-                  <DesvCell real={rv} ppto={pv}/>
-                </tr>;
-              })}
-              <tr className="total-row">
-                <td>TOTAL</td>
-                <td className="num">{fmt(sum(pptoVentasM))}</td>
-                <td className="num">{fmt(sum(realVentasM))}</td>
-                <DesvCell real={sum(realVentasM)} ppto={sum(pptoVentasM)}/>
-              </tr>
-              </tbody>
-            </table>
-            </div>
-          </div>
-
-          {/* Por cliente */}
-          <div className="card">
-            <div className="card-header">
-              <h2>Ventas por cliente</h2>
-              <span style={{fontSize:10,color:'#888'}}>{vista==='ytd'?`YTD · meses cerrados Ene–${MESES[cierreFact>=0?cierreFact:0]} · solo facturación real`:'Proyección año completo · real + forecast'}</span>
-            </div>
-            <div className="overflow-x">
-            <table>
-              <thead><tr>
-                <th>Cliente</th>
-                <th className="num">Ppto</th>
-                <th className="num">Real/Fcst</th>
-                <th className="num">Desviación</th>
-                <th style={{minWidth:100}}>Ejecución</th>
-              </tr></thead>
-              <tbody>
-              {todosClientes.map(c=>{
-                const pv=vista==='ytd'?MESES.slice(0,Math.max(cierreFact,0)+1).reduce((_,__,m)=>_+(ppto.fact?.[c.id]?.[m]||0),0):MESES.reduce((_,__,m)=>_+(ppto.fact?.[c.id]?.[m]||0),0);
-                const rv=vista==='ytd'?MESES.slice(0,Math.max(cierreFact,0)+1).reduce((_,__,m)=>_+(seg.factReal?.[c.id]?.[m]||0),0):MESES.reduce((_,__,m)=>_+(m<=cierreFact?(seg.factReal?.[c.id]?.[m]||0):(seg.factFcst?.[c.id]?.[m]||0)),0);
-                if(!pv&&!rv)return null;
-                const ejec=pv?Math.round(rv/pv*100):null;
-                return<tr key={c.id}>
-                  <td style={{fontWeight:500}}>{c.nombre}</td>
-                  <td className="num">{fmt(pv)}</td>
-                  <td className="num" style={{fontWeight:600,color:'#1a2b4a'}}>{fmt(rv)}</td>
-                  <DesvCell real={rv} ppto={pv}/>
-                  <td>
-                    <div style={{display:'flex',alignItems:'center',gap:6}}>
+        </div>
+        <div className="overflow-x">
+        <table>
+          <thead><tr>
+            <th style={{minWidth:90}}>Mes</th>
+            <th className="num">Presupuesto</th>
+            <th className="num">Real / Forecast</th>
+            <th className="num">Desviación €</th>
+            <th className="num">Desviación %</th>
+            <th style={{minWidth:80}}>Estado</th>
+          </tr></thead>
+          <tbody>
+          {MESES.map((mes,m)=>{
+            const esReal=m<=cierreFact;
+            const esFcst=m>cierreFact;
+            if(vista==='ytd'&&!esReal)return null;
+            const pv=pptoTotalM(m);
+            const rv=esReal?todosClientes.reduce((s,c)=>s+(factReal[c.id]?.[m]||0),0):todosClientes.reduce((s,c)=>s+(factFcst[c.id]?.[m]||0),0);
+            const dev=rv-pv;
+            const devPct=pct(rv,pv);
+            return(
+              <tr key={m}>
+                <td style={{fontWeight:600}}>{mes} {esReal&&<span style={{fontSize:9,background:'#e4f4ec',color:'#1a7a45',padding:'1px 5px',borderRadius:3,marginLeft:4}}>real</span>}{esFcst&&vista==='cierre'&&<span style={{fontSize:9,background:'#e8f0fb',color:'#1a2b4a',padding:'1px 5px',borderRadius:3,marginLeft:4}}>fcst</span>}</td>
+                <td className="num">{fmt(pv)}</td>
+                <td className="num" style={{color:esReal?'#1a7a45':'#1a2b4a',fontWeight:esReal?600:400}}>{fmt(rv)}</td>
+                <td className={`num ${dev>0?'desv-pos':dev<0?'desv-neg':'desv-neu'}`}>{dev>0?'+':''}{fmt(dev)}</td>
+                <td className={`num ${dev>0?'desv-pos':dev<0?'desv-neg':'desv-neu'}`}>{fmtPct(devPct)}</td>
+                <td>
+                  {esReal&&(
+                    <div style={{display:'flex',alignItems:'center',gap:5}}>
                       <div style={{flex:1,height:6,background:'#e8e8e8',borderRadius:3,overflow:'hidden'}}>
-                        <div style={{height:'100%',width:Math.min(ejec||0,150)+'%',background:rv>=pv?'#1a7a45':'#b83232',borderRadius:3}}></div>
+                        <div style={{height:'100%',width:Math.min(pv?rv/pv*100:0,150)+'%',background:dev>=0?'#1a7a45':'#b83232',borderRadius:3}}></div>
                       </div>
-                      <span style={{fontSize:10,color:'#555',minWidth:32,textAlign:'right'}}>{ejec!==null?ejec+'%':'—'}</span>
+                      <span style={{fontSize:10,color:'#888',whiteSpace:'nowrap'}}>{pv?Math.round(rv/pv*100)+'%':'—'}</span>
                     </div>
-                  </td>
-                </tr>;
-              }).filter(Boolean)}
-              <tr className="total-row">
-                <td>TOTAL</td>
-                <td className="num">{fmt(sum(pptoVentasM))}</td>
-                <td className="num">{fmt(sum(realVentasM))}</td>
-                <DesvCell real={sum(realVentasM)} ppto={sum(pptoVentasM)}/>
-                <td></td>
+                  )}
+                  {esFcst&&vista==='cierre'&&<span style={{fontSize:10,color:'#888'}}>previsión</span>}
+                </td>
               </tr>
-              </tbody>
-            </table>
-            </div>
-          </div>
-        </>);
-      })()}
+            );
+          }).filter(Boolean)}
+          <tr className="total-row">
+            <td>{vista==='ytd'?`TOTAL YTD (${mesLabel})`:'TOTAL AÑO'}</td>
+            <td className="num">{fmt(vista==='ytd'?pptoYTD:pptoTotalAnual)}</td>
+            <td className="num" style={{color:'#1a2b4a'}}>{fmt(vista==='ytd'?realYTD:realTotalAnual)}</td>
+            <td className={`num ${(vista==='ytd'?desvYTD:desvAnual)>=0?'desv-pos':'desv-neg'}`}>{(vista==='ytd'?desvYTD:desvAnual)>=0?'+':''}{fmt(Math.abs(vista==='ytd'?desvYTD:desvAnual))}</td>
+            <td className={`num ${(vista==='ytd'?desvYTDpct:desvAnualPct)>=0?'desv-pos':'desv-neg'}`}>{fmtPct(vista==='ytd'?desvYTDpct:desvAnualPct)}</td>
+            <td></td>
+          </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
 
-      {/* ── PyG ── */}
-      {tab==='pyg'&&(()=>{
-        const filas=[
-          {label:'Ingresos netos',ppto:pptoVentasM,real:realVentasM,bold:true,color:'#1a7a45'},
-          {label:'— Personal',ppto:m=>pptoGrupoM('Personal',m),real:m=>realGrupoM('Personal',m),indent:true},
-          {label:'— Colaboradores',ppto:m=>pptoGrupoM('Colaboradores',m),real:m=>realGrupoM('Colaboradores',m),indent:true},
-          {label:'Total Costes Variables',ppto:pptoCVTotalM,real:realCVTotalM,bold:true,color:'#b83232'},
-          {label:'MARGEN BRUTO',ppto:pptoMBM,real:realMBM,bold:true,section:true},
-          {label:'— Estructura',ppto:pptoEstrM,real:realEstrM,indent:true},
-          {label:'EBITDA',ppto:pptoEBITDAM,real:realEBITDAM,bold:true,section:true},
-        ];
-        return(<>
-          <div className="metrics">
-            {[
-              {label:'EBITDA '+(vista==='ytd'?'YTD':'año'),ppto:sum(pptoEBITDAM),real:sum(realEBITDAM)},
-              {label:'Margen Bruto '+(vista==='ytd'?'YTD':'año'),ppto:sum(pptoMBM),real:sum(realMBM)},
-              {label:'Ingresos '+(vista==='ytd'?'YTD':'año'),ppto:sum(pptoVentasM),real:sum(realVentasM)},
-            ].map(({label,ppto:pv,real:rv})=>(
-              <div key={label} className={`metric ${rv-pv>=0?'bg-green':'bg-red'}`}>
-                <div className="metric-label">{label}</div>
-                <div className={`metric-val ${rv>=0?'blue':'red'}`}>{fmt(rv)}</div>
-                <div className="metric-sub">Ppto: {fmt(pv)}</div>
-                <div className={`metric-desv ${rv-pv>=0?'green':'red'}`}>{fmtPct(pct(rv,pv))}</div>
-              </div>
-            ))}
+      {/* Detalle por cliente */}
+      <div className="card">
+        <div className="card-header">
+          <h2>Detalle por cliente</h2>
+          <div className="tabs" style={{margin:0,border:'none'}}>
+            <button className={`tab-btn ${vista==='ytd'?'active':''}`} onClick={()=>setVista('ytd')}>YTD</button>
+            <button className={`tab-btn ${vista==='cierre'?'active':''}`} onClick={()=>setVista('cierre')}>Año completo</button>
           </div>
-
-          <div className="card">
-            <div className="card-header">
-              <h2>Cuenta de explotación · Ppto vs Real/Fcst</h2>
-              <span style={{fontSize:10,color:'#888'}}>{vista==='ytd'?`YTD Ene–${MESES[Math.max(cierreFact,cierreGastos)>=0?Math.max(cierreFact,cierreGastos):0]}`:'Proyección año completo'}</span>
-            </div>
-            <div className="overflow-x">
-            <table>
-              <thead><tr>
-                <th style={{minWidth:200}}>Concepto</th>
-                <th className="num" style={{minWidth:110}}>Presupuesto</th>
-                <th className="num" style={{minWidth:110}}>Real / Fcst</th>
-                <th className="num" style={{minWidth:110}}>Desviación</th>
-                <th className="num" style={{minWidth:70}}>%</th>
-              </tr></thead>
-              <tbody>
-              {filas.map(({label,ppto:pFn,real:rFn,bold,color,indent,section})=>{
-                const rTotal=sum(rFn);const pTotal=sum(pFn);
-                const d=rTotal-pTotal;const p=pTotal?Math.round(d/Math.abs(pTotal)*100):null;
-                return<tr key={label} style={{background:section?'#e4ecf4':undefined}}>
-                  <td style={{fontWeight:bold?700:400,paddingLeft:indent?24:10,color:color||undefined,fontSize:section?12:11}}>{label}</td>
-                  <td className="num" style={{color:'#888'}}>{fmt(pTotal)}</td>
-                  <td className="num" style={{fontWeight:bold?700:500,color:rTotal>=0?'#1a2b4a':'#b83232'}}>{fmt(rTotal)}</td>
-                  <td className={`num ${d>=0?'desv-pos':'desv-neg'}`}>{d>=0?'+':''}{fmt(d)}</td>
-                  <td className={`num ${d>=0?'desv-pos':'desv-neg'}`} style={{fontSize:10}}>{p!==null?(d>=0?'+':'')+p+'%':'—'}</td>
-                </tr>;
-              })}
-              </tbody>
-            </table>
-            </div>
-          </div>
-
-          {/* Tabla mensual PyG */}
-          <div className="card">
-            <div className="card-header">
-              <h2>PyG mensual · Real vs Presupuesto</h2>
-              <span style={{fontSize:10,color:'#888'}}>Meses cerrados en verde · Forecast en gris</span>
-            </div>
-            <div className="overflow-x">
-            <table>
-              <thead><tr>
-                <th style={{minWidth:180}}>Concepto</th>
-                {MESES.map((m,i)=><th key={i} className="num" style={{minWidth:72,background:i<=Math.max(cierreFact,cierreGastos)?'#e4f4ec':'#e8f0fb',color:i<=Math.max(cierreFact,cierreGastos)?'#1a7a45':'#1a2b4a',borderTop:i<=Math.max(cierreFact,cierreGastos)?'2px solid #a0d4b0':'2px solid #90b0d8'}}>
-                  {m}<div style={{fontSize:8,fontWeight:400}}>{i<=Math.max(cierreFact,cierreGastos)?'real':'fcst'}</div>
-                </th>)}
-                <th className="num" style={{minWidth:80,borderLeft:'2px solid #1a2b4a'}}>Total</th>
-              </tr></thead>
-              <tbody>
-              {filas.map(({label,real:rFn,ppto:pFn,bold,color,indent,section})=>{
-                const rTotal=sum(rFn);const pTotal=sum(pFn);const d=rTotal-pTotal;
-                return<tr key={label} style={{background:section?'#e4ecf4':undefined}}>
-                  <td style={{fontWeight:bold?700:400,paddingLeft:indent?20:8,color:color||undefined,fontSize:section?12:11}}>{label}</td>
-                  {MESES.map((_,i)=>{
-                    const rv=rFn(i);const pv=pFn(i);const isClosed=i<=Math.max(cierreFact,cierreGastos);
-                    return<td key={i} className="num" style={{color:isClosed?(rv>=0?'#1a7a45':'#b83232'):'#888',fontWeight:isClosed&&bold?600:400,fontSize:11}}>
-                      {fmt(rv)}
-                      {isClosed&&<div style={{fontSize:8,color:rv-pv>=0?'#1a7a45':'#b83232'}}>{rv-pv>=0?'+':''}{fmt(rv-pv)}</div>}
-                    </td>;
-                  })}
-                  <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:rTotal>=0?'#1a7a45':'#b83232'}}>
-                    {fmt(rTotal)}
-                    <div style={{fontSize:9,color:d>=0?'#1a7a45':'#b83232',fontWeight:600}}>{d>=0?'+':''}{fmt(d)}</div>
-                  </td>
-                </tr>;
-              })}
-              </tbody>
-            </table>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-header"><h2>EBITDA mensual · Ppto vs Real</h2></div>
-            <div className="card-body">
-              <div className="chart-wrap">
-                <BarChart labels={mesesVis} datasets={[
-                  {label:'Ppto EBITDA',data:mesesVis.map((_,i)=>pptoEBITDAM(i)),backgroundColor:'#c8d4e4',borderRadius:3},
-                  {label:'Real EBITDA',data:mesesVis.map((_,i)=>i<=Math.max(cierreFact,cierreGastos)?realEBITDAM(i):0),backgroundColor:'#1a7a45',borderRadius:3},
-                  ...(vista==='anual'?[{label:'Fcst EBITDA',data:mesesVis.map((_,i)=>i>Math.max(cierreFact,cierreGastos)?realEBITDAM(i):0),backgroundColor:'#90b4d8',borderRadius:3}]:[]),
-                ]}/>
-              </div>
-            </div>
-          </div>
-
-          {/* KPIs mensuales PyG */}
-          <div className="card">
-            <div className="card-header"><h2>Detalle mensual · PyG</h2></div>
-            <div className="card-body">
-              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:10}}>
-              {mesesVis.map((_,m)=>{
-                const isClosed=m<=Math.max(cierreFact,cierreGastos);
-                const conceptos=[
-                  {label:'Ingresos',ppto:pptoVentasM(m),real:realVentasM(m)},
-                  {label:'Costes var.',ppto:pptoCVTotalM(m),real:realCVTotalM(m),neg:true},
-                  {label:'Margen Bruto',ppto:pptoMBM(m),real:realMBM(m),bold:true},
-                  {label:'Estructura',ppto:pptoEstrM(m),real:realEstrM(m),neg:true},
-                  {label:'EBITDA',ppto:pptoEBITDAM(m),real:realEBITDAM(m),bold:true},
-                ];
-                return(
-                  <div key={m} style={{border:'1px solid #e0e4ea',borderRadius:7,overflow:'hidden',opacity:!isClosed&&vista==='ytd'?0.5:1}}>
-                    <div style={{background:isClosed?'#1a7a45':'#1a2b4a',color:'#fff',padding:'6px 10px',fontWeight:700,fontSize:11,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                      <span>{MESES[m]}</span>
-                      <span style={{fontSize:9,fontWeight:400,opacity:.7}}>{isClosed?'real':'fcst'}</span>
+        </div>
+        <div className="overflow-x">
+        <table>
+          <thead><tr>
+            <th style={{minWidth:180}}>Cliente</th>
+            <th className="num">Presupuesto</th>
+            <th className="num">Real / Forecast</th>
+            <th className="num">Desv. €</th>
+            <th className="num">Desv. %</th>
+            <th style={{minWidth:100}}>Ejecución</th>
+          </tr></thead>
+          <tbody>
+          {todosClientes.map(c=>{
+            const pv=vista==='ytd'?pptoYTDCliente(c.id):pptoClienteAnual(c.id);
+            const rv=vista==='ytd'?realYTDCliente(c.id):realClienteAnual(c.id);
+            const dev=rv-pv;
+            const devPct=pct(rv,pv);
+            const ejec=pv?Math.round(rv/pv*100):null;
+            if(pv===0&&rv===0)return null;
+            return(
+              <tr key={c.id}>
+                <td style={{fontWeight:500}}>{c.nombre}</td>
+                <td className="num">{fmt(pv)}</td>
+                <td className="num" style={{fontWeight:600,color:'#1a2b4a'}}>{fmt(rv)}</td>
+                <td className={`num ${dev>0?'desv-pos':dev<0?'desv-neg':'desv-neu'}`}>{dev>0?'+':''}{fmt(dev)}</td>
+                <td className={`num ${dev>0?'desv-pos':dev<0?'desv-neg':'desv-neu'}`}>{fmtPct(devPct)}</td>
+                <td>
+                  <div style={{display:'flex',alignItems:'center',gap:6}}>
+                    <div style={{flex:1,height:6,background:'#e8e8e8',borderRadius:3,overflow:'hidden'}}>
+                      <div style={{height:'100%',width:Math.min(ejec||0,150)+'%',background:dev>=0?'#1a7a45':'#b83232',borderRadius:3,transition:'.3s'}}></div>
                     </div>
-                    {conceptos.map(({label,ppto:pv,real:rv,bold,neg})=>{
-                      const d=rv-pv;const pos=neg?d<=0:d>=0;
-                      return(
-                        <div key={label} style={{padding:'4px 10px',borderBottom:'1px solid #f4f4f4',background:bold?'#f8f9fc':undefined}}>
-                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
-                            <span style={{fontSize:9,color:'#888',fontWeight:bold?700:400}}>{label}</span>
-                            <span style={{fontSize:11,fontWeight:bold?700:500,fontFamily:'monospace',color:rv>=0?'#1a2b4a':'#b83232'}}>{fmt(rv)}</span>
-                          </div>
-                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginTop:1}}>
-                            <span style={{fontSize:9,color:'#bbb'}}>ppto {fmt(pv)}</span>
-                            <span style={{fontSize:9,fontWeight:600,color:pos?'#1a7a45':'#b83232'}}>{d>=0?'+':''}{fmt(d)}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    <span style={{fontSize:10,color:'#555',minWidth:32,textAlign:'right'}}>{ejec!==null?ejec+'%':'—'}</span>
                   </div>
-                );
-              })}
-              </div>
-            </div>
-          </div>
-        </>);
-      })()}
-
-      {/* ── TESORERÍA ── */}
-      {tab==='tesorer'&&(()=>{
-        const filasT=[
-          {label:'Cobros',ppto:pptoCobrosM,real:realCobrosM,color:'#1a7a45',bold:true},
-          {label:'Pagos explotación',ppto:pptoPagosExplM,real:realPagosExplM,color:'#b83232',neg:true},
-          {label:'Pagos fiscales',ppto:pptoPagosFiscM,real:realPagosFiscM,color:'#7a4000',neg:true},
-          {label:'SALDO PERIODO',ppto:pptoSaldoPeriodoM,real:realSaldoPeriodoM,bold:true,section:true},
-          {label:'SALDO ACUMULADO',ppto:pptoSaldoAcumM,real:realSaldoAcumM,bold:true,section:true},
-        ];
-        return(<>
-          <div className="metrics">
-            {[
-              {label:'Saldo acumulado actual',ppto:pptoSaldoAcumM(Math.max(cierreFact,cierreGastos,0)),real:realSaldoAcumM(Math.max(cierreFact,cierreGastos,0))},
-              {label:'Cobros '+(vista==='ytd'?'YTD':'año'),ppto:sum(pptoCobrosM),real:sum(realCobrosM)},
-              {label:'Pagos explot. '+(vista==='ytd'?'YTD':'año'),ppto:sum(pptoPagosExplM),real:sum(realPagosExplM)},
-            ].map(({label,ppto:pv,real:rv})=>(
-              <div key={label} className={`metric ${rv-pv>=0?'bg-green':'bg-red'}`}>
-                <div className="metric-label">{label}</div>
-                <div className={`metric-val ${rv>=0?'blue':'red'}`}>{fmt(rv)}</div>
-                <div className="metric-sub">Ppto: {fmt(pv)}</div>
-                <div className={`metric-desv ${rv-pv>=0?'green':'red'}`}>{fmtPct(pct(rv,pv))}</div>
-              </div>
-            ))}
-          </div>
-
-{/* Tabla resumen Ppto vs Real */}
-          <div className="card">
-            <div className="card-header">
-              <h2>Tesorería · Ppto vs Real/Fcst</h2>
-              <span style={{fontSize:10,color:'#888'}}>{vista==='ytd'?`YTD Ene–${MESES[Math.max(cierreFact,cierreGastos,cierreExtracto,0)]}`:'Proyección año completo'}</span>
-            </div>
-            <div className="overflow-x">
-            <table>
-              <thead><tr>
-                <th style={{minWidth:200}}>Concepto</th>
-                <th className="num" style={{minWidth:110}}>Presupuesto</th>
-                <th className="num" style={{minWidth:110}}>Real / Fcst</th>
-                <th className="num" style={{minWidth:110}}>Desviación</th>
-                <th className="num" style={{minWidth:70}}>%</th>
-              </tr></thead>
-              <tbody>
-              {filasT.map(({label,ppto:pFn,real:rFn,bold,color,section})=>{
-                const rTotal=sum(rFn);const pTotal=sum(pFn);
-                const d=rTotal-pTotal;const p=pTotal?Math.round(d/Math.abs(pTotal)*100):null;
-                return<tr key={label} style={{background:section?'#e4ecf4':undefined}}>
-                  <td style={{fontWeight:bold?700:400,color:color||undefined,fontSize:section?12:11,paddingLeft:10}}>{label}</td>
-                  <td className="num" style={{color:'#888'}}>{fmt(pTotal)}</td>
-                  <td className="num" style={{fontWeight:bold?700:500,color:rTotal>=0?'#1a2b4a':'#b83232'}}>{fmt(rTotal)}</td>
-                  <td className={`num ${d>=0?'desv-pos':'desv-neg'}`}>{d>=0?'+':''}{fmt(d)}</td>
-                  <td className={`num ${d>=0?'desv-pos':'desv-neg'}`} style={{fontSize:10}}>{p!==null?(d>=0?'+':'')+p+'%':'—'}</td>
-                </tr>;
-              })}
-              </tbody>
-            </table>
-            </div>
-          </div>
-
-          {/* Gráfico 1: Saldo Explotación por periodo */}
-          <div className="card">
-            <div className="card-header"><h2>Saldo explotación por periodo · Ppto vs Real</h2></div>
-            <div className="card-body">
-              <div className="chart-wrap">
-                <BarChart labels={MESES} datasets={[
-                  {label:'Ppto',data:MESES.map((_,i)=>pptoFlujoExplM2(i)),backgroundColor:'#c8d4e4',borderRadius:3},
-                  {label:'Real/Fcst',data:MESES.map((_,i)=>realFlujoExplM(i)),backgroundColor:MESES.map((_,i)=>i<=Math.max(cierreFact,cierreGastos,cierreExtracto)?'#1a7a45':'#90b4d8'),borderRadius:3},
-                ]}/>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-header"><h2>Evolución saldo acumulado · Ppto vs Real</h2></div>
-            <div className="card-body">
-              <div className="chart-wrap">
-                <LineChart labels={MESES} datasets={[
-                  {label:'Presupuesto',data:MESES.map((_,i)=>pptoSaldoAcumM(i)),borderColor:'#90b4d8',backgroundColor:'rgba(144,180,216,0.1)',tension:.3,pointRadius:3,fill:false},
-                  {label:'Real / Forecast',data:MESES.map((_,i)=>realSaldoAcumM(i)),borderColor:'#1a7a45',backgroundColor:'rgba(26,122,69,0.1)',tension:.3,pointRadius:3,pointBackgroundColor:MESES.map((_,i)=>i<=Math.max(cierreFact,cierreGastos,cierreExtracto)?'#1a7a45':'#90b4d8'),fill:false},
-                ]}/>
-              </div>
-            </div>
-          </div>
-
-          {/* KPIs mensuales Tesorería */}
-          <div className="card">
-            <div className="card-header"><h2>Detalle mensual · Tesorería</h2></div>
-            <div className="card-body">
-              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:10}}>
-              {mesesVis.map((_,m)=>{
-                const isClosed=m<=Math.max(cierreFact,cierreGastos,cierreExtracto);
-                const conceptos=[
-                  {label:'Cobros',ppto:pptoCobrosM(m),real:realCobrosM(m)},
-                  {label:'Pagos explot.',ppto:pptoPagosExplM(m),real:realPagosExplM(m),neg:true},
-                  {label:'Pagos fiscales',ppto:pptoPagosFiscM(m),real:realPagosFiscM(m),neg:true},
-                  {label:'Saldo periodo',ppto:pptoSaldoPeriodoM(m),real:realSaldoPeriodoM(m),bold:true},
-                  {label:'Saldo acumulado',ppto:pptoSaldoAcumM(m),real:realSaldoAcumM(m),bold:true},
-                ];
-                return(
-                  <div key={m} style={{border:'1px solid #e0e4ea',borderRadius:7,overflow:'hidden',opacity:!isClosed&&vista==='ytd'?0.5:1}}>
-                    <div style={{background:isClosed?'#1a7a45':'#1a2b4a',color:'#fff',padding:'6px 10px',fontWeight:700,fontSize:11,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                      <span>{MESES[m]}</span>
-                      <span style={{fontSize:9,fontWeight:400,opacity:.7}}>{isClosed?'real':'fcst'}</span>
-                    </div>
-                    {conceptos.map(({label,ppto:pv,real:rv,bold,neg})=>{
-                      const d=rv-pv;const pos=neg?d<=0:d>=0;
-                      return(
-                        <div key={label} style={{padding:'4px 10px',borderBottom:'1px solid #f4f4f4',background:bold?'#f8f9fc':undefined}}>
-                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
-                            <span style={{fontSize:9,color:'#888',fontWeight:bold?700:400}}>{label}</span>
-                            <span style={{fontSize:11,fontWeight:bold?700:500,fontFamily:'monospace',color:rv>=0?'#1a2b4a':'#b83232'}}>{fmt(rv)}</span>
-                          </div>
-                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginTop:1}}>
-                            <span style={{fontSize:9,color:'#bbb'}}>ppto {fmt(pv)}</span>
-                            <span style={{fontSize:9,fontWeight:600,color:pos?'#1a7a45':'#b83232'}}>{d>=0?'+':''}{fmt(d)}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-              </div>
-            </div>
-          </div>
-        </>);
-      })()}
+                </td>
+              </tr>
+            );
+          })}
+          <tr className="total-row">
+            <td>TOTAL</td>
+            <td className="num">{fmt(vista==='ytd'?pptoYTD:pptoTotalAnual)}</td>
+            <td className="num">{fmt(vista==='ytd'?realYTD:realTotalAnual)}</td>
+            <td className={`num ${(vista==='ytd'?desvYTD:desvAnual)>=0?'desv-pos':'desv-neg'}`}>{(vista==='ytd'?desvYTD:desvAnual)>=0?'+':''}{fmt(Math.abs(vista==='ytd'?desvYTD:desvAnual))}</td>
+            <td className={`num ${(vista==='ytd'?desvYTDpct:desvAnualPct)>=0?'desv-pos':'desv-neg'}`}>{fmtPct(vista==='ytd'?desvYTDpct:desvAnualPct)}</td>
+            <td></td>
+          </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
     </div>
   );
 }

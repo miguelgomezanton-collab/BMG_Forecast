@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BMG Law Services · Control Financiero 2026</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f0f2f5;color:#1a1a1a;min-height:100vh;display:flex;flex-direction:column}
+.header{background:#1a2b4a;color:#fff;padding:28px 32px;display:flex;align-items:center;gap:16px}
+.header-logo{width:44px;height:44px;background:rgba(255,255,255,.12);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.header h1{font-size:20px;font-weight:700}
+.header-sub{font-size:12px;color:#a0b4d0;margin-top:3px}
+.main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px}
+.subtitle{font-size:13px;color:#888;margin-bottom:36px;text-align:center}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;width:100%;max-width:860px}
+.card{background:#fff;border-radius:12px;border:1px solid #e0e0e0;padding:28px 28px 24px;text-decoration:none;color:inherit;transition:.15s;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
+.card:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(26,43,74,.13);border-color:#b0c0d8}
+.card-icon{width:48px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:4px}
+.card-icon-ppto{background:#e4ecf4;color:#1a2b4a}
+.card-icon-seg{background:#e4f4ec;color:#1a7a45}
+.card h2{font-size:17px;font-weight:700;color:#1a2b4a}
+.card p{font-size:12px;color:#666;line-height:1.6}
+.card-tabs{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.tab-pill{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600}
+.tab-pill-ppto{background:#e4ecf4;color:#1a2b4a}
+.tab-pill-seg{background:#e4f4ec;color:#1a7a45}
+.card-arrow{position:absolute;top:24px;right:24px;font-size:18px;color:#c0c8d4;transition:.15s}
+.card:hover .card-arrow{color:#1a2b4a;transform:translateX(3px)}
+.status-row{display:flex;align-items:center;gap:6px;font-size:11px;color:#888;margin-top:6px;padding-top:12px;border-top:1px solid #f0f0f0}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.dot-ok{background:#1a7a45}
+.dot-draft{background:#e0a000}
+.footer{text-align:center;padding:20px;font-size:11px;color:#bbb}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-logo"><i class="ti ti-building-skyscraper"></i></div>
+  <div>
+    <h1>BMG Law Services</h1>
+    <div class="header-sub">Control Financiero 2026 · Plataforma de gestión PyG y tesorería</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="subtitle">Selecciona el módulo que quieres abrir</div>
+  <div class="cards">
+
+    <a class="card" href="presupuesto_bmg.html">
+      <i class="ti ti-chevron-right card-arrow"></i>
+      <div class="card-icon card-icon-ppto"><i class="ti ti-target"></i></div>
+      <h2>Presupuesto 2026</h2>
+      <p>Define y fija el presupuesto anual base. Sirve como referencia fija para comparar con el real a lo largo del año.</p>
+      <div class="card-tabs">
+        <span class="tab-pill tab-pill-ppto"><i class="ti ti-chart-bar" style="font-size:9px"></i> Facturación</span>
+        <span class="tab-pill tab-pill-ppto"><i class="ti ti-receipt" style="font-size:9px"></i> Gastos</span>
+        <span class="tab-pill tab-pill-ppto"><i class="ti ti-report-money" style="font-size:9px"></i> PyG</span>
+        <span class="tab-pill tab-pill-ppto"><i class="ti ti-building-bank" style="font-size:9px"></i> Tesorería</span>
+      </div>
+      <div class="status-row">
+        <span class="dot dot-draft"></span>
+        Introduce los datos y pulsa "Fijar presupuesto"
+      </div>
+    </a>
+
+    <a class="card" href="seguimiento_bmg.html">
+      <i class="ti ti-chevron-right card-arrow"></i>
+      <div class="card-icon card-icon-seg"><i class="ti ti-chart-arrows-vertical"></i></div>
+      <h2>Seguimiento Real</h2>
+      <p>Registra la facturación y gastos reales mes a mes. Los meses cerrados se bloquean en verde; los futuros son editables como forecast de cierre.</p>
+      <div class="card-tabs">
+        <span class="tab-pill tab-pill-seg"><i class="ti ti-chart-bar" style="font-size:9px"></i> Facturación real</span>
+        <span class="tab-pill tab-pill-seg"><i class="ti ti-receipt" style="font-size:9px"></i> Gastos real</span>
+        <span class="tab-pill tab-pill-seg"><i class="ti ti-file-invoice" style="font-size:9px"></i> Pendientes cobro</span>
+        <span class="tab-pill tab-pill-seg"><i class="ti ti-report-money" style="font-size:9px"></i> PyG real</span>
+        <span class="tab-pill tab-pill-seg"><i class="ti ti-building-bank" style="font-size:9px"></i> Caja real</span>
+        <span class="tab-pill tab-pill-seg"><i class="ti ti-credit-card" style="font-size:9px"></i> Extracto</span>
+      </div>
+      <div class="status-row">
+        <span class="dot dot-ok"></span>
+        Actualizado — mes actual: Junio 2026
+      </div>
+    </a>
+
+    <a class="card" href="dashboard_bmg.html">
+      <i class="ti ti-chevron-right card-arrow"></i>
+      <div class="card-icon" style="background:#e8f0fb;color:#1a2b4a"><i class="ti ti-dashboard"></i></div>
+      <h2>Dashboard</h2>
+      <p>Comparativa Presupuesto vs Real. Ventas YTD y proyección de cierre de año, desglosado por cliente y mes.</p>
+      <div class="card-tabs">
+        <span class="tab-pill" style="background:#e8f0fb;color:#1a2b4a"><i class="ti ti-chart-bar" style="font-size:9px"></i> Ventas</span>
+        <span class="tab-pill" style="background:#e8f0fb;color:#1a2b4a"><i class="ti ti-report-money" style="font-size:9px"></i> PyG</span>
+        <span class="tab-pill" style="background:#e8f0fb;color:#1a2b4a"><i class="ti ti-building-bank" style="font-size:9px"></i> Tesorería</span>
+      </div>
+      <div class="status-row">
+        <span class="dot" style="background:#378ADD"></span>
+        Lee datos de Presupuesto y Seguimiento automáticamente
+      </div>
+    </a>
+
+  </div>
+</div>
+
+<div class="footer">BMG Law Services · Plataforma financiera interna · 2026</div>
+</body>
+</html>

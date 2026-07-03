@@ -184,8 +184,29 @@ function App(){
   const [facturas,setFacturas]=useState(()=>sv?.facturas||[]);
   const [movs,setMovs]=useState(()=>sv?.movs||[]);
   const [saldo0,setSaldo0]=useState(()=>sv?.saldo0??45000);
-  const CAJASEG0=[{id:'pag_iva',concepto:'IVA',tipo:'pago',subtipo:'impuestos',imp:Array(12).fill(0)}];
+  const CAJASEG0=[
+    {id:'fin_ent1',concepto:'Entrada financiación',tipo:'cobro',subtipo:'financiacion',imp:Array(12).fill(0)},
+    {id:'fin_sal1',concepto:'Devolución / amortización deuda',tipo:'pago',subtipo:'financiacion',imp:Array(12).fill(0)}
+  ];
   const [cajaSeg,setCajaSeg]=useState(()=>sv?.cajaSeg||JSON.parse(JSON.stringify(CAJASEG0)));
+  const setCajaSegRow=(rid,m,v)=>{
+    const val=pn(v);
+    const n=cajaSeg.map(r=>r.id!==rid?r:{...r,imp:r.imp.map((x,i)=>i===m?val:x)});
+    setCajaSeg(n);save({cajaSeg:n});
+  };
+  const addCajaSegRow=(tipo,subtipo)=>{
+    const id='cj'+Date.now().toString(36);
+    const label=tipo==='cobro'?'Nombre de la entrada de financiación:':'Nombre de la salida de financiación:';
+    const concepto=prompt(label);
+    if(!concepto||!concepto.trim())return;
+    const n=[...cajaSeg,{id,concepto:concepto.trim(),tipo,subtipo:subtipo||'financiacion',imp:Array(12).fill(0)}];
+    setCajaSeg(n);save({cajaSeg:n});
+  };
+  const delCajaSegRow=(rid)=>{
+    if(!confirm('¿Eliminar esta fila?'))return;
+    const n=cajaSeg.filter(r=>r.id!==rid);
+    setCajaSeg(n);save({cajaSeg:n});
+  };
   // cajaPagosReal: importes de caja por partida de gasto en seguimiento {gastoId: [12 meses]}
   const [cajaPagosReal,setCajaPagosReal]=useState(()=>{
     const saved=sv?.cajaPagosReal||{};
@@ -366,7 +387,7 @@ function App(){
       {sub==='gastos'&&<TabGastos gastosReal={gastosReal} gastosFcst={gastosFcst} gCombM={gCombM} setGR={setGR} setGF={setGF} setGMeta={setGMeta} delGasto={delGasto} setModal={setModal} cierreGastos={cierreGastos}/> }
       {sub==='facturas'&&<TabFacturas facturas={facturas} setFacturas={setFacturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} save={save} cierreFact={cierreFact}/>}
       {sub==='pyg'&&<TabPyG ingM={ingM} gCombM={gCombM} gastosReal={gastosReal} gastosFcst={gastosFcst} cierreFact={cierreFact} cierreGastos={cierreGastos}/>}
-      {sub==='caja'&&<TabCaja facturas={facturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} pagosExtM={pagosExtM} cobrosExtM={cobrosExtM} cobrosFcstM={cobrosFcstM} flujoCajaM={flujoCajaM} cierreFact={cierreFact} cierreGastos={cierreGastos} cierreExtracto={cierreExtracto} saldo0={saldo0} setSaldo0={setSaldoApp} gastosReal={gastosReal} gastosFcst={gastosFcst} cajaPagosReal={cajaPagosReal} setCajaPagoReal={setCajaPagoReal} ingFcstM={ingFcstM} ingIVARealM={ingIVARealM} movs={movs}/>}
+      {sub==='caja'&&<TabCaja facturas={facturas} cobrosRealesM={cobrosRealesM} cobrosPendM={cobrosPendM} pagosExtM={pagosExtM} cobrosExtM={cobrosExtM} cobrosFcstM={cobrosFcstM} cierreFact={cierreFact} cierreGastos={cierreGastos} cierreExtracto={cierreExtracto} saldo0={saldo0} setSaldo0={setSaldoApp} gastosReal={gastosReal} gastosFcst={gastosFcst} cajaPagosReal={cajaPagosReal} setCajaPagoReal={setCajaPagoReal} ingFcstM={ingFcstM} ingIVARealM={ingIVARealM} movs={movs} cajaSeg={cajaSeg} setCajaSegRow={setCajaSegRow} addCajaSegRow={addCajaSegRow} delCajaSegRow={delCajaSegRow}/>}
       {sub==='extracto'&&<TabExtracto movs={movs} setMovs={setMovs} save={save} gastosReal={gastosReal} gastosFcst={gastosFcst} reglas={reglas} setReglas={setReglas}/>}
     </div>
   );
@@ -1001,7 +1022,29 @@ function CajaGastoRowReal({g,cajaPagosReal,cierreGastos,setCajaPagoReal,gastosFc
   );
 }
 
-function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobrosFcstM,flujoCajaM,cierreFact,cierreGastos,cierreExtracto,saldo0,setSaldo0,gastosReal,gastosFcst,cajaPagosReal,setCajaPagoReal,ingFcstM,ingIVARealM,movs}){
+function CajaSegRow({r,setCajaSegRow,delCajaSegRow}){
+  const tot=r.imp.reduce((s,v)=>s+v,0);
+  const esCobro=r.tipo==='cobro';
+  return(
+    <tr>
+      <td className="sticky" style={{paddingLeft:16,fontWeight:500,fontSize:12}}>{r.concepto}</td>
+      {MESES.map((_,m)=>(
+        <td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0'}}>
+          <input type="number" className="cell-edit"
+            defaultValue={r.imp[m]||0}
+            onBlur={e=>setCajaSegRow(r.id,m,e.target.value)}
+            min={0}
+            style={{color:esCobro?'#1a7a45':'#b83232'}}
+          />
+        </td>
+      ))}
+      <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:esCobro?'#f4fbf6':'#fdf8f0',color:esCobro?'#1a7a45':'#b83232'}}>{fmt(tot)}</td>
+      <td style={{padding:'2px 4px'}}><button className="btn btn-sm btn-danger" onClick={()=>delCajaSegRow(r.id)}><i className="ti ti-trash"></i></button></td>
+    </tr>
+  );
+}
+
+function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobrosFcstM,cierreFact,cierreGastos,cierreExtracto,saldo0,setSaldo0,gastosReal,gastosFcst,cajaPagosReal,setCajaPagoReal,ingFcstM,ingIVARealM,movs,cajaSeg,setCajaSegRow,addCajaSegRow,delCajaSegRow}){
   // Valor de caja real de una partida en un mes: extracto cerrado > manual > forecast
   const cajaValPartida=(g,m)=>{
     const imp=cajaPagosReal[g.id]||Array(12).fill(0);
@@ -1017,10 +1060,19 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
   };
   // Pagos de explotación = extracto real (si cerrado) · manual · forecast, por partida
   const pagosExplM=m=>(gastosReal||[]).reduce((s,g)=>s+cajaValPartida(g,m),0);
-  const saldoM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=cobrosRealesM(i)+pagosExtM(i);return s;};
-  const TC=cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+cobrosRealesM(m)+cobrosExtM(m),0):0;
-  const TP=cierreGastos>=0?MESES.slice(0,cierreGastos+1).reduce((_,__,m)=>_+pagosExtM(m),0):0;
-  const SF=saldoM(Math.max(cierreFact,cierreGastos,0));
+  // Cobros/Pagos/Flujo del mes — fuente única: extracto si cerrado, si no forecast+pendientes/reales de facturas
+  const cobrosCajaM=m=>m<=cierreExtracto?cobrosExtM(m):((m<=cierreFact?cobrosRealesM(m):cobrosFcstM(m))+cobrosPendM(m));
+  const pagosCajaM=m=>m<=cierreExtracto?pagosExtM(m):-pagosExplM(m);
+  const flujoCajaM=m=>cobrosCajaM(m)+pagosCajaM(m);
+  const TC=MESES.reduce((_,__,m)=>_+cobrosCajaM(m),0);
+  const TP=MESES.reduce((_,__,m)=>_+pagosCajaM(m),0);
+  // Financiación: entradas/salidas ajenas a la explotación (préstamos, confirming, amortizaciones...)
+  const finFlujM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='financiacion').reduce((s,r)=>s+(r.tipo==='cobro'?1:-1)*(r.imp[m]||0),0);
+  const saldoPeriodoM=m=>flujoCajaM(m)+finFlujM(m);
+  const saldoM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=saldoPeriodoM(i);return s;};
+  const TFinEnt=MESES.reduce((_,__,m)=>_+(cajaSeg||[]).filter(r=>r.subtipo==='financiacion'&&r.tipo==='cobro').reduce((s,r)=>s+(r.imp[m]||0),0),0);
+  const TFinSal=MESES.reduce((_,__,m)=>_+(cajaSeg||[]).filter(r=>r.subtipo==='financiacion'&&r.tipo==='pago').reduce((s,r)=>s+(r.imp[m]||0),0),0);
+  const SF=saldoM(11);
   const grupos=['Personal','Colaboradores','Estructura'];
 
   return(
@@ -1037,7 +1089,8 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
             <input type="number" style={{width:150,padding:'6px 10px',border:'1px solid #dde0e6',borderRadius:5,fontSize:15,fontWeight:700,fontFamily:'monospace',color:'#1a2b4a'}}
               value={saldo0} onChange={e=>setSaldo0(e.target.value)}/>
           </div>
-          <div style={{fontSize:11}}>Saldo actual ({MESES[Math.max(cierreFact,cierreGastos,0)]}): <strong style={{color:SF>=0?'#1a7a45':'#b83232',fontSize:14}}>{fmt(SF)}</strong></div>
+          <div style={{fontSize:11}}>Saldo actual ({MESES[Math.max(cierreExtracto,0)]}): <strong style={{color:saldoM(Math.max(cierreExtracto,0))>=0?'#1a7a45':'#b83232',fontSize:14}}>{fmt(saldoM(Math.max(cierreExtracto,0)))}</strong></div>
+          <div style={{fontSize:11}}>Proyección cierre año (Dic): <strong style={{color:SF>=0?'#1a7a45':'#b83232',fontSize:14}}>{fmt(SF)}</strong></div>
         </div>
       </div>
 
@@ -1048,20 +1101,21 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
           <thead><tr>
             <th className="sticky" style={{minWidth:230}}>Concepto</th>
             {MESES.map((m,i)=>{
-              const esCF=i<=cierreFact;const esCG=i<=cierreGastos;
+              const esReal=i<=cierreExtracto;
               return(<th key={i} className="mh" style={{minWidth:72,
-                background:esCF||esCG?'#e4f4ec':'#e8f0fb',
-                color:esCF||esCG?'#1a7a45':'#1a2b4a',
-                borderTop:esCF||esCG?'2px solid #a0d4b0':'2px solid #90b0d8'}}>
-                {m}<div style={{fontSize:8,fontWeight:400,marginTop:1}}>{esCF||esCG?'real':'fcst'}</div>
+                background:esReal?'#e4f4ec':'#e8f0fb',
+                color:esReal?'#1a7a45':'#1a2b4a',
+                borderTop:esReal?'2px solid #a0d4b0':'2px solid #90b0d8'}}>
+                {m}<div style={{fontSize:8,fontWeight:400,marginTop:1}}>{esReal?'real':'fcst'}</div>
               </th>);
             })}
             <th className="mh mh-total" style={{minWidth:82}}>Total</th>
+            <th style={{width:32}}></th>
           </tr></thead>
           <tbody>
 
             {/* COBROS */}
-            <tr className="section-row"><td className="sticky" colSpan={14}>Cobros</td></tr>
+            <tr className="section-row"><td className="sticky" colSpan={15}>Cobros</td></tr>
 
             {/* 1. COBROS REALES — facturas cobradas, solo si el extracto de ese mes NO está cerrado */}
             <tr style={{background:'#f4fbf6'}}>
@@ -1155,7 +1209,7 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
             </tr>
 
             {/* PAGOS EXPLOTACIÓN — partidas de gastosReal, editable */}
-            <tr className="section-row"><td className="sticky" colSpan={14}>
+            <tr className="section-row"><td className="sticky" colSpan={15}>
               Pagos de explotación
               <span style={{fontSize:9,background:'#dce8f8',color:'#1a2b4a',padding:'1px 7px',borderRadius:10,fontWeight:600,marginLeft:8}}>extracto (verde) · manual · forecast (azul)</span>
             </td></tr>
@@ -1166,7 +1220,7 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
               const tGrA=MESES.reduce((_,__,m)=>_+tGrM(m),0);
               return[
                 <tr key={`hdr${gr}`} style={{background:'#f4f6f9'}}>
-                  <td className="sticky" colSpan={14} style={{paddingLeft:12,fontWeight:700,fontSize:10,color:'#1a2b4a',textTransform:'uppercase',letterSpacing:'.04em'}}>{gr}</td>
+                  <td className="sticky" colSpan={15} style={{paddingLeft:12,fontWeight:700,fontSize:10,color:'#1a2b4a',textTransform:'uppercase',letterSpacing:'.04em'}}>{gr}</td>
                 </tr>,
                 ...gg.map(g=><CajaGastoRowReal key={g.id} g={g} cajaPagosReal={cajaPagosReal} cierreGastos={cierreGastos} setCajaPagoReal={setCajaPagoReal} gastosFcst={gastosFcst} movs={movs} cierreExtracto={cierreExtracto}/>),
                 <tr key={`tot${gr}`} style={{background:'#f0f2f6'}}>
@@ -1183,7 +1237,7 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
             </tr>
 
             {/* PAGOS EXTRACTO */}
-            <tr className="section-row"><td className="sticky" colSpan={14}>
+            <tr className="section-row"><td className="sticky" colSpan={15}>
               Pagos del extracto bancario
               {cierreExtracto>=0&&<span style={{fontSize:9,background:'#e4f4ec',color:'#1a7a45',padding:'1px 7px',borderRadius:10,fontWeight:600,marginLeft:8}}>Cerrado hasta {MESES[cierreExtracto]}</span>}
             </td></tr>
@@ -1198,23 +1252,72 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
               <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#b83232'}}>{fmt(TP)}</td>
             </tr>
 
-            {/* TOTALES */}
+            {/* TOTALES EXPLOTACIÓN */}
             <tr style={{background:'#e4ecf4'}}>
-              <td className="sticky" style={{fontWeight:700}}>FLUJO NETO</td>
+              <td className="sticky" style={{fontWeight:700}}>SALDO EXPLOTACIÓN</td>
               {MESES.map((_,m)=>{
                 const f=flujoCajaM(m);
-                return<td key={m} className={`num ${f>=0?'green':'red'}`} style={{fontWeight:700,background:m>Math.max(cierreFact,cierreGastos)?'#f4f6f9':undefined}}>{m<=Math.max(cierreFact,cierreGastos)?fmt(f):'—'}</td>;
+                const esReal=m<=cierreExtracto;
+                return<td key={m} className={`num ${f>=0?'green':'red'}`} style={{fontWeight:700,background:esReal?undefined:'#f4f6f9'}}>{fmt(f)}</td>;
               })}
               <td className={`num ${TC+TP>=0?'green':'red'}`} style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(TC+TP)}</td>
+              <td></td>
+            </tr>
+
+            {/* ── FINANCIACIÓN ── */}
+            <tr style={{background:'#1a2b4a',color:'#fff'}}>
+              <td className="sticky" colSpan={15} style={{background:'#1a2b4a',color:'#a0b4d0',fontWeight:700,fontSize:10,textTransform:'uppercase',letterSpacing:'.04em',padding:'8px 16px'}}>
+                Plan de caja — Financiación
+              </td>
+            </tr>
+
+            <tr className="section-row"><td className="sticky" colSpan={15}>Entradas de financiación</td></tr>
+            {(cajaSeg||[]).filter(r=>r.subtipo==='financiacion'&&r.tipo==='cobro').map(r=>(
+              <CajaSegRow key={r.id} r={r} setCajaSegRow={setCajaSegRow} delCajaSegRow={delCajaSegRow}/>
+            ))}
+            <tr><td colSpan={15} style={{padding:'4px 8px',background:'#fafafa'}}>
+              <button className="btn-add" style={{borderColor:'#a0c4a0',color:'#1a6a3a'}} onClick={()=>addCajaSegRow('cobro','financiacion')}>
+                <i className="ti ti-plus"></i>Añadir entrada de financiación
+              </button>
+            </td></tr>
+            <tr style={{background:'#e4f0e4'}}>
+              <td className="sticky" style={{fontWeight:700,color:'#1a6a3a',paddingLeft:8,fontSize:11}}>Total entradas financiación</td>
+              {MESES.map((_,m)=>{const t=(cajaSeg||[]).filter(r=>r.subtipo==='financiacion'&&r.tipo==='cobro').reduce((s,r)=>s+(r.imp[m]||0),0);return<td key={m} className="num" style={{fontWeight:600,color:'#1a6a3a'}}>{fmt(t)}</td>;})}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a6a3a'}}>{fmt(TFinEnt)}</td>
+              <td></td>
+            </tr>
+
+            <tr className="section-row"><td className="sticky" colSpan={15}>Salidas de financiación (amortización, devolución)</td></tr>
+            {(cajaSeg||[]).filter(r=>r.subtipo==='financiacion'&&r.tipo==='pago').map(r=>(
+              <CajaSegRow key={r.id} r={r} setCajaSegRow={setCajaSegRow} delCajaSegRow={delCajaSegRow}/>
+            ))}
+            <tr><td colSpan={15} style={{padding:'4px 8px',background:'#fafafa'}}>
+              <button className="btn-add" style={{borderColor:'#c4a0a0',color:'#6a1a1a'}} onClick={()=>addCajaSegRow('pago','financiacion')}>
+                <i className="ti ti-plus"></i>Añadir salida de financiación
+              </button>
+            </td></tr>
+            <tr style={{background:'#f4e4e4'}}>
+              <td className="sticky" style={{fontWeight:700,color:'#6a1a1a',paddingLeft:8,fontSize:11}}>Total salidas financiación</td>
+              {MESES.map((_,m)=>{const t=(cajaSeg||[]).filter(r=>r.subtipo==='financiacion'&&r.tipo==='pago').reduce((s,r)=>s+(r.imp[m]||0),0);return<td key={m} className="num" style={{fontWeight:600,color:'#6a1a1a'}}>{fmt(t)}</td>;})}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#6a1a1a'}}>{fmt(TFinSal)}</td>
+              <td></td>
+            </tr>
+
+            <tr style={{background:'#243d6a'}}>
+              <td className="sticky" style={{background:'#243d6a',color:'#fff',fontWeight:700,fontSize:12}}>SALDO PERÍODO</td>
+              {MESES.map((_,m)=>{const v=saldoPeriodoM(m);return<td key={m} className="num" style={{fontWeight:700,color:'#fff'}}>{fmt(v)}</td>;})}
+              <td className="num" style={{fontWeight:700,color:'#fff',borderLeft:'2px solid rgba(255,255,255,.3)'}}>{fmt(MESES.reduce((_,__,m)=>_+saldoPeriodoM(m),0))}</td>
+              <td></td>
             </tr>
             <tr className="result-row">
               <td className="sticky">SALDO ACUMULADO</td>
               {MESES.map((_,m)=>{
                 const s=saldoM(m);
-                const vis=m<=Math.max(cierreFact,cierreGastos);
-                return<td key={m} className="num" style={{fontWeight:700,background:vis&&s<20000?'#8b2020':!vis?'rgba(0,0,0,.2)':undefined,color:!vis?'rgba(255,255,255,.3)':undefined}}>{vis?fmt(s):'—'}</td>;
+                const esReal=m<=cierreExtracto;
+                return<td key={m} className="num" style={{fontWeight:700,background:esReal&&s<20000?'#8b2020':!esReal?'rgba(0,0,0,.15)':undefined,color:!esReal?'rgba(255,255,255,.55)':undefined}}>{fmt(s)}</td>;
               })}
               <td className="num" style={{fontWeight:700,borderLeft:'2px solid rgba(255,255,255,.3)'}}>{fmt(SF)}</td>
+              <td></td>
             </tr>
           </tbody>
         </table>

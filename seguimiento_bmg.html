@@ -1063,17 +1063,20 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
             {/* COBROS */}
             <tr className="section-row"><td className="sticky" colSpan={14}>Cobros</td></tr>
 
-            {/* 1. COBROS REALES — facturas cobradas, meses cerrados */}
+            {/* 1. COBROS REALES — facturas cobradas, solo si el extracto de ese mes NO está cerrado */}
             <tr style={{background:'#f4fbf6'}}>
               <td className="sticky" style={{fontWeight:600,paddingLeft:16,color:'#1a7a45',fontSize:12}}>
                 Cobros de facturas
-                <div style={{fontSize:9,color:'#888',fontWeight:400}}>facturas marcadas como cobradas · meses cerrados</div>
+                <div style={{fontSize:9,color:'#888',fontWeight:400}}>facturas marcadas como cobradas · solo si el extracto de ese mes no está cerrado</div>
               </td>
-              {MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a7a45',fontWeight:600,background:m>cierreFact?'#fafafa':undefined}}>
-                {m<=cierreFact?fmt(cobrosRealesM(m)):'—'}
-              </td>)}
+              {MESES.map((_,m)=>{
+                const ocultoPorExtracto=m<=cierreExtracto;
+                return<td key={m} className="num" style={{color:'#1a7a45',fontWeight:600,background:(m>cierreFact||ocultoPorExtracto)?'#fafafa':undefined}}>
+                  {(!ocultoPorExtracto&&m<=cierreFact)?fmt(cobrosRealesM(m)):'—'}
+                </td>;
+              })}
               <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a7a45'}}>
-                {fmt(cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+cobrosRealesM(m),0):0)}
+                {fmt(MESES.reduce((_,__,m)=>_+((m>cierreExtracto&&m<=cierreFact)?cobrosRealesM(m):0),0))}
               </td>
             </tr>
 
@@ -1085,13 +1088,12 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
                 <tr style={{background:'#edfaf2'}}>
                   <td className="sticky" style={{fontWeight:600,paddingLeft:16,color:'#1a7a45',fontSize:12}}>
                     Cobros del extracto
-                    <div style={{fontSize:9,color:'#888',fontWeight:400}}>etiqueta "Cobro de cliente" en el extracto bancario</div>
+                    <div style={{fontSize:9,color:'#888',fontWeight:400}}>etiqueta "Cobro de cliente" en el extracto bancario · única fuente cuando el mes está cerrado</div>
                   </td>
                   {MESES.map((_,m)=>{
                     const cerrado=cierreExtracto>=0&&m<=cierreExtracto;
-                    const v=cobrosExtM(m);
-                    return<td key={m} className="num" style={{color:'#1a7a45',fontWeight:cerrado?600:400,background:cerrado?'#edfaf2':'#fafafa'}}>
-                      {v>0?fmt(v):'—'}
+                    return<td key={m} className="num" style={{color:'#1a7a45',fontWeight:cerrado?700:400,background:cerrado?'#edfaf2':'#fafafa'}}>
+                      {cerrado?fmt(cobrosExtM(m)):'—'}
                     </td>;
                   })}
                   <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a7a45'}}>{fmt(TCext)}</td>
@@ -1099,34 +1101,40 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
               );
             })()}
 
-            {/* 2. ENTRADAS PENDIENTES DE COBRO — facturas con fecha prevista, TODOS los meses */}
+            {/* 2. ENTRADAS PENDIENTES DE COBRO — solo en meses sin extracto cerrado */}
             <tr style={{background:'#f0fbf4'}}>
               <td className="sticky" style={{fontWeight:600,paddingLeft:16,color:'#1a6a3a',fontSize:12}}>
                 Entradas pendientes de cobro
-                <div style={{fontSize:9,color:'#888',fontWeight:400}}>facturas del Excel · todos los meses según fecha prevista de cobro</div>
+                <div style={{fontSize:9,color:'#888',fontWeight:400}}>facturas del Excel · solo meses sin extracto cerrado</div>
               </td>
-              {MESES.map((_,m)=><td key={m} className="num" style={{
-                color:'#1a6a3a',fontWeight:500,
-                background:m<=cierreFact?'#f0fbf4':'#e8f8f0'
-              }}>
-                {fmt(cobrosPendM(m))}
-              </td>)}
+              {MESES.map((_,m)=>{
+                const ocultoPorExtracto=m<=cierreExtracto;
+                return<td key={m} className="num" style={{
+                  color:'#1a6a3a',fontWeight:500,
+                  background:ocultoPorExtracto?'#fafafa':(m<=cierreFact?'#f0fbf4':'#e8f8f0')
+                }}>
+                  {ocultoPorExtracto?'—':fmt(cobrosPendM(m))}
+                </td>;
+              })}
               <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a6a3a'}}>
-                {fmt(MESES.reduce((_,__,m)=>_+cobrosPendM(m),0))}
+                {fmt(MESES.reduce((_,__,m)=>_+(m>cierreExtracto?cobrosPendM(m):0),0))}
               </td>
             </tr>
 
-            {/* 3. ENTRADAS POR FORECAST — meses no cerrados en facturación */}
+            {/* 3. ENTRADAS POR FORECAST — meses no cerrados en facturación NI en extracto */}
             <tr style={{background:'#f4f7fd'}}>
               <td className="sticky" style={{fontWeight:600,paddingLeft:16,color:'#1a2b4a',fontSize:12}}>
                 Entradas por forecast (facturación prevista)
                 <div style={{fontSize:9,color:'#888',fontWeight:400}}>forecast de facturación × (1+IVA) + plazo cobro · para meses no cerrados</div>
               </td>
-              {MESES.map((_,m)=><td key={m} className="num" style={{color:'#1a2b4a',fontWeight:500,background:m<=cierreFact?'#fafafa':undefined}}>
-                {m>cierreFact?fmt(cobrosFcstM(m)):'—'}
-              </td>)}
+              {MESES.map((_,m)=>{
+                const visible=m>cierreFact&&m>cierreExtracto;
+                return<td key={m} className="num" style={{color:'#1a2b4a',fontWeight:500,background:visible?undefined:'#fafafa'}}>
+                  {visible?fmt(cobrosFcstM(m)):'—'}
+                </td>;
+              })}
               <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a2b4a'}}>
-                {fmt(MESES.slice(cierreFact+1).reduce((_,__,i)=>_+cobrosFcstM(cierreFact+1+i),0))}
+                {fmt(MESES.reduce((_,__,m)=>_+((m>cierreFact&&m>cierreExtracto)?cobrosFcstM(m):0),0))}
               </td>
             </tr>
 
@@ -1134,16 +1142,15 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
             <tr style={{background:'#e4f4ec'}}>
               <td className="sticky" style={{fontWeight:700,color:'#1a7a45',paddingLeft:8}}>TOTAL COBROS</td>
               {MESES.map((_,m)=>{
-                const v=m<=cierreFact
-                  ?(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m))
-                  :(cobrosPendM(m)+cobrosFcstM(m));
+                const v=m<=cierreExtracto
+                  ?cobrosExtM(m)
+                  :((m<=cierreFact?cobrosRealesM(m):cobrosFcstM(m))+cobrosPendM(m));
                 return<td key={m} className="num green" style={{fontWeight:700}}>{fmt(v)}</td>;
               })}
               <td className="num green" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>
-                {fmt(
-                  (cierreFact>=0?MESES.slice(0,cierreFact+1).reduce((_,__,m)=>_+(cobrosRealesM(m)+cobrosExtM(m)+cobrosPendM(m)),0):0)
-                  +MESES.slice(cierreFact+1).reduce((_,__,i)=>_+(cobrosPendM(cierreFact+1+i)+cobrosFcstM(cierreFact+1+i)),0)
-                )}
+                {fmt(MESES.reduce((_,__,m)=>_+(m<=cierreExtracto
+                  ?cobrosExtM(m)
+                  :((m<=cierreFact?cobrosRealesM(m):cobrosFcstM(m))+cobrosPendM(m))),0))}
               </td>
             </tr>
 

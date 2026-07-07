@@ -226,7 +226,7 @@ function App(){
 
   // Ref siempre actualizado — evita el problema de closures stale en handlers
   const stateRef=React.useRef({});
-  stateRef.current={clientes,factReal,factFcst,gastosReal,gastosFcst,facturas,movs,saldo0,cierreFact,cierreGastos,cierreExtracto,cajaPagosReal,reglas};
+  stateRef.current={clientes,factReal,factFcst,gastosReal,gastosFcst,facturas,movs,saldo0,cierreFact,cierreGastos,cierreExtracto,cajaPagosReal,reglas,cajaSeg};
 
   // save() siempre usa el estado más reciente via stateRef + el parche
   const save=(patch={})=>{

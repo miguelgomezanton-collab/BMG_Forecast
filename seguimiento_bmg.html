@@ -602,6 +602,7 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
   const [editId,setEditId]=useState(null);
   const [filtroMes,setFiltroMes]=useState('todos');
   const [filtroEstado,setFiltroEstado]=useState('todos');
+  const [filtroCliente,setFiltroCliente]=useState('todos');
   const [importLog,setImportLog]=useState(null);
 
   const upd=f=>{setFacturas([...f]);save({facturas:[...f]});};
@@ -793,13 +794,14 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
   };
 
 
-  const filtradas=facturas.filter(f=>filtroMes==='todos'||f.mesCobro===parseInt(filtroMes)).filter(f=>filtroEstado==='todos'||f.estado===filtroEstado).sort((a,b)=>parseInt(b.diasRetraso||0)-parseInt(a.diasRetraso||0));
+  const filtradas=facturas.filter(f=>filtroMes==='todos'||f.mesCobro===parseInt(filtroMes)).filter(f=>filtroEstado==='todos'||f.estado===filtroEstado).filter(f=>filtroCliente==='todos'||(f.cliente||'Sin cliente')===filtroCliente).sort((a,b)=>parseInt(b.diasRetraso||0)-parseInt(a.diasRetraso||0));
   const pendTotal=facturas.filter(f=>!['Cobrada','Cancelada','Incobrable'].includes(f.estado)).reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
   const cobTotal=facturas.filter(f=>f.estado==='Cobrada').reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
 
   // Resumen: pendientes de cobro agrupadas por cliente × mes previsto
   const pendientes=facturas.filter(f=>!['Cobrada','Cancelada','Incobrable'].includes(f.estado));
   const clientesPend=[...new Set(pendientes.map(f=>f.cliente||'Sin cliente'))];
+  const clientesTodos=[...new Set(facturas.map(f=>f.cliente||'Sin cliente'))].sort((a,b)=>a.localeCompare(b));
   const pivM=(cli,m)=>pendientes.filter(f=>(f.cliente||'Sin cliente')===cli&&f.mesCobro===m).reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
   const pivTot=cli=>MESES.reduce((s,_,m)=>s+pivM(cli,m),0);
   const clientesPendOrd=[...clientesPend].sort((a,b)=>pivTot(b)-pivTot(a));
@@ -823,8 +825,8 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
           </tr></thead>
           <tbody>
           {clientesPendOrd.map(cli=>(
-            <tr key={cli}>
-              <td className="sticky" style={{fontWeight:500,fontSize:12}}>{cli}</td>
+            <tr key={cli} onClick={()=>setFiltroCliente(filtroCliente===cli?'todos':cli)} style={{cursor:'pointer',background:filtroCliente===cli?'#fdf3e0':undefined}} title="Clic para filtrar el listado por este cliente">
+              <td className="sticky" style={{fontWeight:500,fontSize:12,background:filtroCliente===cli?'#fdf3e0':undefined}}>{cli}</td>
               {MESES.map((_,m)=>{const v=pivM(cli,m);return<td key={m} className="num" style={{color:v>0?'#b06000':'#ccc',fontWeight:v>0?600:400}}>{v>0?fmt(v):'—'}</td>;})}
               <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a2b4a'}}>{fmt(pivTot(cli))}</td>
             </tr>
@@ -899,6 +901,9 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
             </select>
             <select value={filtroEstado} onChange={e=>setFiltroEstado(e.target.value)} style={{fontSize:11,padding:'3px 6px',border:'1px solid #dde0e6',borderRadius:4,fontFamily:'Arial,sans-serif'}}>
               <option value="todos">Todos los estados</option>{ESTADOS_FAC.map(e=><option key={e}>{e}</option>)}
+            </select>
+            <select value={filtroCliente} onChange={e=>setFiltroCliente(e.target.value)} style={{fontSize:11,padding:'3px 6px',border:'1px solid #dde0e6',borderRadius:4,fontFamily:'Arial,sans-serif',maxWidth:180}}>
+              <option value="todos">Todos los clientes</option>{clientesTodos.map(c=><option key={c} value={c}>{c}</option>)}
             </select>
           </div>
         </div>

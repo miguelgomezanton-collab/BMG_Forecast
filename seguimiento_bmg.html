@@ -421,10 +421,10 @@ function FactRow({c,factReal,factFcst,setFactReal,setFactFcst,setIVACliente,setP
         const esReal=m<=cierreFact;
         const def=esReal?(factReal[c.id]?.[m]||0):(factFcst[c.id]?.[m]||0);
         return(<td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0',background:esReal?'#f4fbf6':'#f4f7fd'}}>
-          <input type="number" className="cell-edit" key={`${m}-${esReal?1:0}`} defaultValue={def} disabled={esReal}
-            onChange={e=>{if(!esReal)setF(m,e.target.value);}}
+          <input type="number" className="cell-edit" key={`${m}-${esReal?1:0}`} defaultValue={def}
+            onChange={e=>{esReal?setR(m,e.target.value):setF(m,e.target.value);}}
             min={0}
-            style={{color:esReal?'#1a7a45':'#1a2b4a',borderBottomColor:esReal?'transparent':'#90b0d8',cursor:'text',fontWeight:esReal?600:400}}/>
+            style={{color:esReal?'#1a7a45':'#1a2b4a',borderBottomColor:esReal?'#a0d4b0':'#90b0d8',cursor:'text',fontWeight:esReal?600:400}}/>
         </td>);
       })}
       <td className="num" style={{fontWeight:600,borderLeft:'2px solid #c0d0e0',background:'#f0f4f8',color:'#1a7a45'}}>{fmt(totReal)}</td>
@@ -520,8 +520,8 @@ function GastoRow({g,gastosReal,gastosFcst,setGR,setGF,setGMeta,delGasto,cierreG
       {MESES.map((_,m)=>{
         const esReal=m<=cierreGastos;
         return(<td key={m} style={{padding:'3px 4px',borderLeft:'1px solid #f0f0f0',background:esReal?'#f4fbf6':'#f4f7fd'}}>
-          <input type="number" className="cell-edit" key={`${g.id}-${m}-${esReal?1:0}`} defaultValue={val(m)} disabled={esReal} onChange={e=>{if(!esReal)setGF(g.id,m,e.target.value);}} min={0}
-            style={{color:esReal?'#1a7a45':'#1a2b4a',borderBottomColor:esReal?'transparent':'#90b0d8',cursor:esReal?'default':'text',fontWeight:esReal?600:400}}/>
+          <input type="number" className="cell-edit" key={`${g.id}-${m}-${esReal?1:0}`} defaultValue={val(m)} onChange={e=>{esReal?setGR(g.id,m,e.target.value):setGF(g.id,m,e.target.value);}} min={0}
+            style={{color:esReal?'#1a7a45':'#1a2b4a',borderBottomColor:esReal?'#a0d4b0':'#90b0d8',cursor:'text',fontWeight:esReal?600:400}}/>
         </td>);
       })}
       <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',background:'#fdf8f0',color:'#b83232'}}>{fmt(tot)}</td>
@@ -792,12 +792,47 @@ function TabFacturas({facturas,setFacturas,cobrosRealesM,cobrosPendM,save,cierre
   const pendTotal=facturas.filter(f=>!['Cobrada','Cancelada','Incobrable'].includes(f.estado)).reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
   const cobTotal=facturas.filter(f=>f.estado==='Cobrada').reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
 
+  // Resumen: pendientes de cobro agrupadas por cliente × mes previsto
+  const pendientes=facturas.filter(f=>!['Cobrada','Cancelada','Incobrable'].includes(f.estado));
+  const clientesPend=[...new Set(pendientes.map(f=>f.cliente||'Sin cliente'))];
+  const pivM=(cli,m)=>pendientes.filter(f=>(f.cliente||'Sin cliente')===cli&&f.mesCobro===m).reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
+  const pivTot=cli=>MESES.reduce((s,_,m)=>s+pivM(cli,m),0);
+  const clientesPendOrd=[...clientesPend].sort((a,b)=>pivTot(b)-pivTot(a));
+  const pivColTot=m=>clientesPend.reduce((s,cli)=>s+pivM(cli,m),0);
+
   return(
     <div>
       <div className="metrics">
         <div className="metric"><div className="metric-label">Pendiente cobro</div><div className="metric-val orange">{fmt(pendTotal)}</div></div>
         <div className="metric"><div className="metric-label">Cobrado YTD</div><div className="metric-val green">{fmt(cobTotal)}</div></div>
         {[0,1,2].map(i=>{const m=Math.min(cierreFact+1,11)+i;return m<=11?<div key={m} className="metric"><div className="metric-label">Previsto {MESES[m]}</div><div className="metric-val blue">{fmt(cobrosPendM(m))}</div></div>:null;})}
+      </div>
+      <div className="card">
+        <div className="card-header"><h2>Resumen previsto por cliente y mes</h2><span style={{fontSize:10,color:'#888'}}>Solo facturas pendientes de cobro · se actualiza al cambiar el "Mes cobro" de cada factura</span></div>
+        <div className="overflow-x">
+        <table style={{minWidth:1150}}>
+          <thead><tr>
+            <th className="sticky" style={{minWidth:190}}>Cliente</th>
+            {MESES.map((m,i)=><th key={i} className="mh" style={{minWidth:68}}>{m}</th>)}
+            <th className="mh mh-total" style={{minWidth:90}}>Total</th>
+          </tr></thead>
+          <tbody>
+          {clientesPendOrd.map(cli=>(
+            <tr key={cli}>
+              <td className="sticky" style={{fontWeight:500,fontSize:12}}>{cli}</td>
+              {MESES.map((_,m)=>{const v=pivM(cli,m);return<td key={m} className="num" style={{color:v>0?'#b06000':'#ccc',fontWeight:v>0?600:400}}>{v>0?fmt(v):'—'}</td>;})}
+              <td className="num" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a',color:'#1a2b4a'}}>{fmt(pivTot(cli))}</td>
+            </tr>
+          ))}
+          {clientesPendOrd.length===0&&<tr><td colSpan={14} style={{textAlign:'center',padding:20,color:'#aaa'}}>Sin facturas pendientes</td></tr>}
+          <tr className="result-row">
+            <td className="sticky">TOTAL PREVISTO</td>
+            {MESES.map((_,m)=><td key={m} className="num" style={{fontWeight:700}}>{fmt(pivColTot(m))}</td>)}
+            <td className="num" style={{fontWeight:700,borderLeft:'2px solid rgba(255,255,255,.3)'}}>{fmt(pendTotal)}</td>
+          </tr>
+          </tbody>
+        </table>
+        </div>
       </div>
       <div className="card">
         <div className="card-header"><h2>Importar desde Excel BMG</h2></div>

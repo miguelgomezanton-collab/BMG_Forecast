@@ -186,7 +186,10 @@ function App(){
   const [saldo0,setSaldo0]=useState(()=>sv?.saldo0??45000);
   const CAJASEG0=[
     {id:'fin_ent1',concepto:'Entrada financiación',tipo:'cobro',subtipo:'financiacion',imp:Array(12).fill(0)},
-    {id:'fin_sal1',concepto:'Devolución / amortización deuda',tipo:'pago',subtipo:'financiacion',imp:Array(12).fill(0)}
+    {id:'fin_sal1',concepto:'Devolución / amortización deuda',tipo:'pago',subtipo:'financiacion',imp:Array(12).fill(0)},
+    {id:'pag_iva',concepto:'Liquidación IVA (mod. 303)',tipo:'pago',subtipo:'impuestos',imp:Array(12).fill(0)},
+    {id:'pag_irpf',concepto:'Retenciones IRPF (mod. 111/115)',tipo:'pago',subtipo:'impuestos',imp:Array(12).fill(0)},
+    {id:'pag_is',concepto:'Pago fraccionado IS (mod. 202)',tipo:'pago',subtipo:'impuestos',imp:Array(12).fill(0)}
   ];
   const [cajaSeg,setCajaSeg]=useState(()=>sv?.cajaSeg||JSON.parse(JSON.stringify(CAJASEG0)));
   const setCajaSegRow=(rid,m,v)=>{
@@ -196,7 +199,7 @@ function App(){
   };
   const addCajaSegRow=(tipo,subtipo)=>{
     const id='cj'+Date.now().toString(36);
-    const label=tipo==='cobro'?'Nombre de la entrada de financiación:':'Nombre de la salida de financiación:';
+    const label=subtipo==='impuestos'?'Nombre del pago fiscal:':(tipo==='cobro'?'Nombre de la entrada de financiación:':'Nombre de la salida de financiación:');
     const concepto=prompt(label);
     if(!concepto||!concepto.trim())return;
     const n=[...cajaSeg,{id,concepto:concepto.trim(),tipo,subtipo:subtipo||'financiacion',imp:Array(12).fill(0)}];
@@ -283,8 +286,8 @@ function App(){
   const cobrosRealesM=m=>facturas.filter(f=>f.estado==='Cobrada'&&f.fechaCobro&&new Date(f.fechaCobro).getMonth()===m&&new Date(f.fechaCobro).getFullYear()===2026).reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
   const cobrosPendM=m=>facturas.filter(f=>f.mesCobro===m&&!['Cobrada','Cancelada','Incobrable'].includes(f.estado)).reduce((s,f)=>s+(parseFloat(f.importe)||0),0);
 
-  // Pagos del extracto (excluye traspasos y movimientos de financiación, que van aparte)
-  const finConceptos=(cajaSeg||[]).map(r=>r.concepto);
+  // Pagos del extracto (excluye traspasos y movimientos de financiación; los fiscales SÍ cuentan en explotación)
+  const finConceptos=(cajaSeg||[]).filter(r=>r.subtipo==='financiacion').map(r=>r.concepto);
   const pagosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.importe<0&&mv.etiqueta!=='Traspaso entre cuentas'&&!finConceptos.includes(mv.etiqueta)).reduce((s,mv)=>s+mv.importe,0);
   const cobrosExtM=m=>movs.filter(mv=>mv.mes===m&&mv.etiqueta==='Cobro de cliente').reduce((s,mv)=>s+mv.importe,0);
   const flujoCajaM=m=>cobrosRealesM(m)+pagosExtM(m);
@@ -1122,13 +1125,7 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
   // Pagos de explotación = extracto real (si cerrado) · manual · forecast, por partida
   const pagosExplM=m=>(gastosReal||[]).reduce((s,g)=>s+cajaValPartida(g,m),0);
   // Cobros/Pagos/Flujo del mes — fuente única: extracto si cerrado, si no forecast+pendientes/reales de facturas
-  const cobrosCajaM=m=>m<=cierreExtracto?cobrosExtM(m):((m<=cierreFact?cobrosRealesM(m):cobrosFcstM(m))+cobrosPendM(m));
-  const pagosCajaM=m=>m<=cierreExtracto?pagosExtM(m):-pagosExplM(m);
-  const flujoCajaM=m=>cobrosCajaM(m)+pagosCajaM(m);
-  const TC=MESES.reduce((_,__,m)=>_+cobrosCajaM(m),0);
-  const TP=MESES.reduce((_,__,m)=>_+pagosCajaM(m),0);
-  // Financiación: entradas/salidas ajenas a la explotación (préstamos, confirming, amortizaciones...)
-  // Valor real del extracto para una fila de financiación en un mes: extracto cerrado > manual
+  // Valor real del extracto para una fila de financiación/fiscal en un mes: extracto cerrado > manual
   const finVal=(r,m)=>{
     const esCobro=r.tipo==='cobro';
     if(cierreExtracto>=0&&m<=cierreExtracto){
@@ -1137,6 +1134,14 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
     }
     return r.imp[m]||0;
   };
+  const pagosFiscalM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='impuestos').reduce((s,r)=>s+finVal(r,m),0);
+  const cobrosCajaM=m=>m<=cierreExtracto?cobrosExtM(m):((m<=cierreFact?cobrosRealesM(m):cobrosFcstM(m))+cobrosPendM(m));
+  const pagosCajaM=m=>m<=cierreExtracto?pagosExtM(m):-(pagosExplM(m)+pagosFiscalM(m));
+  const flujoCajaM=m=>cobrosCajaM(m)+pagosCajaM(m);
+  const TC=MESES.reduce((_,__,m)=>_+cobrosCajaM(m),0);
+  const TP=MESES.reduce((_,__,m)=>_+pagosCajaM(m),0);
+  const TFiscal=MESES.reduce((_,__,m)=>_+pagosFiscalM(m),0);
+  // Financiación: entradas/salidas ajenas a la explotación (préstamos, confirming, amortizaciones...)
   const finFlujM=m=>(cajaSeg||[]).filter(r=>r.subtipo==='financiacion').reduce((s,r)=>s+(r.tipo==='cobro'?1:-1)*finVal(r,m),0);
   const saldoPeriodoM=m=>flujoCajaM(m)+finFlujM(m);
   const saldoM=m=>{let s=saldo0;for(let i=0;i<=m;i++)s+=saldoPeriodoM(i);return s;};
@@ -1304,6 +1309,38 @@ function TabCaja({facturas,cobrosRealesM,cobrosPendM,pagosExtM,cobrosExtM,cobros
               <td className="sticky" style={{fontWeight:700,color:'#b83232',paddingLeft:8,fontSize:11}}>Subtotal explotación</td>
               {MESES.map((_,m)=><td key={m} className="num red" style={{fontWeight:600}}>{fmt(pagosExplM(m))}</td>)}
               <td className="num red" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a'}}>{fmt(MESES.reduce((_,__,m)=>_+pagosExplM(m),0))}</td>
+              <td></td>
+            </tr>
+
+            {/* PAGOS FISCALES */}
+            <tr className="section-row"><td className="sticky" colSpan={15}>
+              Pagos fiscales (IVA, IRPF, IS)
+              <span style={{fontSize:9,background:'#dce8f8',color:'#1a2b4a',padding:'1px 7px',borderRadius:10,fontWeight:600,marginLeft:8}}>extracto (verde/rojo) · manual/forecast</span>
+            </td></tr>
+            {(cajaSeg||[]).filter(r=>r.subtipo==='impuestos').map(r=>(
+              <CajaSegRow key={r.id} r={r} setCajaSegRow={setCajaSegRow} delCajaSegRow={delCajaSegRow} movs={movs} cierreExtracto={cierreExtracto}/>
+            ))}
+            <tr><td colSpan={15} style={{padding:'4px 8px',background:'#fafafa'}}>
+              <button className="btn-add" style={{borderColor:'#c4a0d0',color:'#5a1a6a'}} onClick={()=>addCajaSegRow('pago','impuestos')}>
+                <i className="ti ti-plus"></i>Añadir pago fiscal
+              </button>
+            </td></tr>
+            <tr style={{background:'#ede4f4'}}>
+              <td className="sticky" style={{fontWeight:700,color:'#5a1a6a',paddingLeft:8,fontSize:11}}>Subtotal fiscal</td>
+              {MESES.map((_,m)=><td key={m} className="num" style={{fontWeight:600,color:'#5a1a6a'}}>{fmt(pagosFiscalM(m))}</td>)}
+              <td className="num" style={{fontWeight:600,borderLeft:'2px solid #1a2b4a',color:'#5a1a6a'}}>{fmt(TFiscal)}</td>
+              <td></td>
+            </tr>
+
+            <tr style={{background:'#f4e8e8'}}>
+              <td className="sticky" style={{fontWeight:700,color:'#b83232',paddingLeft:8}}>TOTAL PAGOS</td>
+              {MESES.map((_,m)=>{
+                const esReal=m<=cierreExtracto;
+                const v=esReal?0:(pagosExplM(m)+pagosFiscalM(m)); // en meses reales, ver "Total pagos extracto" abajo
+                return<td key={m} className="num red" style={{fontWeight:700,background:esReal?'#fafafa':undefined}}>{esReal?'—':fmt(v)}</td>;
+              })}
+              <td className="num red" style={{fontWeight:700,borderLeft:'2px solid #1a2b4a'}}>{fmt(MESES.reduce((_,__,m)=>_+(m<=cierreExtracto?0:(pagosExplM(m)+pagosFiscalM(m))),0))}</td>
+              <td></td>
             </tr>
 
             {/* PAGOS EXTRACTO */}
@@ -1405,7 +1442,7 @@ function TabExtracto({movs,setMovs,save,gastosReal,gastosFcst,reglas,setReglas,c
   const [bancos]=useState(['CAIXABANK','SABADELL','CAJAMAR','BSCH','BANKINTER','OTRO']);
   const [importLog,setImportLog]=useState(null);
 
-  // Categorías = partidas de gastos + partidas de financiación + fijas de caja + traspaso
+  // Categorías = partidas de gastos + partidas de financiación/fiscal + fijas de caja + traspaso
   const gastosUnicos=[...new Map((gastosReal||[]).map(g=>[g.id,g])).values()];
   const finUnicas=[...new Map((cajaSeg||[]).map(r=>[r.id,r])).values()];
   const CATS_FIJAS=['Traspaso entre cuentas','Cobro de cliente','Sin categorizar'];

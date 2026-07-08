@@ -309,12 +309,13 @@ function App(){
             <span style={{fontSize:10,color:'#a0b4d0',whiteSpace:'nowrap'}}>Facturación cerrada hasta:</span>
             <select value={cierreFact} onChange={e=>{
               const v=parseInt(e.target.value);
-              // Copiar factFcst → factReal para todos los meses que se cierran
+              const prevCierre=cierreFact;
+              // Copiar factFcst → factReal SOLO para los meses que se cierran ahora (nuevos)
               let nr={...factReal};
               clientes.forEach(c=>{
                 const arr=(nr[c.id]||Array(12).fill(0)).slice();
-                for(let m=0;m<=v;m++){
-                  if(!arr[m]&&factFcst[c.id]?.[m]) arr[m]=factFcst[c.id][m];
+                for(let m=prevCierre+1;m<=v;m++){
+                  if(m>=0&&factFcst[c.id]?.[m])arr[m]=factFcst[c.id][m];
                 }
                 nr[c.id]=arr;
               });
@@ -339,12 +340,13 @@ function App(){
             <span style={{fontSize:10,color:'#a0b4d0',whiteSpace:'nowrap'}}>Gastos cerrados hasta:</span>
             <select value={cierreGastos} onChange={e=>{
               const v=parseInt(e.target.value);
-              // Copiar gastosFcst → gastosReal para todos los meses que se cierran
+              const prevCierre=cierreGastos;
+              // Copiar gastosFcst → gastosReal SOLO para los meses que se cierran ahora (nuevos)
               const nr=gastosReal.map(g=>{
                 const gf=gastosFcst.find(x=>x.id===g.id);
                 const arr=g.imp.slice();
-                for(let m=0;m<=v;m++){
-                  if(!arr[m]&&gf?.imp[m]) arr[m]=gf.imp[m];
+                for(let m=prevCierre+1;m<=v;m++){
+                  if(m>=0&&gf?.imp[m])arr[m]=gf.imp[m];
                 }
                 return{...g,imp:arr};
               });
